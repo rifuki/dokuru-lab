@@ -115,7 +115,7 @@
 	}
 
 	function runPidBomb() {
-		cgroupResult = { ok: true, demo: 'PIDs cgroup abuse', requested: pidCount };
+		cgroupResult = { ok: true, scenario: 'PIDs cgroup pressure', requested: pidCount };
 		sendTerminal({ type: 'pid-bomb', count: pidCount });
 	}
 
@@ -195,7 +195,7 @@
 	<section class="bg-white px-4 py-14 md:px-16 lg:px-24 lg:py-[72px]">
 		<div class="mx-auto mb-5 flex max-w-[1540px] flex-col justify-between gap-4 lg:flex-row lg:items-end">
 			<div>
-				<p class="m-0 mb-2 text-sm font-bold tracking-[0.12em] text-playstation-blue uppercase">Demo board</p>
+				<p class="m-0 mb-2 text-sm font-bold tracking-[0.12em] text-playstation-blue uppercase">Evidence board</p>
 				<h2 class="m-0 text-[clamp(28px,4vw,42px)] leading-tight font-light text-black">Before / after evidence</h2>
 			</div>
 			<p class="m-0 max-w-2xl text-[16px] leading-relaxed text-body-gray">

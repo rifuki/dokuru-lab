@@ -41,7 +41,7 @@
 		<p class="m-0 mt-2 text-sm leading-relaxed text-body-gray">
 			Watch <code>pids.current</code> in the live monitor, run the PID bomb, then compare before/after Dokuru. Before hardening it can spawn many sleepers; after rule 5.29 is fixed, <code>pids.max</code> is lower and spawning is capped or fails earlier.
 		</p>
-		{#if result?.demo === 'PIDs cgroup abuse'}
+		{#if result?.scenario === 'PIDs cgroup pressure'}
 			<p class="m-0 mt-2 text-sm text-ink">
 				Last PID run requested <strong>{String(result.requested)}</strong> processes. Watch the live terminal for each spawned PID and the monitor for <code>pids.current</code>.
 			</p>

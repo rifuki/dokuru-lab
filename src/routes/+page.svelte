@@ -6,7 +6,7 @@
 	<title>Dokuru Namespace Cgroup Lab</title>
 	<meta
 		name="description"
-		content="A clickable SvelteKit lab for demonstrating Docker namespace isolation and cgroup controls."
+		content="A clickable SvelteKit lab for validating Docker namespace isolation and cgroup controls."
 	/>
 </svelte:head>
 

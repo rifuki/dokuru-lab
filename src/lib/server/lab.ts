@@ -117,7 +117,7 @@ export function spawnPidBomb(count: unknown): LabResponse {
 
 	return {
 		ok: true,
-		demo: 'PIDs cgroup abuse',
+		scenario: 'PIDs cgroup pressure',
 		requested,
 		spawned,
 		errors,
@@ -135,7 +135,7 @@ export function allocateMemory(mb: unknown): LabResponse {
 
 	return {
 		ok: true,
-		demo: 'memory cgroup abuse',
+		scenario: 'memory cgroup pressure',
 		allocated_mb: requested,
 		held_mb: memoryHold.length,
 		cgroup: cgroupEvidence()
@@ -156,7 +156,7 @@ export function burnCpu(seconds: unknown): LabResponse {
 
 	return {
 		ok: true,
-		demo: 'CPU cgroup abuse',
+		scenario: 'CPU cgroup pressure',
 		seconds: requested,
 		pid: child.pid,
 		cgroup: cgroupEvidence()

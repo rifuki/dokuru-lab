@@ -15,7 +15,7 @@
 
 <section class="grid grid-cols-1 items-stretch gap-8 bg-black px-4 py-12 text-white md:px-16 lg:grid-cols-[1.1fr_0.9fr] lg:px-24 lg:py-14">
 	<div class="animate-rise-in self-center">
-		<p class="mb-3 text-sm font-medium text-[#cccccc]">Hosted Docker isolation demo</p>
+		<p class="mb-3 text-sm font-medium text-[#cccccc]">Container isolation lab</p>
 		<h1 class="mb-4 max-w-3xl text-[clamp(34px,4.6vw,52px)] leading-[1.06] font-light tracking-[-0.1px]">
 			Show the exploit, then show the boundary.
 		</h1>

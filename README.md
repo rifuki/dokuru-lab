@@ -1,6 +1,6 @@
 # Dokuru Lab
 
-Dokuru Lab is a deliberately vulnerable SvelteKit application for demonstrating Docker namespace isolation and cgroup controls before and after Dokuru hardening.
+Dokuru Lab is a deliberately vulnerable SvelteKit application for validating Docker namespace isolation and cgroup controls before and after Dokuru hardening.
 
 The application is intentionally unsafe. Run it only on disposable lab infrastructure.
 
@@ -25,7 +25,7 @@ Open:
 http://localhost:8080
 ```
 
-The hosted demo uses the production server because it includes WebSocket endpoints for the live terminal and monitor:
+The hosted lab uses the production server because it includes WebSocket endpoints for the live terminal and monitor:
 
 ```bash
 bun run build
@@ -34,7 +34,7 @@ LAB_DATA_DIR=./data bun run start
 
 ## Hosted Lab Deployment
 
-The Compose file runs Caddy and the intentionally vulnerable lab app for the hosted demo.
+The Compose file runs Caddy and the intentionally vulnerable lab app for the hosted lab.
 
 Caddy terminates HTTPS for `lab.dokuru.rifuki.dev` and proxies to `dokuru-lab:8080`. The lab app intentionally starts with unsafe runtime settings:
 
@@ -78,7 +78,7 @@ The repository includes GitHub Actions workflows modeled after the Dokuru and ri
 - `Build Dokuru Lab`: builds and publishes `ghcr.io/rifuki/dokuru-lab:latest`, `ghcr.io/rifuki/dokuru-lab:v<version>`, and `ghcr.io/rifuki/dokuru-lab:sha-<short-commit>` on `main`.
 - `Deploy Compose Service`: reusable SSH deploy workflow that pulls the published image on the VPS and runs `docker compose -f docker-compose.yaml up -d --no-build`.
 
-The browser demo uses:
+The browser lab uses:
 
 - `wss://lab.dokuru.rifuki.dev/ws/monitor` for live namespace and cgroup metrics.
 - `wss://lab.dokuru.rifuki.dev/ws/terminal` for real stdout/stderr from commands and pressure tests.
@@ -149,7 +149,7 @@ curl -X POST http://localhost:8080/api/cpu-burn \
   -d '{"seconds":5}'
 ```
 
-## Dokuru Demo Flow
+## Dokuru Validation Flow
 
 1. Deploy the hosted lab with `docker compose up --build -d`.
 2. Trigger namespace and cgroup payloads from the browser.
@@ -158,7 +158,7 @@ curl -X POST http://localhost:8080/api/cpu-burn \
 5. Apply Dokuru hardening fixes.
 6. Re-run the audit.
 7. Trigger the same payloads again.
-8. Show that host namespaces are no longer visible and resource abuse is constrained.
+8. Show that host namespaces are no longer visible and resource pressure is constrained.
 
 ## Repository Hygiene
 
