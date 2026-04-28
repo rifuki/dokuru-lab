@@ -1,5 +1,6 @@
 services:
   dokuru-lab:
+    image: ${DOKURU_LAB_IMAGE:-ghcr.io/rifuki/dokuru-lab}:${VERSION:-latest}
     build: .
     container_name: dokuru-lab
     restart: unless-stopped

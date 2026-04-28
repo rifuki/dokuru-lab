@@ -1,0 +1,103 @@
+name: Build Dokuru Lab
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'static/**'
+      - 'Dockerfile'
+      - 'docker-compose.vps.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'svelte.config.js'
+      - 'tsconfig.json'
+      - 'vite.config.ts'
+      - '.github/workflows/build-lab.yaml'
+      - '.github/workflows/deploy-compose-service.yaml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'static/**'
+      - 'Dockerfile'
+      - 'docker-compose.vps.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'svelte.config.js'
+      - 'tsconfig.json'
+      - 'vite.config.ts'
+      - '.github/workflows/build-lab.yaml'
+      - '.github/workflows/deploy-compose-service.yaml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/dokuru-lab
+  PLATFORMS: linux/amd64
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docker:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=sha-${{ github.sha }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ env.PLATFORMS }}
+          push: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy Lab
+    needs: docker
+    if: >-
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/main' &&
+      (vars.DOKURU_LAB_DEPLOY_HOST != '' || vars.DOKURU_DEPLOY_HOST != '') &&
+      (vars.DOKURU_LAB_DEPLOY_USER != '' || vars.DOKURU_DEPLOY_USER != '') &&
+      (vars.DOKURU_LAB_DEPLOY_PATH != '' || vars.DOKURU_DEPLOY_PATH != '')
+    uses: ./.github/workflows/deploy-compose-service.yaml
+    with:
+      service: dokuru-lab
+      image: ghcr.io/${{ github.repository_owner }}/dokuru-lab
+      image-tag: sha-${{ github.sha }}
+    secrets: inherit

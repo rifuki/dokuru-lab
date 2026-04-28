@@ -65,6 +65,7 @@ Example `.env` values:
 HOST=0.0.0.0
 PORT=8080
 LAB_DATA_DIR=/app/data
+DOKURU_LAB_IMAGE=ghcr.io/rifuki/dokuru-lab
 DOKURU_LAB_HOST=lab.dokuru.rifuki.dev
 TRAEFIK_ENTRYPOINT=websecure
 TRAEFIK_CERT_RESOLVER=letsencrypt
@@ -88,6 +89,38 @@ If the network does not exist yet:
 ```bash
 docker network create traefik-public
 ```
+
+## CI/CD
+
+The repository includes GitHub Actions workflows modeled after the Dokuru and rifuki.dev stacks:
+
+- `Quality Gate`: runs Bun install, SvelteKit checks, production build, Compose config validation, and a Docker smoke build.
+- `Build Dokuru Lab`: builds and publishes `ghcr.io/rifuki/dokuru-lab:latest` and `ghcr.io/rifuki/dokuru-lab:sha-<commit>` on `main`.
+- `Deploy Compose Service`: reusable SSH deploy workflow that pulls the published image on the VPS and runs `docker compose -f docker-compose.vps.yml up -d --no-build dokuru-lab`.
+
+Set these repository variables for automatic deployment from `main`:
+
+```text
+DOKURU_LAB_DEPLOY_HOST
+DOKURU_LAB_DEPLOY_USER
+DOKURU_LAB_DEPLOY_PATH
+```
+
+Set this repository secret:
+
+```text
+DOKURU_LAB_DEPLOY_SSH_KEY
+```
+
+Optional values:
+
+```text
+DOKURU_LAB_DEPLOY_PORT
+DOKURU_LAB_COMPOSE_FILE
+DOKURU_LAB_GHCR_TOKEN
+```
+
+The deploy workflow also accepts the Dokuru-compatible fallback names `DOKURU_DEPLOY_*` and `DOKURU_GHCR_TOKEN`.
 
 ## Network Namespace Demo
 
