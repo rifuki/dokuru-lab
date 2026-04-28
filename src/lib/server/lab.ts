@@ -1,12 +1,12 @@
 import { exec as execCallback, execFileSync, spawn } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
-import type { CgroupEvidence, LabResponse, RuntimeEvidence } from '$lib/types/lab';
+import type { CgroupEvidence, LabResponse, ProcessEvidence, RuntimeEvidence } from '$lib/types/lab';
 
 const exec = promisify(execCallback);
 const dataDir = process.env.LAB_DATA_DIR || '/app/data';
+let memoryHold: Buffer[] = [];
 
 type ExecError = Error & {
 	stdout?: string;
@@ -43,6 +43,15 @@ export function cgroupEvidence(): CgroupEvidence {
 	};
 }
 
+export function processEvidence(): ProcessEvidence {
+	return {
+		process_count: commandSync("ps -eo pid= | wc -l | tr -d ' '"),
+		pid_bomb_sleepers: commandSync("pgrep -fc dokuru_pid_bomb_sleep 2>/dev/null || true"),
+		cpu_burners: commandSync("pgrep -fc dokuru_cpu_burn 2>/dev/null || true"),
+		top_processes: commandSync('ps -eo pid,ppid,user,comm | head -12')
+	};
+}
+
 export function runtimeEvidence(): RuntimeEvidence {
 	return {
 		id: commandSync('id'),
@@ -51,7 +60,8 @@ export function runtimeEvidence(): RuntimeEvidence {
 		pid_namespace: namespaceLink('/proc/self/ns/pid'),
 		user_namespace: namespaceLink('/proc/self/ns/user'),
 		uts_namespace: namespaceLink('/proc/self/ns/uts'),
-		cgroup: cgroupEvidence()
+		cgroup: cgroupEvidence(),
+		processes: processEvidence()
 	};
 }
 
@@ -84,10 +94,20 @@ export async function runShell(command: unknown): Promise<LabResponse> {
 }
 
 export async function fetchFromServer(url: unknown): Promise<LabResponse> {
-	const target = String(url || 'http://127.0.0.1:9999/').trim().slice(0, 1000);
+	const target = String(url || '').trim().slice(0, 1000);
 	const started = Date.now();
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), 3000);
+
+	if (!target) {
+		clearTimeout(timeout);
+		return {
+			ok: false,
+			demo: 'server-side fetch diagnostic',
+			error: 'URL is required',
+			runtime: runtimeEvidence()
+		};
+	}
 
 	try {
 		const response = await fetch(target, { signal: controller.signal });
@@ -95,7 +115,7 @@ export async function fetchFromServer(url: unknown): Promise<LabResponse> {
 
 		return {
 			ok: true,
-			demo: 'network namespace via intentionally vulnerable SSRF',
+			demo: 'server-side fetch diagnostic',
 			url: target,
 			status: response.status,
 			elapsed_ms: Date.now() - started,
@@ -105,7 +125,7 @@ export async function fetchFromServer(url: unknown): Promise<LabResponse> {
 	} catch (error) {
 		return {
 			ok: false,
-			demo: 'network namespace via intentionally vulnerable SSRF',
+			demo: 'server-side fetch diagnostic',
 			url: target,
 			elapsed_ms: Date.now() - started,
 			error: error instanceof Error ? error.message : String(error),
@@ -151,41 +171,44 @@ export function spawnPidBomb(count: unknown): LabResponse {
 
 export function allocateMemory(mb: unknown): LabResponse {
 	const requested = clamp(Number(mb || 128), 1, 1024);
-	const chunks: Buffer[] = [];
 
 	for (let index = 0; index < requested; index += 1) {
-		chunks.push(Buffer.alloc(1024 * 1024, 'a'));
+		memoryHold.push(Buffer.alloc(1024 * 1024, 'a'));
 	}
 
 	return {
 		ok: true,
 		demo: 'memory cgroup abuse',
 		allocated_mb: requested,
+		held_mb: memoryHold.length,
 		cgroup: cgroupEvidence()
 	};
 }
 
 export function burnCpu(seconds: unknown): LabResponse {
 	const requested = clamp(Number(seconds || 5), 1, 30);
-	const end = Date.now() + requested * 1000;
-	let ops = 0;
-
-	while (Date.now() < end) {
-		createHash('sha256').update(`${ops}:${Date.now()}`).digest('hex');
-		ops += 1;
-	}
+	const child = spawn(
+		process.execPath,
+		[
+			'-e',
+			`process.title='dokuru_cpu_burn'; const crypto = require('node:crypto'); const end = Date.now() + ${requested} * 1000; let ops = 0; while (Date.now() < end) { crypto.createHash('sha256').update(String(ops++)).digest('hex'); }`
+		],
+		{ detached: true, stdio: 'ignore' }
+	);
+	child.unref();
 
 	return {
 		ok: true,
 		demo: 'CPU cgroup abuse',
 		seconds: requested,
-		ops,
+		pid: child.pid,
 		cgroup: cgroupEvidence()
 	};
 }
 
 export async function cleanup(): Promise<LabResponse> {
-	return runShell("pkill -f '[d]okuru_pid_bomb_sleep' 2>&1 || true");
+	memoryHold = [];
+	return runShell("pkill -f '[d]okuru_pid_bomb_sleep' 2>&1 || true; pkill -f '[d]okuru_cpu_burn' 2>&1 || true");
 }
 
 export function health(): LabResponse {

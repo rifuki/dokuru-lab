@@ -3,12 +3,14 @@
 	import Field from '$lib/components/atoms/Field.svelte';
 	import OutputPanel from '$lib/components/molecules/OutputPanel.svelte';
 	import Panel from '$lib/components/molecules/Panel.svelte';
+	import type { LabResponse } from '$lib/types/lab';
 
 	type Props = {
 		pidCount: number;
 		memoryMb: number;
 		cpuSeconds: number;
 		output: string;
+		result: LabResponse | null;
 		running: string;
 		onPidCountChange: (value: number) => void;
 		onMemoryChange: (value: number) => void;
@@ -24,6 +26,7 @@
 		memoryMb,
 		cpuSeconds,
 		output,
+		result,
 		running,
 		onPidCountChange,
 		onMemoryChange,
@@ -36,6 +39,18 @@
 </script>
 
 <Panel id="cgroup" title="Cgroup pressure" subtitle="Rules 5.11, 5.12, 5.29" class="lg:col-span-8">
+	<div class="mb-4 rounded-xl border border-playstation-blue/20 bg-[#eef7ff] p-4">
+		<strong class="block text-sm text-ink">How to prove PIDs</strong>
+		<p class="m-0 mt-2 text-sm leading-relaxed text-body-gray">
+			Watch <code>pids.current</code> in the live monitor, run the PID bomb, then compare before/after Dokuru. Before hardening it can spawn many sleepers; after rule 5.29 is fixed, <code>pids.max</code> is lower and spawning is capped or fails earlier.
+		</p>
+		{#if result?.demo === 'PIDs cgroup abuse'}
+			<p class="m-0 mt-2 text-sm text-ink">
+				Last PID run: spawned <strong>{String(result.spawned)}</strong> of <strong>{String(result.requested)}</strong> requested processes.
+			</p>
+		{/if}
+	</div>
+
 	<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
 		<div class="grid gap-2.5 rounded-xl border border-divider p-3.5">
 			<Field id="pid-count" label="PIDs" type="number" min={1} max={500} value={pidCount} oninput={(value) => onPidCountChange(Number(value))} />
@@ -58,5 +73,5 @@
 		</div>
 	</div>
 
-	<OutputPanel content={output} />
+	<OutputPanel title="Last cgroup action result" content={output} />
 </Panel>

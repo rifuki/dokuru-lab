@@ -8,6 +8,13 @@ export type CgroupEvidence = {
 	cpu_shares_v1: string;
 };
 
+export type ProcessEvidence = {
+	process_count: string;
+	pid_bomb_sleepers: string;
+	cpu_burners: string;
+	top_processes: string;
+};
+
 export type RuntimeEvidence = {
 	id: string;
 	uid_map: string;
@@ -16,6 +23,7 @@ export type RuntimeEvidence = {
 	user_namespace: string;
 	uts_namespace: string;
 	cgroup: CgroupEvidence;
+	processes: ProcessEvidence;
 };
 
 export type LabResponse = {

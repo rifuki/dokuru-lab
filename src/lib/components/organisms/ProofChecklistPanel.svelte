@@ -2,14 +2,17 @@
 	import Panel from '$lib/components/molecules/Panel.svelte';
 </script>
 
-<Panel title="Expected proof" subtitle="Before vs after" class="lg:col-span-4">
+<Panel title="Before / after proof" subtitle="Screenshot guide" class="lg:col-span-4">
+	<p class="m-0 mb-4 text-sm leading-relaxed text-body-gray">
+		Use these exact changes as the explanation slide. The app remains vulnerable; the container boundary changes.
+	</p>
 	<table class="w-full border-collapse text-left text-[13px] leading-relaxed">
 		<tbody>
-			<tr class="border-b border-divider"><th class="w-20 py-2.5 pr-3 font-bold text-ink">PID view</th><td class="py-2.5 text-body-gray">Host processes disappear</td></tr>
-			<tr class="border-b border-divider"><th class="w-20 py-2.5 pr-3 font-bold text-ink">UID map</th><td class="py-2.5 text-body-gray"><code>0 0</code> becomes a remapped UID</td></tr>
-			<tr class="border-b border-divider"><th class="w-20 py-2.5 pr-3 font-bold text-ink">PIDs</th><td class="py-2.5 text-body-gray"><code>pids.max</code> changes from max</td></tr>
-			<tr class="border-b border-divider"><th class="w-20 py-2.5 pr-3 font-bold text-ink">Memory</th><td class="py-2.5 text-body-gray"><code>memory.max</code> becomes a limit</td></tr>
-			<tr class="border-b border-divider"><th class="w-20 py-2.5 pr-3 font-bold text-ink">CPU</th><td class="py-2.5 text-body-gray"><code>CpuShares</code> becomes explicit</td></tr>
+			<tr class="border-b border-divider"><th class="w-24 py-2.5 pr-3 font-bold text-ink">UID map</th><td class="py-2.5 text-body-gray">Before: <code>0 0</code>. After: remapped host UID range.</td></tr>
+			<tr class="border-b border-divider"><th class="w-24 py-2.5 pr-3 font-bold text-ink">PID view</th><td class="py-2.5 text-body-gray">Before: host process list. After: only container processes.</td></tr>
+			<tr class="border-b border-divider"><th class="w-24 py-2.5 pr-3 font-bold text-ink">PIDs</th><td class="py-2.5 text-body-gray">Before: many sleepers spawn. After: <code>pids.max</code> caps the bomb.</td></tr>
+			<tr class="border-b border-divider"><th class="w-24 py-2.5 pr-3 font-bold text-ink">Memory</th><td class="py-2.5 text-body-gray">Before: unlimited or host-sized. After: explicit memory limit.</td></tr>
+			<tr class="border-b border-divider"><th class="w-24 py-2.5 pr-3 font-bold text-ink">CPU</th><td class="py-2.5 text-body-gray">Before: default shares. After: explicit CPU shares/weight.</td></tr>
 		</tbody>
 	</table>
 

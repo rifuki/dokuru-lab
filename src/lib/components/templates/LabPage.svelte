@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import CgroupLabPanel from '$lib/components/organisms/CgroupLabPanel.svelte';
 	import HeroSection from '$lib/components/organisms/HeroSection.svelte';
+	import LiveMonitorPanel from '$lib/components/organisms/LiveMonitorPanel.svelte';
 	import Masthead from '$lib/components/organisms/Masthead.svelte';
 	import NamespaceLabPanel from '$lib/components/organisms/NamespaceLabPanel.svelte';
 	import ProofChecklistPanel from '$lib/components/organisms/ProofChecklistPanel.svelte';
@@ -9,15 +10,15 @@
 	import type { CommandPreset, LabResponse, RuntimeEvidence } from '$lib/types/lab';
 
 	let command = $state('id; cat /proc/self/uid_map; cat /proc/self/gid_map');
-	let url = $state('http://127.0.0.1:9999/');
 	let pidCount = $state(120);
 	let memoryMb = $state(128);
 	let cpuSeconds = $state(5);
 	let running = $state('');
-	let healthData = $state<LabResponse | null>(null);
+	let evidenceData = $state<LabResponse | null>(null);
 	let namespaceOutput = $state('Choose a namespace payload, then run it.');
 	let cgroupOutput = $state('Run a pressure test to collect cgroup evidence.');
-	let probeOutput = $state('Run the recovery probe after hardening.');
+	let cgroupResult = $state<LabResponse | null>(null);
+	let lastUpdated = $state('');
 
 	const presets: CommandPreset[] = [
 		{ label: 'UID map', command: 'id; cat /proc/self/uid_map; cat /proc/self/gid_map' },
@@ -28,25 +29,32 @@
 		}
 	];
 
-	const runtime = $derived(healthData?.runtime as RuntimeEvidence | undefined);
+	const runtime = $derived(evidenceData?.runtime as RuntimeEvidence | undefined);
 
 	onMount(() => {
-		void refreshHealth();
+		void refreshEvidence(true);
+		const interval = window.setInterval(() => void refreshEvidence(false), 1200);
+		return () => window.clearInterval(interval);
 	});
 
-	async function refreshHealth() {
-		running = 'health';
-		healthData = await requestJson('/api/health');
-		probeOutput = pretty(healthData);
-		running = '';
+	async function refreshEvidence(showLoading = true) {
+		if (showLoading) running = 'health';
+		const result = await requestJson('/api/evidence');
+		evidenceData = result;
+		lastUpdated = new Date().toLocaleTimeString('en-US', {
+			hour12: false,
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit'
+		});
+		if (showLoading) running = '';
 	}
 
 	async function runProbe() {
 		running = 'probe';
-		probeOutput = 'Running recovery probe...';
 		const result = await requestJson('/api/probe', { method: 'POST' });
-		probeOutput = pretty(result);
-		if (result.runtime) healthData = { ok: result.ok, runtime: result.runtime };
+		namespaceOutput = pretty(result);
+		if (result.runtime) evidenceData = { ok: result.ok, runtime: result.runtime };
 		running = '';
 	}
 
@@ -55,44 +63,43 @@
 		namespaceOutput = 'Running command in the container...';
 		const result = await postJson('/api/exec', { command });
 		namespaceOutput = pretty(result);
-		if (result.runtime) healthData = { ok: result.ok, runtime: result.runtime };
-		running = '';
-	}
-
-	async function runFetch() {
-		running = 'fetch';
-		namespaceOutput = 'Fetching URL from the server side...';
-		const result = await postJson('/api/fetch-url', { url });
-		namespaceOutput = pretty(result);
-		if (result.runtime) healthData = { ok: result.ok, runtime: result.runtime };
+		if (result.runtime) evidenceData = { ok: result.ok, runtime: result.runtime };
 		running = '';
 	}
 
 	async function runPidBomb() {
 		running = 'pid';
 		cgroupOutput = 'Spawning sleeper processes...';
-		cgroupOutput = pretty(await postJson('/api/pid-bomb', { count: pidCount }));
+		cgroupResult = await postJson('/api/pid-bomb', { count: pidCount });
+		cgroupOutput = pretty(cgroupResult);
+		await refreshEvidence(false);
 		running = '';
 	}
 
 	async function runMemoryBomb() {
 		running = 'memory';
-		cgroupOutput = 'Allocating memory inside the request worker...';
-		cgroupOutput = pretty(await postJson('/api/memory-bomb', { mb: memoryMb }));
+		cgroupOutput = 'Allocating memory and holding it in the server process...';
+		cgroupResult = await postJson('/api/memory-bomb', { mb: memoryMb });
+		cgroupOutput = pretty(cgroupResult);
+		await refreshEvidence(false);
 		running = '';
 	}
 
 	async function runCpuBurn() {
 		running = 'cpu';
-		cgroupOutput = 'Burning CPU inside the request worker...';
-		cgroupOutput = pretty(await postJson('/api/cpu-burn', { seconds: cpuSeconds }));
+		cgroupOutput = 'Starting a short CPU burner process...';
+		cgroupResult = await postJson('/api/cpu-burn', { seconds: cpuSeconds });
+		cgroupOutput = pretty(cgroupResult);
+		await refreshEvidence(false);
 		running = '';
 	}
 
 	async function cleanupPidBomb() {
 		running = 'cleanup';
-		cgroupOutput = 'Cleaning up sleeper processes...';
-		cgroupOutput = pretty(await requestJson('/api/cleanup', { method: 'POST' }));
+		cgroupOutput = 'Cleaning up sleeper, CPU, and held-memory pressure...';
+		cgroupResult = await requestJson('/api/cleanup', { method: 'POST' });
+		cgroupOutput = pretty(cgroupResult);
+		await refreshEvidence(false);
 		running = '';
 	}
 
@@ -120,38 +127,39 @@
 	}
 </script>
 
-<Masthead onRefresh={refreshHealth} running={running === 'health'} />
+<Masthead onRefresh={() => refreshEvidence(true)} running={running === 'health'} />
 
 <main>
 	<HeroSection runtime={runtime} onProbe={runProbe} onRunCommand={runExec} {running} />
 
 	<section class="bg-white px-4 py-14 md:px-16 lg:px-24 lg:py-[72px]">
-		<div class="mx-auto mb-5 flex max-w-[1540px] flex-col justify-between gap-6 lg:flex-row">
-			<h2 class="m-0 text-[clamp(28px,4vw,44px)] leading-tight font-light text-black">Attack controls</h2>
-			<p class="m-0 max-w-xl text-[17px] leading-relaxed text-body-gray">
-				Use these browser controls during the before/after demo. Outputs stay near the action so screenshots remain clean.
+		<div class="mx-auto mb-5 flex max-w-[1540px] flex-col justify-between gap-4 lg:flex-row lg:items-end">
+			<div>
+				<p class="m-0 mb-2 text-sm font-bold tracking-[0.12em] text-playstation-blue uppercase">Demo board</p>
+				<h2 class="m-0 text-[clamp(28px,4vw,42px)] leading-tight font-light text-black">Before / after evidence</h2>
+			</div>
+			<p class="m-0 max-w-2xl text-[16px] leading-relaxed text-body-gray">
+				Start with the live monitor, run one proof at a time, then compare the same cards after Dokuru fixes namespace and cgroup rules.
 			</p>
 		</div>
 
 		<div class="mx-auto grid max-w-[1540px] grid-cols-1 gap-4 lg:grid-cols-12">
+			<LiveMonitorPanel runtime={runtime} {lastUpdated} />
+
 			<RuntimeEvidencePanel
 				runtime={runtime}
-				ok={Boolean(healthData?.ok)}
-				output={probeOutput}
-				onRefresh={refreshHealth}
+				ok={Boolean(evidenceData?.ok)}
+				onRefresh={() => refreshEvidence(true)}
 				onProbe={runProbe}
 				{running}
 			/>
 
 			<NamespaceLabPanel
-				{url}
 				{command}
 				{presets}
 				output={namespaceOutput}
 				{running}
-				onUrlChange={(value) => (url = value)}
 				onCommandChange={(value) => (command = value)}
-				onFetch={runFetch}
 				onRun={runExec}
 			/>
 
@@ -160,6 +168,7 @@
 				{memoryMb}
 				{cpuSeconds}
 				output={cgroupOutput}
+				result={cgroupResult}
 				{running}
 				onPidCountChange={(value) => (pidCount = value)}
 				onMemoryChange={(value) => (memoryMb = value)}
@@ -177,5 +186,5 @@
 
 <footer class="flex flex-col justify-between gap-3 bg-playstation-blue px-4 py-6 text-sm text-white md:px-16 lg:flex-row lg:px-24">
 	<strong>Dokuru Namespace Cgroup Lab</strong>
-	<span class="max-w-3xl">Run only on a disposable lab host. Endpoints intentionally expose SSRF, shell execution, and resource pressure.</span>
+	<span class="max-w-3xl">Run only on a disposable lab host. Endpoints intentionally expose shell execution and resource pressure.</span>
 </footer>
