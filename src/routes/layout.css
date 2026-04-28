@@ -1,0 +1,63 @@
+@import 'tailwindcss';
+
+@theme {
+	--font-sans: Arial, Helvetica, sans-serif;
+	--font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+	--color-playstation-blue: #0070cc;
+	--color-playstation-cyan: #1eaedb;
+	--color-console-black: #000000;
+	--color-ink: #1f1f1f;
+	--color-body-gray: #6b6b6b;
+	--color-divider: #f3f3f3;
+	--color-paper: #ffffff;
+	--color-ice: #f5f7fa;
+	--color-commerce: #d53b00;
+	--animate-panel-in: panel-in 420ms ease both;
+	--animate-rise-in: rise-in 520ms ease both;
+}
+
+@keyframes panel-in {
+	from {
+		opacity: 0;
+		transform: translateY(12px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes rise-in {
+	from {
+		opacity: 0;
+		transform: translateY(18px) scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+html {
+	scroll-behavior: smooth;
+}
+
+body {
+	margin: 0;
+	background: #ffffff;
+	color: #1f1f1f;
+	font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+textarea {
+	font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+	outline: 2px solid #0070cc;
+	outline-offset: 2px;
+}

@@ -1,0 +1,18 @@
+services:
+  dokuru-lab:
+    build: .
+    container_name: dokuru-lab
+    restart: unless-stopped
+    user: root
+    network_mode: host
+    pid: host
+    ipc: host
+    uts: host
+    userns_mode: host
+    environment:
+      NODE_ENV: production
+      HOST: ${HOST:-0.0.0.0}
+      PORT: ${PORT:-8080}
+      LAB_DATA_DIR: ${LAB_DATA_DIR:-/app/data}
+    volumes:
+      - ./data:/app/data

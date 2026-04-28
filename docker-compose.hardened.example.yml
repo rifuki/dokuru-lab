@@ -1,0 +1,20 @@
+services:
+  dokuru-lab:
+    build: .
+    container_name: dokuru-lab
+    restart: unless-stopped
+    user: root
+    ports:
+      - "8080:8080"
+    mem_limit: 256m
+    cpu_shares: 512
+    pids_limit: 100
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      NODE_ENV: production
+      HOST: ${HOST:-0.0.0.0}
+      PORT: ${PORT:-8080}
+      LAB_DATA_DIR: ${LAB_DATA_DIR:-/app/data}
+    volumes:
+      - ./data:/app/data
