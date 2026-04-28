@@ -1,0 +1,8 @@
+{
+	email admin@rifuki.dev
+}
+
+lab.dokuru.rifuki.dev {
+	encode zstd gzip
+	reverse_proxy dokuru-lab:8080
+}

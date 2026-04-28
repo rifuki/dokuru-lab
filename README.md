@@ -43,15 +43,16 @@ The default Compose file intentionally starts the app with unsafe runtime settin
 
 These settings make Dokuru namespace and cgroup audit findings visible before hardening.
 
-## VPS Deployment With Traefik
+## VPS Deployment With Caddy
 
-This repository includes a VPS compose file that matches the Traefik pattern used by the Dokuru and rifuki.dev stacks:
+This repository includes a VPS compose file for a dedicated lab server:
 
-- external network: `traefik-public`
-- entrypoint: `websecure`
-- certificate resolver: `letsencrypt`
-- router host rule: `lab.dokuru.rifuki.dev`
-- service port: `8080`
+- Caddy terminates HTTPS for `lab.dokuru.rifuki.dev`.
+- Caddy proxies to the SvelteKit server on `dokuru-lab:8080`.
+- Caddy uses named volumes for certificates and config state.
+- The lab app keeps unsafe namespace settings so Dokuru can demonstrate before/after hardening.
+
+Point DNS for `lab.dokuru.rifuki.dev` to the VPS, then deploy:
 
 On the VPS, create `.env` from `.env.example` only if you want to override the app runtime values:
 
@@ -67,22 +68,10 @@ PORT=8080
 LAB_DATA_DIR=/app/data
 ```
 
-Deploy behind Traefik:
+Deploy with Caddy:
 
 ```bash
 docker compose -f docker-compose.vps.yml up --build -d
-```
-
-The VPS must already have the external Traefik network:
-
-```bash
-docker network ls | grep traefik-public
-```
-
-If the network does not exist yet:
-
-```bash
-docker network create traefik-public
 ```
 
 ## CI/CD
@@ -91,7 +80,7 @@ The repository includes GitHub Actions workflows modeled after the Dokuru and ri
 
 - `Quality Gate`: runs Bun install, SvelteKit checks, production build, Compose config validation, and a Docker smoke build.
 - `Build Dokuru Lab`: builds and publishes `ghcr.io/rifuki/dokuru-lab:latest` and `ghcr.io/rifuki/dokuru-lab:sha-<commit>` on `main`.
-- `Deploy Compose Service`: reusable SSH deploy workflow that pulls the published image on the VPS and runs `docker compose -f docker-compose.vps.yml up -d --no-build dokuru-lab`.
+- `Deploy Compose Service`: reusable SSH deploy workflow that pulls the published image on the VPS and runs `docker compose -f docker-compose.vps.yml up -d --no-build`.
 
 Set these repository variables for automatic deployment from `main`:
 

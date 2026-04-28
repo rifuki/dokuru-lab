@@ -1,4 +1,24 @@
 services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: dokuru-lab-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    mem_limit: 128m
+    cpu_shares: 512
+    pids_limit: 100
+    depends_on:
+      dokuru-lab:
+        condition: service_healthy
+    networks:
+      - dokuru-lab
+
   dokuru-lab:
     image: ghcr.io/rifuki/dokuru-lab:${VERSION:-latest}
     build: .
@@ -14,14 +34,10 @@ services:
       HOST: ${HOST:-0.0.0.0}
       PORT: ${PORT:-8080}
       LAB_DATA_DIR: ${LAB_DATA_DIR:-/app/data}
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.dokuru-lab.rule=Host(`lab.dokuru.rifuki.dev`)"
-      - "traefik.http.routers.dokuru-lab.entrypoints=websecure"
-      - "traefik.http.routers.dokuru-lab.tls.certresolver=letsencrypt"
-      - "traefik.http.services.dokuru-lab.loadbalancer.server.port=8080"
     volumes:
       - ./data:/app/data
+    expose:
+      - "8080"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:$${PORT:-8080}/api/health >/dev/null"]
       interval: 10s
@@ -29,13 +45,13 @@ services:
       retries: 3
       start_period: 15s
     networks:
-      - dokuru-lab-internal
-      - traefik-public
+      - dokuru-lab
+
+volumes:
+  caddy-data:
+  caddy-config:
 
 networks:
-  dokuru-lab-internal:
-    name: dokuru-lab-internal
+  dokuru-lab:
+    name: dokuru-lab
     driver: bridge
-  traefik-public:
-    name: traefik-public
-    external: true
