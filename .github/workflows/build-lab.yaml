@@ -51,6 +51,8 @@ jobs:
   docker:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.image.outputs.image_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -66,6 +68,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Prepare image tags
+        id: image
+        run: |
+          short_sha="${GITHUB_SHA::7}"
+          version="$(node -p "require('./package.json').version")"
+          echo "short_sha=${short_sha}" >> "${GITHUB_OUTPUT}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "image_tag=sha-${short_sha}" >> "${GITHUB_OUTPUT}"
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -73,7 +84,8 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest
-            type=raw,value=sha-${{ github.sha }}
+            type=raw,value=v${{ steps.image.outputs.version }}
+            type=raw,value=sha-${{ steps.image.outputs.short_sha }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -100,5 +112,5 @@ jobs:
     uses: ./.github/workflows/deploy-compose-service.yaml
     with:
       service: dokuru-lab
-      image-tag: sha-${{ github.sha }}
+      image-tag: ${{ needs.docker.outputs.image-tag }}
     secrets: inherit
