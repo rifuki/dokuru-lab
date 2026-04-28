@@ -43,6 +43,52 @@ The default Compose file intentionally starts the app with unsafe runtime settin
 
 These settings make Dokuru namespace and cgroup audit findings visible before hardening.
 
+## VPS Deployment With Traefik
+
+This repository includes a VPS compose file that matches the Traefik pattern used by the Dokuru and rifuki.dev stacks:
+
+- external network: `traefik-public`
+- entrypoint: `websecure`
+- certificate resolver: `letsencrypt`
+- router host rule through `DOKURU_LAB_HOST`
+- service port: `8080`
+
+On the VPS, create `.env` from `.env.example` and adjust the hostname:
+
+```bash
+cp .env.example .env
+```
+
+Example `.env` values:
+
+```env
+HOST=0.0.0.0
+PORT=8080
+LAB_DATA_DIR=/app/data
+DOKURU_LAB_HOST=lab.dokuru.rifuki.dev
+TRAEFIK_ENTRYPOINT=websecure
+TRAEFIK_CERT_RESOLVER=letsencrypt
+TRAEFIK_NETWORK=traefik-public
+```
+
+Deploy behind Traefik:
+
+```bash
+docker compose -f docker-compose.vps.yml up --build -d
+```
+
+The VPS must already have the external Traefik network:
+
+```bash
+docker network ls | grep traefik-public
+```
+
+If the network does not exist yet:
+
+```bash
+docker network create traefik-public
+```
+
 ## Network Namespace Demo
 
 Use the network-host Compose file only for the SSRF demo:

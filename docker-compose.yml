@@ -17,3 +17,9 @@ services:
       LAB_DATA_DIR: ${LAB_DATA_DIR:-/app/data}
     volumes:
       - ./data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:$${PORT:-8080}/api/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
