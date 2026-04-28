@@ -50,10 +50,10 @@ This repository includes a VPS compose file that matches the Traefik pattern use
 - external network: `traefik-public`
 - entrypoint: `websecure`
 - certificate resolver: `letsencrypt`
-- router host rule through `DOKURU_LAB_HOST`
+- router host rule: `lab.dokuru.rifuki.dev`
 - service port: `8080`
 
-On the VPS, create `.env` from `.env.example` and adjust the hostname:
+On the VPS, create `.env` from `.env.example` only if you want to override the app runtime values:
 
 ```bash
 cp .env.example .env
@@ -65,11 +65,6 @@ Example `.env` values:
 HOST=0.0.0.0
 PORT=8080
 LAB_DATA_DIR=/app/data
-DOKURU_LAB_IMAGE=ghcr.io/rifuki/dokuru-lab
-DOKURU_LAB_HOST=lab.dokuru.rifuki.dev
-TRAEFIK_ENTRYPOINT=websecure
-TRAEFIK_CERT_RESOLVER=letsencrypt
-TRAEFIK_NETWORK=traefik-public
 ```
 
 Deploy behind Traefik:

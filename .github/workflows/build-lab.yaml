@@ -98,6 +98,5 @@ jobs:
     uses: ./.github/workflows/deploy-compose-service.yaml
     with:
       service: dokuru-lab
-      image: ghcr.io/${{ github.repository_owner }}/dokuru-lab
       image-tag: sha-${{ github.sha }}
     secrets: inherit
