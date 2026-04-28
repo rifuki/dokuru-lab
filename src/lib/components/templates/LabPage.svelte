@@ -7,6 +7,7 @@
 	import NamespaceLabPanel from '$lib/components/organisms/NamespaceLabPanel.svelte';
 	import ProofChecklistPanel from '$lib/components/organisms/ProofChecklistPanel.svelte';
 	import RuntimeEvidencePanel from '$lib/components/organisms/RuntimeEvidencePanel.svelte';
+	import TerminalPanel, { type TerminalLine } from '$lib/components/organisms/TerminalPanel.svelte';
 	import type { CommandPreset, LabResponse, RuntimeEvidence } from '$lib/types/lab';
 
 	let command = $state('id; cat /proc/self/uid_map; cat /proc/self/gid_map');
@@ -15,10 +16,14 @@
 	let cpuSeconds = $state(5);
 	let running = $state('');
 	let evidenceData = $state<LabResponse | null>(null);
-	let namespaceOutput = $state('Choose a namespace payload, then run it.');
-	let cgroupOutput = $state('Run a pressure test to collect cgroup evidence.');
 	let cgroupResult = $state<LabResponse | null>(null);
 	let lastUpdated = $state('');
+	let terminalLines = $state<TerminalLine[]>([]);
+	let terminalConnected = $state(false);
+	let monitorConnected = $state(false);
+	let terminalSocket: WebSocket | null = null;
+	let monitorSocket: WebSocket | null = null;
+	let mounted = false;
 
 	const presets: CommandPreset[] = [
 		{ label: 'UID map', command: 'id; cat /proc/self/uid_map; cat /proc/self/gid_map' },
@@ -32,10 +37,61 @@
 	const runtime = $derived(evidenceData?.runtime as RuntimeEvidence | undefined);
 
 	onMount(() => {
+		mounted = true;
+		connectMonitor();
+		connectTerminal();
 		void refreshEvidence(true);
-		const interval = window.setInterval(() => void refreshEvidence(false), 1200);
-		return () => window.clearInterval(interval);
+		return () => {
+			mounted = false;
+			terminalSocket?.close();
+			monitorSocket?.close();
+		};
 	});
+
+	function connectMonitor() {
+		monitorSocket = new WebSocket(wsUrl('/ws/monitor'));
+		monitorSocket.onopen = () => (monitorConnected = true);
+		monitorSocket.onmessage = (event) => {
+			const message = parseSocketMessage(event.data);
+			if (message?.type !== 'monitor.evidence') return;
+			evidenceData = { ok: true, runtime: message.runtime as RuntimeEvidence };
+			lastUpdated = timeLabel(message.at);
+		};
+		monitorSocket.onclose = () => {
+			monitorConnected = false;
+			if (mounted) window.setTimeout(connectMonitor, 900);
+		};
+	}
+
+	function connectTerminal() {
+		terminalSocket = new WebSocket(wsUrl('/ws/terminal'));
+		terminalSocket.onopen = () => (terminalConnected = true);
+		terminalSocket.onmessage = (event) => {
+			const message = parseSocketMessage(event.data);
+			if (!message) return;
+
+			if (message.type === 'terminal.line') {
+				pushTerminalLine({
+					stream: message.stream as TerminalLine['stream'],
+					text: String(message.text || ''),
+					at: timeLabel(message.at)
+				});
+			}
+
+			if (message.type === 'terminal.start') {
+				running = String(message.action || 'terminal');
+			}
+
+			if (message.type === 'terminal.exit') {
+				running = '';
+				void refreshEvidence(false);
+			}
+		};
+		terminalSocket.onclose = () => {
+			terminalConnected = false;
+			if (mounted) window.setTimeout(connectTerminal, 900);
+		};
+	}
 
 	async function refreshEvidence(showLoading = true) {
 		if (showLoading) running = 'health';
@@ -51,56 +107,28 @@
 	}
 
 	async function runProbe() {
-		running = 'probe';
-		const result = await requestJson('/api/probe', { method: 'POST' });
-		namespaceOutput = pretty(result);
-		if (result.runtime) evidenceData = { ok: result.ok, runtime: result.runtime };
-		running = '';
+		sendTerminal({ type: 'probe' });
 	}
 
-	async function runExec() {
-		running = 'exec';
-		namespaceOutput = 'Running command in the container...';
-		const result = await postJson('/api/exec', { command });
-		namespaceOutput = pretty(result);
-		if (result.runtime) evidenceData = { ok: result.ok, runtime: result.runtime };
-		running = '';
+	function runExec() {
+		sendTerminal({ type: 'exec', command });
 	}
 
-	async function runPidBomb() {
-		running = 'pid';
-		cgroupOutput = 'Spawning sleeper processes...';
-		cgroupResult = await postJson('/api/pid-bomb', { count: pidCount });
-		cgroupOutput = pretty(cgroupResult);
-		await refreshEvidence(false);
-		running = '';
+	function runPidBomb() {
+		cgroupResult = { ok: true, demo: 'PIDs cgroup abuse', requested: pidCount };
+		sendTerminal({ type: 'pid-bomb', count: pidCount });
 	}
 
-	async function runMemoryBomb() {
-		running = 'memory';
-		cgroupOutput = 'Allocating memory and holding it in the server process...';
-		cgroupResult = await postJson('/api/memory-bomb', { mb: memoryMb });
-		cgroupOutput = pretty(cgroupResult);
-		await refreshEvidence(false);
-		running = '';
+	function runMemoryBomb() {
+		sendTerminal({ type: 'memory-bomb', mb: memoryMb });
 	}
 
-	async function runCpuBurn() {
-		running = 'cpu';
-		cgroupOutput = 'Starting a short CPU burner process...';
-		cgroupResult = await postJson('/api/cpu-burn', { seconds: cpuSeconds });
-		cgroupOutput = pretty(cgroupResult);
-		await refreshEvidence(false);
-		running = '';
+	function runCpuBurn() {
+		sendTerminal({ type: 'cpu-burn', seconds: cpuSeconds });
 	}
 
-	async function cleanupPidBomb() {
-		running = 'cleanup';
-		cgroupOutput = 'Cleaning up sleeper, CPU, and held-memory pressure...';
-		cgroupResult = await requestJson('/api/cleanup', { method: 'POST' });
-		cgroupOutput = pretty(cgroupResult);
-		await refreshEvidence(false);
-		running = '';
+	function cleanupPidBomb() {
+		sendTerminal({ type: 'cleanup' });
 	}
 
 	async function requestJson(path: string, options: RequestInit = {}): Promise<LabResponse> {
@@ -114,16 +142,48 @@
 		}
 	}
 
-	function postJson(path: string, values: Record<string, unknown>): Promise<LabResponse> {
-		return requestJson(path, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(values)
-		});
+	function sendTerminal(payload: Record<string, unknown>) {
+		if (!terminalSocket || terminalSocket.readyState !== WebSocket.OPEN) {
+			pushTerminalLine({
+				stream: 'stderr',
+				text: 'terminal websocket is not connected\n',
+				at: timeLabel()
+			});
+			return;
+		}
+
+		terminalSocket.send(JSON.stringify(payload));
 	}
 
-	function pretty(value: unknown): string {
-		return JSON.stringify(value, null, 2);
+	function clearTerminal() {
+		terminalLines = [];
+	}
+
+	function pushTerminalLine(line: TerminalLine) {
+		terminalLines = [...terminalLines, line].slice(-600);
+	}
+
+	function parseSocketMessage(value: unknown): Record<string, unknown> | null {
+		try {
+			return JSON.parse(String(value)) as Record<string, unknown>;
+		} catch {
+			return null;
+		}
+	}
+
+	function wsUrl(path: string): string {
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+		return `${protocol}//${window.location.host}${path}`;
+	}
+
+	function timeLabel(value?: unknown): string {
+		const date = value ? new Date(String(value)) : new Date();
+		return date.toLocaleTimeString('en-US', {
+			hour12: false,
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit'
+		});
 	}
 </script>
 
@@ -139,12 +199,14 @@
 				<h2 class="m-0 text-[clamp(28px,4vw,42px)] leading-tight font-light text-black">Before / after evidence</h2>
 			</div>
 			<p class="m-0 max-w-2xl text-[16px] leading-relaxed text-body-gray">
-				Start with the live monitor, run one proof at a time, then compare the same cards after Dokuru fixes namespace and cgroup rules.
+				Start with the WebSocket monitor, run one proof at a time, then read the live terminal stdout/stderr while Dokuru fixes are compared.
 			</p>
 		</div>
 
 		<div class="mx-auto grid max-w-[1540px] grid-cols-1 gap-4 lg:grid-cols-12">
-			<LiveMonitorPanel runtime={runtime} {lastUpdated} />
+			<LiveMonitorPanel runtime={runtime} {lastUpdated} connected={monitorConnected} />
+
+			<TerminalPanel lines={terminalLines} connected={terminalConnected} busy={Boolean(running)} onClear={clearTerminal} />
 
 			<RuntimeEvidencePanel
 				runtime={runtime}
@@ -157,7 +219,6 @@
 			<NamespaceLabPanel
 				{command}
 				{presets}
-				output={namespaceOutput}
 				{running}
 				onCommandChange={(value) => (command = value)}
 				onRun={runExec}
@@ -167,7 +228,6 @@
 				{pidCount}
 				{memoryMb}
 				{cpuSeconds}
-				output={cgroupOutput}
 				result={cgroupResult}
 				{running}
 				onPidCountChange={(value) => (pidCount = value)}

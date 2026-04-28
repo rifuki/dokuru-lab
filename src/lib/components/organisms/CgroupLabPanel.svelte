@@ -1,7 +1,6 @@
 <script lang="ts">
 	import Button from '$lib/components/atoms/Button.svelte';
 	import Field from '$lib/components/atoms/Field.svelte';
-	import OutputPanel from '$lib/components/molecules/OutputPanel.svelte';
 	import Panel from '$lib/components/molecules/Panel.svelte';
 	import type { LabResponse } from '$lib/types/lab';
 
@@ -9,7 +8,6 @@
 		pidCount: number;
 		memoryMb: number;
 		cpuSeconds: number;
-		output: string;
 		result: LabResponse | null;
 		running: string;
 		onPidCountChange: (value: number) => void;
@@ -25,7 +23,6 @@
 		pidCount,
 		memoryMb,
 		cpuSeconds,
-		output,
 		result,
 		running,
 		onPidCountChange,
@@ -46,7 +43,7 @@
 		</p>
 		{#if result?.demo === 'PIDs cgroup abuse'}
 			<p class="m-0 mt-2 text-sm text-ink">
-				Last PID run: spawned <strong>{String(result.spawned)}</strong> of <strong>{String(result.requested)}</strong> requested processes.
+				Last PID run requested <strong>{String(result.requested)}</strong> processes. Watch the live terminal for each spawned PID and the monitor for <code>pids.current</code>.
 			</p>
 		{/if}
 	</div>
@@ -54,24 +51,23 @@
 	<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
 		<div class="grid gap-2.5 rounded-xl border border-divider p-3.5">
 			<Field id="pid-count" label="PIDs" type="number" min={1} max={500} value={pidCount} oninput={(value) => onPidCountChange(Number(value))} />
-			<Button onclick={onPidBomb} disabled={running === 'pid'}>Run PID bomb</Button>
+			<Button onclick={onPidBomb} disabled={Boolean(running)}>Run PID bomb</Button>
 		</div>
 		<div class="grid gap-2.5 rounded-xl border border-divider p-3.5">
 			<Field id="memory-mb" label="Memory MB" type="number" min={1} max={1024} value={memoryMb} oninput={(value) => onMemoryChange(Number(value))} />
-			<Button onclick={onMemoryBomb} disabled={running === 'memory'}>Allocate</Button>
+			<Button onclick={onMemoryBomb} disabled={Boolean(running)}>Allocate</Button>
 		</div>
 		<div class="grid gap-2.5 rounded-xl border border-divider p-3.5">
 			<Field id="cpu-seconds" label="CPU seconds" type="number" min={1} max={30} value={cpuSeconds} oninput={(value) => onCpuChange(Number(value))} />
-			<Button onclick={onCpuBurn} disabled={running === 'cpu'}>Burn CPU</Button>
+			<Button onclick={onCpuBurn} disabled={Boolean(running)}>Burn CPU</Button>
 		</div>
 		<div class="grid content-between gap-2.5 rounded-xl border border-divider p-3.5">
 			<div>
 				<span class="mb-1.5 block text-sm font-bold text-ink">Cleanup</span>
 				<p class="m-0 text-[13px] leading-snug text-body-gray">Kill sleeper processes after PID tests.</p>
 			</div>
-			<Button variant="commerce" onclick={onCleanup} disabled={running === 'cleanup'}>Cleanup</Button>
+			<Button variant="commerce" onclick={onCleanup} disabled={Boolean(running)}>Cleanup</Button>
 		</div>
 	</div>
 
-	<OutputPanel title="Last cgroup action result" content={output} />
 </Panel>

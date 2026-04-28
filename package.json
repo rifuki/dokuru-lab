@@ -6,6 +6,7 @@
 	"scripts": {
 		"dev": "vite dev --host 0.0.0.0 --port 8080",
 		"build": "svelte-kit sync && vite build",
+		"start": "bun server.js",
 		"preview": "vite preview --host 0.0.0.0 --port 8080",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -22,5 +23,8 @@
 		"tailwindcss": "^4.2.2",
 		"typescript": "^6.0.2",
 		"vite": "^8.0.7"
+	},
+	"dependencies": {
+		"ws": "^8.20.0"
 	}
 }

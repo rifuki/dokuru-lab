@@ -26,9 +26,10 @@ ENV LAB_DATA_DIR=/app/data
 COPY --from=build /app/build ./build
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/server.js ./server.js
 
 RUN mkdir -p /app/data && chmod -R 777 /app/data
 
 EXPOSE 8080
 
-CMD ["bun", "build/index.js"]
+CMD ["bun", "server.js"]

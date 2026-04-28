@@ -25,6 +25,13 @@ Open:
 http://localhost:8080
 ```
 
+The hosted demo uses the production server because it includes WebSocket endpoints for the live terminal and monitor:
+
+```bash
+bun run build
+LAB_DATA_DIR=./data bun run start
+```
+
 ## Hosted Lab Deployment
 
 The Compose file runs Caddy and the intentionally vulnerable lab app for the hosted demo.
@@ -68,8 +75,13 @@ docker compose up --build -d
 The repository includes GitHub Actions workflows modeled after the Dokuru and rifuki.dev stacks:
 
 - `Quality Gate`: runs Bun install, SvelteKit checks, production build, Compose config validation, and a Docker smoke build.
-- `Build Dokuru Lab`: builds and publishes `ghcr.io/rifuki/dokuru-lab:latest` and `ghcr.io/rifuki/dokuru-lab:sha-<commit>` on `main`.
+- `Build Dokuru Lab`: builds and publishes `ghcr.io/rifuki/dokuru-lab:latest`, `ghcr.io/rifuki/dokuru-lab:v<version>`, and `ghcr.io/rifuki/dokuru-lab:sha-<short-commit>` on `main`.
 - `Deploy Compose Service`: reusable SSH deploy workflow that pulls the published image on the VPS and runs `docker compose -f docker-compose.yaml up -d --no-build`.
+
+The browser demo uses:
+
+- `wss://lab.dokuru.rifuki.dev/ws/monitor` for live namespace and cgroup metrics.
+- `wss://lab.dokuru.rifuki.dev/ws/terminal` for real stdout/stderr from commands and pressure tests.
 
 Set these repository variables for automatic deployment from `main`:
 

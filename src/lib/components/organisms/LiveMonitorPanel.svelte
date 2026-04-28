@@ -5,9 +5,10 @@
 	type Props = {
 		runtime?: RuntimeEvidence;
 		lastUpdated: string;
+		connected: boolean;
 	};
 
-	let { runtime, lastUpdated }: Props = $props();
+	let { runtime, lastUpdated, connected }: Props = $props();
 
 	function asNumber(value?: string): number | null {
 		if (!value || value === 'max' || value === 'unavailable') return null;
@@ -41,7 +42,12 @@
 	}
 </script>
 
-<Panel id="monitor" title="Live resource monitor" subtitle={lastUpdated ? `Updated ${lastUpdated}` : 'Polling'} class="lg:col-span-12">
+<Panel
+	id="monitor"
+	title="Live resource monitor"
+	subtitle={connected ? `WebSocket live ${lastUpdated}` : 'WebSocket reconnecting'}
+	class="lg:col-span-12"
+>
 	<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
 		<div class="rounded-xl border border-divider bg-ice p-4">
 			<div class="mb-3 flex items-start justify-between gap-3">

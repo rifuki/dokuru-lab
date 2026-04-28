@@ -46,7 +46,7 @@ export function cgroupEvidence(): CgroupEvidence {
 export function processEvidence(): ProcessEvidence {
 	return {
 		process_count: commandSync("ps -eo pid= | wc -l | tr -d ' '"),
-		pid_bomb_sleepers: commandSync("pgrep -fc '[d]okuru_pid_bomb_sleep' 2>/dev/null || true"),
+		pid_bomb_sleepers: commandSync("pgrep -fc '[d]okuru_pid_slp|[d]okuru_pid_bomb_sleep' 2>/dev/null || true"),
 		cpu_burners: commandSync("pgrep -fc '[d]okuru_cpu_burn' 2>/dev/null || true"),
 		top_processes: commandSync('ps -eo pid,ppid,user,comm | head -12')
 	};
@@ -93,49 +93,6 @@ export async function runShell(command: unknown): Promise<LabResponse> {
 	}
 }
 
-export async function fetchFromServer(url: unknown): Promise<LabResponse> {
-	const target = String(url || '').trim().slice(0, 1000);
-	const started = Date.now();
-	const controller = new AbortController();
-	const timeout = setTimeout(() => controller.abort(), 3000);
-
-	if (!target) {
-		clearTimeout(timeout);
-		return {
-			ok: false,
-			demo: 'server-side fetch diagnostic',
-			error: 'URL is required',
-			runtime: runtimeEvidence()
-		};
-	}
-
-	try {
-		const response = await fetch(target, { signal: controller.signal });
-		const body = await response.text();
-
-		return {
-			ok: true,
-			demo: 'server-side fetch diagnostic',
-			url: target,
-			status: response.status,
-			elapsed_ms: Date.now() - started,
-			body_snippet: body.slice(0, 2200),
-			runtime: runtimeEvidence()
-		};
-	} catch (error) {
-		return {
-			ok: false,
-			demo: 'server-side fetch diagnostic',
-			url: target,
-			elapsed_ms: Date.now() - started,
-			error: error instanceof Error ? error.message : String(error),
-			runtime: runtimeEvidence()
-		};
-	} finally {
-		clearTimeout(timeout);
-	}
-}
-
 export function spawnPidBomb(count: unknown): LabResponse {
 	const requested = clamp(Number(count || 120), 1, 500);
 	let spawned = 0;
@@ -145,7 +102,7 @@ export function spawnPidBomb(count: unknown): LabResponse {
 		try {
 			const child = spawn(
 				process.execPath,
-				['-e', "process.title='dokuru_pid_bomb_sleep'; setTimeout(() => {}, 60000);"],
+				['-e', "process.title='dokuru_pid_slp'; setTimeout(() => {}, 60000);"],
 				{ detached: true, stdio: 'ignore' }
 			);
 			child.unref();
@@ -165,7 +122,7 @@ export function spawnPidBomb(count: unknown): LabResponse {
 		spawned,
 		errors,
 		cgroup: cgroupEvidence(),
-		cleanup: 'POST /api/cleanup to kill dokuru_pid_bomb_sleep processes'
+		cleanup: 'POST /api/cleanup to kill dokuru_pid_slp processes'
 	};
 }
 
@@ -208,7 +165,7 @@ export function burnCpu(seconds: unknown): LabResponse {
 
 export async function cleanup(): Promise<LabResponse> {
 	memoryHold = [];
-	return runShell("pkill -f '[d]okuru_pid_bomb_sleep' 2>&1 || true; pkill -f '[d]okuru_cpu_burn' 2>&1 || true");
+	return runShell("pkill -f '[d]okuru_pid_slp|[d]okuru_pid_bomb_sleep|[d]okuru_cpu_burn' 2>&1 || true");
 }
 
 export function health(): LabResponse {

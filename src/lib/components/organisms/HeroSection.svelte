@@ -23,8 +23,8 @@
 			The app stays intentionally vulnerable. Dokuru should change what the container can see and how many resources it can consume.
 		</p>
 		<div class="flex flex-wrap items-center gap-2.5">
-			<Button onclick={onProbe} disabled={running === 'probe'}>Run recovery probe</Button>
-			<Button variant="secondary" onclick={onRunCommand} disabled={running === 'exec'}>Run selected command</Button>
+			<Button onclick={onProbe} disabled={Boolean(running)}>Run recovery probe</Button>
+			<Button variant="secondary" onclick={onRunCommand} disabled={Boolean(running)}>Run selected command</Button>
 		</div>
 	</div>
 

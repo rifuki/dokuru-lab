@@ -1,13 +1,11 @@
 <script lang="ts">
 	import Button from '$lib/components/atoms/Button.svelte';
-	import OutputPanel from '$lib/components/molecules/OutputPanel.svelte';
 	import Panel from '$lib/components/molecules/Panel.svelte';
 	import type { CommandPreset } from '$lib/types/lab';
 
 	type Props = {
 		command: string;
 		presets: CommandPreset[];
-		output: string;
 		running: string;
 		onCommandChange: (value: string) => void;
 		onRun: () => void | Promise<void>;
@@ -16,7 +14,6 @@
 	let {
 		command,
 		presets,
-		output,
 		running,
 		onCommandChange,
 		onRun
@@ -52,8 +49,7 @@
 			oninput={(event) => onCommandChange(event.currentTarget.value)}
 			class="mb-2.5 min-h-24 w-full resize-y rounded-[3px] border border-[#cccccc] bg-white px-3 py-2.5 font-mono text-[13px] text-ink transition focus:ring-2 focus:ring-playstation-blue focus:outline-none"
 		></textarea>
-		<Button onclick={onRun} disabled={running === 'exec'}>Run command</Button>
+		<Button onclick={onRun} disabled={Boolean(running)}>Run command</Button>
 	</div>
 
-	<OutputPanel title="Namespace command result" content={output} />
 </Panel>

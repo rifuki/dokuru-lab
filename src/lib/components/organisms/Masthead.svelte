@@ -17,6 +17,8 @@
 		</a>
 
 		<div class="hidden items-center gap-6 text-sm font-medium md:flex">
+			<a class="text-white no-underline transition hover:text-[#1883fd]" href="#monitor">Monitor</a>
+			<a class="text-white no-underline transition hover:text-[#1883fd]" href="#terminal">Terminal</a>
 			<a class="text-white no-underline transition hover:text-[#1883fd]" href="#namespace">Namespace</a>
 			<a class="text-white no-underline transition hover:text-[#1883fd]" href="#cgroup">Cgroup</a>
 			<a class="text-white no-underline transition hover:text-[#1883fd]" href="#evidence">Evidence</a>
