@@ -58,7 +58,7 @@ jobs:
       GHCR_TOKEN: ${{ secrets.DOKURU_LAB_GHCR_TOKEN || secrets.DOKURU_GHCR_TOKEN }}
       GHCR_USER: ${{ github.actor }}
       IMAGE_TAG: ${{ inputs.image-tag }}
-      COMPOSE_FILE: ${{ vars.DOKURU_LAB_COMPOSE_FILE || 'docker-compose.vps.yml' }}
+      COMPOSE_FILE: docker-compose.yaml
     steps:
       - name: Validate deployment configuration
         run: |

@@ -51,17 +51,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Validate local compose
+      - name: Validate compose
         run: docker compose config --quiet
-
-      - name: Validate VPS compose
-        run: docker compose -f docker-compose.vps.yml config --quiet
-
-      - name: Validate network-host compose
-        run: docker compose -f docker-compose.network-host.yml config --quiet
-
-      - name: Validate hardened example compose
-        run: docker compose -f docker-compose.hardened.example.yml config --quiet
 
   docker-smoke:
     name: Docker Smoke Build

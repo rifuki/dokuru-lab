@@ -25,13 +25,11 @@ Open:
 http://localhost:8080
 ```
 
-## Docker Lab Mode
+## Hosted Lab Deployment
 
-```bash
-docker compose up --build
-```
+The Compose file runs Caddy and the intentionally vulnerable lab app for the hosted demo.
 
-The default Compose file intentionally starts the app with unsafe runtime settings:
+Caddy terminates HTTPS for `lab.dokuru.rifuki.dev` and proxies to `dokuru-lab:8080`. The lab app intentionally starts with unsafe runtime settings:
 
 - `pid: host`
 - `ipc: host`
@@ -41,16 +39,7 @@ The default Compose file intentionally starts the app with unsafe runtime settin
 - no CPU shares
 - no PIDs limit
 
-These settings make Dokuru namespace and cgroup audit findings visible before hardening.
-
-## VPS Deployment With Caddy
-
-This repository includes a VPS compose file for a dedicated lab server:
-
-- Caddy terminates HTTPS for `lab.dokuru.rifuki.dev`.
-- Caddy proxies to the SvelteKit server on `dokuru-lab:8080`.
-- Caddy uses named volumes for certificates and config state.
-- The lab app keeps unsafe namespace settings so Dokuru can demonstrate before/after hardening.
+These settings make Dokuru namespace and cgroup audit findings visible before hardening. Caddy uses normal isolation and resource limits so the audit noise stays focused on `dokuru-lab`.
 
 Point DNS for `lab.dokuru.rifuki.dev` to the VPS, then deploy:
 
@@ -68,10 +57,10 @@ PORT=8080
 LAB_DATA_DIR=/app/data
 ```
 
-Deploy with Caddy:
+Deploy:
 
 ```bash
-docker compose -f docker-compose.vps.yml up --build -d
+docker compose up --build -d
 ```
 
 ## CI/CD
@@ -80,7 +69,7 @@ The repository includes GitHub Actions workflows modeled after the Dokuru and ri
 
 - `Quality Gate`: runs Bun install, SvelteKit checks, production build, Compose config validation, and a Docker smoke build.
 - `Build Dokuru Lab`: builds and publishes `ghcr.io/rifuki/dokuru-lab:latest` and `ghcr.io/rifuki/dokuru-lab:sha-<commit>` on `main`.
-- `Deploy Compose Service`: reusable SSH deploy workflow that pulls the published image on the VPS and runs `docker compose -f docker-compose.vps.yml up -d --no-build`.
+- `Deploy Compose Service`: reusable SSH deploy workflow that pulls the published image on the VPS and runs `docker compose -f docker-compose.yaml up -d --no-build`.
 
 Set these repository variables for automatic deployment from `main`:
 
@@ -100,35 +89,10 @@ Optional values:
 
 ```text
 DOKURU_LAB_DEPLOY_PORT
-DOKURU_LAB_COMPOSE_FILE
 DOKURU_LAB_GHCR_TOKEN
 ```
 
 The deploy workflow also accepts the Dokuru-compatible fallback names `DOKURU_DEPLOY_*` and `DOKURU_GHCR_TOKEN`.
-
-## Network Namespace Demo
-
-Use the network-host Compose file only for the SSRF demo:
-
-```bash
-docker compose -f docker-compose.network-host.yml up --build
-```
-
-Start a host-only HTTP service:
-
-```bash
-python3 -m http.server 9999 --bind 127.0.0.1
-```
-
-Then trigger the browser SSRF control or call the API directly:
-
-```bash
-curl -X POST http://localhost:8080/api/fetch-url \
-  -H 'content-type: application/json' \
-  -d '{"url":"http://127.0.0.1:9999/"}'
-```
-
-Before rule `5.10` is fixed, the request succeeds. After network namespace isolation is restored, the same request fails.
 
 ## API Payloads
 
@@ -175,7 +139,7 @@ curl -X POST http://localhost:8080/api/cpu-burn \
 
 ## Dokuru Demo Flow
 
-1. Run the app with the default insecure Compose file.
+1. Deploy the hosted lab with `docker compose up --build -d`.
 2. Trigger namespace and cgroup payloads from the browser.
 3. Run the Dokuru audit from the VPS agent.
 4. Show failing rules for namespace and cgroup controls.
