@@ -119,7 +119,7 @@
 				<Button onclick={onProbe} disabled={Boolean(running)}>
 					<span class="inline-flex items-center gap-2">
 						<Play size={16} strokeWidth={1.5} fill="currentColor" />
-						Run system diagnostics
+						Check container health
 					</span>
 				</Button>
 				<a
