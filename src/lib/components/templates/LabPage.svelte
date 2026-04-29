@@ -10,6 +10,7 @@
 	import ProofChecklistPanel from '$lib/components/organisms/ProofChecklistPanel.svelte';
 	import RuntimeEvidencePanel from '$lib/components/organisms/RuntimeEvidencePanel.svelte';
 	import TerminalDrawer from '$lib/components/organisms/TerminalDrawer.svelte';
+	import TerminalTab from '$lib/components/organisms/TerminalTab.svelte';
 	import type { TerminalLine } from '$lib/components/organisms/TerminalPanel.svelte';
 	import type { CommandPreset, CustomerSample, LabResponse, RuntimeEvidence } from '$lib/types/lab';
 
@@ -244,17 +245,17 @@
 <div class="flex min-h-screen bg-white">
 	<!-- Main column -->
 	<div class="@container/page flex min-w-0 flex-1 flex-col">
-		<Masthead
-			onRefresh={() => refreshEvidence(true)}
-			onToggleTerminal={toggleTerminal}
-			running={running === 'health'}
-			{terminalOpen}
-			{terminalConnected}
-			{terminalBusy}
-		/>
+		<Masthead {monitorConnected} monitorLastUpdated={lastUpdated} />
 
 		<main class="@container/main flex-1">
-			<HeroSection {runtime} onProbe={runProbe} onRunCommand={runExec} {running} />
+			<HeroSection
+				{monitorConnected}
+				{terminalConnected}
+				{customerConnected}
+				onProbe={runProbe}
+				onRunCommand={runExec}
+				{running}
+			/>
 
 			<!-- Section 01 · Live monitor -->
 			<section id="monitor" class="scroll-mt-20 bg-white px-4 py-12 sm:px-6 md:px-8 lg:py-16">
@@ -423,4 +424,14 @@
 			/>
 		</div>
 	</div>
+{/if}
+
+<!-- Floating right-edge tab handle (only when drawer is closed) -->
+{#if !terminalOpen}
+	<TerminalTab
+		connected={terminalConnected}
+		busy={terminalBusy}
+		lineCount={terminalLines.length}
+		onOpen={toggleTerminal}
+	/>
 {/if}
