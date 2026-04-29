@@ -196,15 +196,15 @@
 			stickToBottom = !stickToBottom;
 			if (stickToBottom) jumpToLatest();
 		}}
-		class="inline-flex cursor-pointer items-center gap-2 rounded-full px-2.5 py-1 font-mono text-[10px] tracking-[0.04em] transition-all duration-150 {stickToBottom
-			? 'bg-emerald-400/10 text-emerald-400 hover:bg-emerald-400/20'
-			: 'bg-white/5 text-white/35 hover:bg-white/10 hover:text-white/60'}"
-		title={stickToBottom ? 'Auto-scroll is ON — click to pause' : 'Auto-scroll is OFF — click to resume'}
+		class="inline-flex cursor-pointer items-center gap-1.5 font-mono text-[10px] tracking-[0.04em] transition-colors duration-150 {stickToBottom
+			? 'text-emerald-400 hover:text-emerald-300'
+			: 'text-white/30 hover:text-white/55'}"
+		title={stickToBottom ? 'Auto-scroll ON — click to pause' : 'Auto-scroll OFF — click to resume'}
 		aria-pressed={stickToBottom}
 		aria-label="Toggle auto-scroll"
 	>
-		<span class="inline-block h-1.5 w-1.5 rounded-full {stickToBottom ? 'bg-emerald-400' : 'bg-white/30'}"></span>
-		auto-scroll {stickToBottom ? 'on' : 'off'}
+		<span class="inline-block h-1.5 w-1.5 rounded-full transition-colors {stickToBottom ? 'bg-emerald-400' : 'bg-white/25'}"></span>
+		auto-scroll
 	</button>
 	<span class="font-mono text-[10px] tracking-[0.04em] text-white/25">drag edge to resize</span>
 </footer>
