@@ -23,8 +23,8 @@
 	const busy = $derived(Boolean(running));
 </script>
 
-<Panel title="Blast-radius scenarios" subtitle="Lab v2" class="lg:col-span-7">
-	<div class="grid gap-3 md:grid-cols-2">
+<Panel title="Blast-radius scenarios" subtitle="Lab v2" class="@4xl/main:col-span-7">
+	<div class="grid gap-3 @xl/main:grid-cols-2">
 		<div class="rounded-xl border border-divider p-4">
 			<span class="block text-sm font-bold text-ink">Baseline customer</span>
 			<p class="m-0 mt-2 mb-3 min-h-12 text-sm leading-relaxed text-body-gray">
@@ -57,7 +57,7 @@
 			<Button variant="commerce" onclick={onStealSecrets} disabled={busy}>Steal neighbor secrets</Button>
 		</div>
 
-		<div class="rounded-xl border border-divider p-4 md:col-span-2">
+		<div class="rounded-xl border border-divider p-4 @xl/main:col-span-2">
 			<span class="block text-sm font-bold text-ink">B4 &middot; Reverse-proxy sabotage</span>
 			<p class="m-0 mt-2 mb-3 min-h-12 text-sm leading-relaxed text-body-gray">
 				Send <code>SIGSTOP</code> to the host caddy process &mdash; the lab UI disconnects briefly until an automatic <code>SIGCONT</code> resumes it. Use as a fallback only.

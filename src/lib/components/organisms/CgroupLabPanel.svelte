@@ -48,7 +48,7 @@
 		{/if}
 	</div>
 
-	<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+	<div class="grid gap-3 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
 		<div class="grid gap-2.5 rounded-xl border border-divider p-3.5">
 			<Field id="pid-count" label="PIDs" type="number" min={1} max={500} value={pidCount} oninput={(value) => onPidCountChange(Number(value))} />
 			<Button onclick={onPidBomb} disabled={Boolean(running)}>Run PID bomb</Button>

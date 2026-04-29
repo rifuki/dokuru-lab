@@ -46,7 +46,7 @@
 	title="Live resource monitor"
 	subtitle={connected ? `WebSocket live ${lastUpdated}` : 'WebSocket reconnecting'}
 >
-	<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+	<div class="grid gap-3 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
 		<div class="rounded-xl border border-divider bg-ice p-4">
 			<div class="mb-3 flex items-start justify-between gap-3">
 				<div>

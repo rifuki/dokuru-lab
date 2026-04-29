@@ -64,7 +64,7 @@
 <Panel
 	title="Customer Live View"
 	subtitle={connected ? 'victim-checkout live' : 'waiting for stream'}
-	class="lg:col-span-5"
+	class="@4xl/main:col-span-5"
 >
 	<div class="rounded-2xl border border-divider bg-[#061826] p-4 text-white">
 		<div class="mb-4 flex items-start justify-between gap-4">

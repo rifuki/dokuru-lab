@@ -2,7 +2,7 @@
 	import Panel from '$lib/components/molecules/Panel.svelte';
 </script>
 
-<Panel title="Before / after proof" subtitle="Screenshot guide" class="lg:col-span-7">
+<Panel title="Before / after proof" subtitle="Screenshot guide" class="@4xl/main:col-span-7">
 	<p class="m-0 mb-4 text-sm leading-relaxed text-body-gray">
 		Use these exact changes as the explanation slide. The app remains vulnerable; the container boundary changes.
 	</p>

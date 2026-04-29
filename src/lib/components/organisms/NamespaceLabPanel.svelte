@@ -21,7 +21,7 @@
 </script>
 
 <Panel title="Namespace proof" subtitle="Rules 2.10, 5.16, 5.17, 5.21, 5.31">
-	<div class="grid gap-3 md:grid-cols-3">
+	<div class="grid gap-3 @xl/main:grid-cols-2 @3xl/main:grid-cols-3">
 		<div class="rounded-xl border border-divider bg-ice p-4">
 			<strong class="block text-sm text-ink">UID remap</strong>
 			<p class="m-0 mt-2 text-xs leading-relaxed text-body-gray"><code>uid_map</code> starts as <code>0 0</code>. After Dokuru userns-remap, root maps to a host subuid.</p>

@@ -46,9 +46,6 @@
 
 	onMount(() => {
 		mounted = true;
-		if (typeof window !== 'undefined' && window.innerWidth >= 1280) {
-			terminalOpen = true;
-		}
 		connectMonitor();
 		connectTerminal();
 		connectCustomer();
@@ -209,9 +206,6 @@
 			return;
 		}
 
-		if (!terminalOpen && typeof window !== 'undefined' && window.innerWidth >= 1280) {
-			terminalOpen = true;
-		}
 		terminalSocket.send(JSON.stringify(payload));
 	}
 
@@ -247,158 +241,186 @@
 	}
 </script>
 
-<div class={`transition-[padding] duration-300 ease-out ${terminalOpen ? 'xl:pr-[460px]' : ''}`}>
-	<Masthead
-		onRefresh={() => refreshEvidence(true)}
-		onToggleTerminal={toggleTerminal}
-		running={running === 'health'}
-		{terminalOpen}
-		{terminalConnected}
-		{terminalBusy}
-	/>
+<div class="flex min-h-screen bg-white">
+	<!-- Main column -->
+	<div class="@container/page flex min-w-0 flex-1 flex-col">
+		<Masthead
+			onRefresh={() => refreshEvidence(true)}
+			onToggleTerminal={toggleTerminal}
+			running={running === 'health'}
+			{terminalOpen}
+			{terminalConnected}
+			{terminalBusy}
+		/>
 
-	<main>
-		<HeroSection {runtime} onProbe={runProbe} onRunCommand={runExec} {running} />
+		<main class="@container/main flex-1">
+			<HeroSection {runtime} onProbe={runProbe} onRunCommand={runExec} {running} />
 
-		<!-- Section 01 · Live monitor -->
-		<section id="monitor" class="scroll-mt-20 bg-white px-4 py-14 md:px-10 lg:px-16 lg:py-[72px]">
-			<div class="mx-auto max-w-[1480px]">
-				<header class="mb-6 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
-					<div>
-						<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 01 &middot; Live monitor</p>
-						<h2 class="m-0 text-[clamp(28px,4vw,42px)] leading-tight font-light text-black">Real-time namespace and cgroup signals</h2>
+			<!-- Section 01 · Live monitor -->
+			<section id="monitor" class="scroll-mt-20 bg-white px-4 py-12 sm:px-6 md:px-8 lg:py-16">
+				<div class="mx-auto max-w-[1480px]">
+					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
+						<div>
+							<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 01 &middot; Live monitor</p>
+							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Real-time namespace and cgroup signals</h2>
+						</div>
+						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
+							Streamed over <code>/ws/monitor</code> straight from <code>dokuru-lab</code>. Each metric reacts as you trigger payloads from the next section.
+						</p>
+					</header>
+
+					<LiveMonitorPanel {runtime} {lastUpdated} connected={monitorConnected} />
+				</div>
+			</section>
+
+			<!-- Section 02 · Blast-radius scenarios -->
+			<section id="scenarios" class="scroll-mt-20 bg-gradient-to-b from-white to-ice px-4 py-12 sm:px-6 md:px-8 lg:py-16">
+				<div class="mx-auto max-w-[1480px]">
+					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
+						<div>
+							<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 02 &middot; Blast radius</p>
+							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Trigger a payload, watch the neighbor</h2>
+						</div>
+						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
+							Each scenario runs from inside <code>dokuru-lab</code>. Open the terminal sidebar to follow stdout/stderr while the customer signal updates live.
+						</p>
+					</header>
+
+					<div class="grid grid-cols-1 gap-4 @4xl/main:grid-cols-12">
+						<CustomerLiveView samples={customerSamples} connected={customerConnected} />
+						<BlastRadiusPanel
+							{running}
+							onCustomerProbe={runCustomerProbe}
+							onCpuBlast={runCpuBlast}
+							onMemoryBlast={runMemoryBlast}
+							onStealSecrets={runStealSecrets}
+							onSabotageProxy={runSabotageProxy}
+						/>
 					</div>
-					<p class="m-0 max-w-xl text-[15px] leading-relaxed text-body-gray">
-						Streamed over <code>/ws/monitor</code> straight from <code>dokuru-lab</code>. Watch each metric move while you trigger payloads from the next section.
-					</p>
-				</header>
+				</div>
+			</section>
 
-				<LiveMonitorPanel {runtime} {lastUpdated} connected={monitorConnected} />
-			</div>
-		</section>
+			<!-- Section 03 · Namespace isolation -->
+			<section id="namespace" class="scroll-mt-20 bg-white px-4 py-12 sm:px-6 md:px-8 lg:py-16">
+				<div class="mx-auto max-w-[1480px]">
+					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
+						<div>
+							<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 03 &middot; Namespace isolation</p>
+							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Prove what the container can see</h2>
+						</div>
+						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
+							CIS Docker Benchmark rules <strong>2.10</strong>, <strong>5.16</strong>, <strong>5.17</strong>, <strong>5.21</strong>, <strong>5.31</strong>. Capture proof output before and after Dokuru recreates the container.
+						</p>
+					</header>
 
-		<!-- Section 02 · Blast-radius scenarios -->
-		<section id="scenarios" class="scroll-mt-20 bg-gradient-to-b from-white to-ice px-4 py-14 md:px-10 lg:px-16 lg:py-[72px]">
-			<div class="mx-auto max-w-[1480px]">
-				<header class="mb-6 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
-					<div>
-						<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 02 &middot; Blast radius</p>
-						<h2 class="m-0 text-[clamp(28px,4vw,42px)] leading-tight font-light text-black">Trigger a payload, watch the neighbor</h2>
-					</div>
-					<p class="m-0 max-w-xl text-[15px] leading-relaxed text-body-gray">
-						Each scenario runs from inside <code>dokuru-lab</code>. Open the terminal drawer to follow stdout/stderr while the customer signal updates live.
-					</p>
-				</header>
-
-				<div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
-					<CustomerLiveView samples={customerSamples} connected={customerConnected} />
-					<BlastRadiusPanel
+					<NamespaceLabPanel
+						{command}
+						{presets}
 						{running}
-						onCustomerProbe={runCustomerProbe}
-						onCpuBlast={runCpuBlast}
-						onMemoryBlast={runMemoryBlast}
-						onStealSecrets={runStealSecrets}
-						onSabotageProxy={runSabotageProxy}
+						onCommandChange={(value) => (command = value)}
+						onRun={runExec}
 					/>
 				</div>
-			</div>
-		</section>
+			</section>
 
-		<!-- Section 03 · Namespace isolation -->
-		<section id="namespace" class="scroll-mt-20 bg-white px-4 py-14 md:px-10 lg:px-16 lg:py-[72px]">
-			<div class="mx-auto max-w-[1480px]">
-				<header class="mb-6 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
-					<div>
-						<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 03 &middot; Namespace isolation</p>
-						<h2 class="m-0 text-[clamp(28px,4vw,42px)] leading-tight font-light text-black">Prove what the container can see</h2>
-					</div>
-					<p class="m-0 max-w-xl text-[15px] leading-relaxed text-body-gray">
-						CIS Docker Benchmark rules <strong>2.10</strong>, <strong>5.16</strong>, <strong>5.17</strong>, <strong>5.21</strong>, <strong>5.31</strong>. Run a proof command and capture the output before and after Dokuru recreates the container.
-					</p>
-				</header>
+			<!-- Section 04 · Cgroup controls -->
+			<section id="cgroup" class="scroll-mt-20 bg-gradient-to-b from-white to-ice px-4 py-12 sm:px-6 md:px-8 lg:py-16">
+				<div class="mx-auto max-w-[1480px]">
+					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
+						<div>
+							<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 04 &middot; Cgroup controls</p>
+							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Prove how much the container can consume</h2>
+						</div>
+						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
+							CIS Docker Benchmark rules <strong>5.11</strong>, <strong>5.12</strong>, <strong>5.29</strong>. Tune inputs, run pressure, then read the live monitor while Dokuru applies <code>mem_limit</code>, <code>cpu_shares</code>, and <code>pids_limit</code>.
+						</p>
+					</header>
 
-				<NamespaceLabPanel
-					{command}
-					{presets}
-					{running}
-					onCommandChange={(value) => (command = value)}
-					onRun={runExec}
-				/>
-			</div>
-		</section>
-
-		<!-- Section 04 · Cgroup controls -->
-		<section id="cgroup" class="scroll-mt-20 bg-gradient-to-b from-white to-ice px-4 py-14 md:px-10 lg:px-16 lg:py-[72px]">
-			<div class="mx-auto max-w-[1480px]">
-				<header class="mb-6 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
-					<div>
-						<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 04 &middot; Cgroup controls</p>
-						<h2 class="m-0 text-[clamp(28px,4vw,42px)] leading-tight font-light text-black">Prove how much the container can consume</h2>
-					</div>
-					<p class="m-0 max-w-xl text-[15px] leading-relaxed text-body-gray">
-						CIS Docker Benchmark rules <strong>5.11</strong>, <strong>5.12</strong>, <strong>5.29</strong>. Tune the inputs, run pressure, then read the live monitor while Dokuru applies <code>mem_limit</code>, <code>cpu_shares</code>, and <code>pids_limit</code>.
-					</p>
-				</header>
-
-				<CgroupLabPanel
-					{pidCount}
-					{memoryMb}
-					{cpuSeconds}
-					result={cgroupResult}
-					{running}
-					onPidCountChange={(value) => (pidCount = value)}
-					onMemoryChange={(value) => (memoryMb = value)}
-					onCpuChange={(value) => (cpuSeconds = value)}
-					onPidBomb={runPidBomb}
-					onMemoryBomb={runMemoryBomb}
-					onCpuBurn={runCpuBurn}
-					onCleanup={cleanupPidBomb}
-				/>
-			</div>
-		</section>
-
-		<!-- Section 05 · Evidence -->
-		<section id="evidence" class="scroll-mt-20 bg-white px-4 py-14 md:px-10 lg:px-16 lg:py-[72px]">
-			<div class="mx-auto max-w-[1480px]">
-				<header class="mb-6 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
-					<div>
-						<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 05 &middot; Evidence</p>
-						<h2 class="m-0 text-[clamp(28px,4vw,42px)] leading-tight font-light text-black">Side-by-side reference for the report</h2>
-					</div>
-					<p class="m-0 max-w-xl text-[15px] leading-relaxed text-body-gray">
-						Use these cards as a screenshot crib sheet for the thesis defense. The container stays vulnerable; only the boundary changes.
-					</p>
-				</header>
-
-				<div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
-					<RuntimeEvidencePanel
-						{runtime}
-						ok={Boolean(evidenceData?.ok)}
-						onRefresh={() => refreshEvidence(true)}
-						onProbe={runProbe}
+					<CgroupLabPanel
+						{pidCount}
+						{memoryMb}
+						{cpuSeconds}
+						result={cgroupResult}
 						{running}
+						onPidCountChange={(value) => (pidCount = value)}
+						onMemoryChange={(value) => (memoryMb = value)}
+						onCpuChange={(value) => (cpuSeconds = value)}
+						onPidBomb={runPidBomb}
+						onMemoryBomb={runMemoryBomb}
+						onCpuBurn={runCpuBurn}
+						onCleanup={cleanupPidBomb}
 					/>
-					<ProofChecklistPanel />
 				</div>
-			</div>
-		</section>
-	</main>
+			</section>
 
-	<footer class="bg-playstation-blue px-4 py-8 text-sm text-white md:px-10 lg:px-16">
-		<div class="mx-auto flex max-w-[1480px] flex-col justify-between gap-3 lg:flex-row lg:items-center">
-			<strong class="text-base">Dokuru Namespace &amp; Cgroup Lab</strong>
-			<span class="max-w-3xl text-white/85">
-				Run only on a disposable lab host. Endpoints intentionally expose shell execution and resource pressure.
-			</span>
-		</div>
-	</footer>
+			<!-- Section 05 · Evidence -->
+			<section id="evidence" class="scroll-mt-20 bg-white px-4 py-12 sm:px-6 md:px-8 lg:py-16">
+				<div class="mx-auto max-w-[1480px]">
+					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
+						<div>
+							<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 05 &middot; Evidence</p>
+							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Side-by-side reference for the report</h2>
+						</div>
+						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
+							Screenshot crib sheet for the thesis defense. The container stays vulnerable; only the boundary changes.
+						</p>
+					</header>
+
+					<div class="grid grid-cols-1 gap-4 @4xl/main:grid-cols-12">
+						<RuntimeEvidencePanel
+							{runtime}
+							ok={Boolean(evidenceData?.ok)}
+							onRefresh={() => refreshEvidence(true)}
+							onProbe={runProbe}
+							{running}
+						/>
+						<ProofChecklistPanel />
+					</div>
+				</div>
+			</section>
+		</main>
+
+		<footer class="bg-playstation-blue px-4 py-7 text-sm text-white sm:px-6 md:px-8">
+			<div class="mx-auto flex max-w-[1480px] flex-col justify-between gap-3 @3xl/page:flex-row @3xl/page:items-center">
+				<strong class="text-base">Dokuru Namespace &amp; Cgroup Lab</strong>
+				<span class="max-w-3xl text-white/85">
+					Run only on a disposable lab host. Endpoints intentionally expose shell execution and resource pressure.
+				</span>
+			</div>
+		</footer>
+	</div>
+
+	<!-- In-flow sidebar (lg+ only) -->
+	{#if terminalOpen}
+		<aside class="sticky top-0 hidden h-screen w-[360px] shrink-0 flex-col self-start border-l border-divider bg-black text-white lg:flex xl:w-[400px]">
+			<TerminalDrawer
+				lines={terminalLines}
+				connected={terminalConnected}
+				busy={terminalBusy}
+				onClear={clearTerminal}
+				onClose={closeTerminal}
+			/>
+		</aside>
+	{/if}
 </div>
 
-<TerminalDrawer
-	lines={terminalLines}
-	connected={terminalConnected}
-	busy={terminalBusy}
-	open={terminalOpen}
-	onClear={clearTerminal}
-	onClose={closeTerminal}
-/>
+<!-- Mobile / tablet overlay drawer (<lg) -->
+{#if terminalOpen}
+	<div class="fixed inset-0 z-40 flex lg:hidden">
+		<button
+			type="button"
+			class="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
+			aria-label="Close terminal overlay"
+			onclick={closeTerminal}
+		></button>
+		<div class="relative ml-auto flex h-screen w-full max-w-md flex-col bg-black text-white shadow-[-12px_0_30px_rgba(0,0,0,0.45)]">
+			<TerminalDrawer
+				lines={terminalLines}
+				connected={terminalConnected}
+				busy={terminalBusy}
+				onClear={clearTerminal}
+				onClose={closeTerminal}
+			/>
+		</div>
+	</div>
+{/if}
