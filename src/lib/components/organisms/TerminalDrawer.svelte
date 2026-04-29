@@ -96,7 +96,7 @@
 			disabled={totalCount === 0}
 			aria-label="Clear terminal"
 			title="Clear"
-			class="grid h-8 w-8 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+			class="grid h-8 w-8 cursor-pointer place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
 		>
 			<Eraser size={14} strokeWidth={1.5} />
 		</button>
@@ -105,7 +105,7 @@
 			onclick={onClose}
 			aria-label="Close terminal"
 			title="Close"
-			class="grid h-8 w-8 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white"
+			class="grid h-8 w-8 cursor-pointer place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white"
 		>
 			<X size={16} strokeWidth={1.5} />
 		</button>
@@ -119,7 +119,7 @@
 			type="button"
 			onclick={() => toggleStream(key)}
 			aria-pressed={active}
-			class="relative pb-1 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors {active
+			class="relative cursor-pointer pb-1 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors {active
 				? key === 'stderr'
 					? 'text-[#ff8278]'
 					: key === 'system'
@@ -181,7 +181,7 @@
 		<button
 			type="button"
 			onclick={jumpToLatest}
-			class="sticky right-3 bottom-3 ml-auto flex items-center gap-1.5 rounded-full bg-playstation-blue px-3 py-1.5 font-mono text-[10.5px] tracking-[0.04em] text-white shadow-[0_5px_9px_rgba(0,0,0,0.25)] transition hover:bg-link-hover"
+			class="sticky right-3 bottom-3 ml-auto flex cursor-pointer items-center gap-1.5 rounded-full bg-playstation-blue px-3 py-1.5 font-mono text-[10.5px] tracking-[0.04em] text-white shadow-[0_5px_9px_rgba(0,0,0,0.25)] transition hover:bg-link-hover"
 		>
 			<ArrowDown size={11} strokeWidth={2.4} />
 			{pendingCount > 99 ? '99+' : pendingCount} new

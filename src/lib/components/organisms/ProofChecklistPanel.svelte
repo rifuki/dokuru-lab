@@ -11,9 +11,9 @@
 	] as const;
 </script>
 
-<Panel title="Before / after proof" subtitle="Screenshot guide" class="@4xl/main:col-span-7">
+<Panel title="Before / after proof" subtitle="Isolation comparison" class="@4xl/main:col-span-7">
 	<p class="m-0 mb-4 text-sm leading-relaxed text-body-gray">
-		Use these exact changes as the explanation slide. The app remains vulnerable; the container boundary changes.
+		Observable differences before and after Dokuru applies container hardening rules. The application workload remains unchanged; only the isolation boundary shifts.
 	</p>
 	<dl class="grid gap-0">
 		{#each rows as { label, icon: Icon, body } (label)}

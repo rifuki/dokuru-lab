@@ -17,7 +17,7 @@
 
 <Panel title="Runtime evidence" subtitle={ok ? 'Ready' : 'Check'} class="@4xl/main:col-span-5">
 	<p class="m-0 mb-4 text-sm leading-relaxed text-body-gray">
-		Use this card for the quick oral explanation: what user the app runs as, which namespaces it sees, and whether bind-mounted data is still writable after hardening.
+		Runtime snapshot of the container's isolation boundary — which user identity it holds, which namespaces it's confined to, and whether resource limits are actively enforced.
 	</p>
 	<dl class="grid gap-0">
 		<div class="grid grid-cols-[24px_92px_minmax(0,1fr)] items-start gap-3 border-b border-divider py-2.5">

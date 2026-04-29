@@ -435,7 +435,7 @@
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Side-by-side reference for the report</h2>
 						</div>
 						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
-							Screenshot crib sheet for the thesis defense. The container stays vulnerable; only the boundary changes.
+							Side-by-side comparison of container isolation. The application remains vulnerable, but the blast radius is strictly contained.
 						</p>
 					</header>
 
@@ -508,7 +508,7 @@
 	<div class="fixed inset-0 z-40 flex lg:hidden">
 		<button
 			type="button"
-			class="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
+			class="absolute inset-0 cursor-pointer bg-black/45 backdrop-blur-[2px]"
 			aria-label="Close terminal overlay"
 			onclick={closeTerminal}
 		></button>
@@ -530,7 +530,7 @@
 		type="button"
 		onclick={toggleTerminal}
 		aria-label="Open terminal"
-		class="fixed right-4 bottom-4 z-30 inline-flex items-center gap-2.5 rounded-full bg-playstation-blue px-5 py-3.5 text-[14px] font-medium text-white shadow-[0_5px_15px_rgba(0,0,0,0.5)] transition-all duration-300 hover:scale-[1.05] hover:bg-[#1eaedb] hover:shadow-[0_8px_25px_rgba(30,174,219,0.3)] lg:hidden"
+		class="fixed right-4 bottom-4 z-30 inline-flex cursor-pointer items-center gap-2.5 rounded-full bg-playstation-blue px-5 py-3.5 text-[14px] font-medium text-white shadow-[0_5px_15px_rgba(0,0,0,0.5)] transition-all duration-300 hover:scale-[1.05] hover:bg-[#1eaedb] hover:shadow-[0_8px_25px_rgba(30,174,219,0.3)] lg:hidden"
 	>
 		<span class={`inline-block h-2 w-2 rounded-full shadow-[0_0_8px_currentColor] ${terminalConnected ? (terminalBusy ? 'bg-playstation-cyan animate-pulse' : 'bg-emerald-400') : 'bg-commerce'}`} aria-hidden="true"></span>
 		<span class="tracking-wide">Terminal</span>

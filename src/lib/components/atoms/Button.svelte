@@ -22,13 +22,13 @@
 	};
 	const variants: Record<ButtonVariant, string> = {
 		primary:
-			'bg-playstation-blue text-white font-medium hover:-translate-y-0.5 hover:bg-[#1eaedb] hover:shadow-[0_5px_15px_rgba(30,174,219,0.35)]',
+			'bg-playstation-blue text-white font-medium hover:-translate-y-0.5 hover:bg-[#1eaedb] hover:shadow-[0_4px_12px_rgba(30,174,219,0.35)]',
 		secondary:
-			'border border-[#dcdcdc] bg-white text-ink font-medium hover:-translate-y-0.5 hover:border-playstation-blue hover:text-playstation-blue hover:shadow-[0_5px_15px_rgba(0,112,204,0.15)]',
+			'border border-[#d0d0d0] bg-white text-ink font-medium hover:-translate-y-0.5 hover:border-playstation-blue hover:text-playstation-blue hover:shadow-[0_4px_12px_rgba(0,112,204,0.12)]',
 		ghost:
-			'border border-transparent bg-transparent text-body-gray font-medium hover:-translate-y-0.5 hover:bg-black/5 hover:text-ink',
+			'border border-[#d0d0d0] bg-transparent text-ink font-medium hover:-translate-y-0.5 hover:border-[#b0b0b0] hover:bg-black/[0.04] hover:text-ink',
 		commerce:
-			'bg-commerce text-white font-medium hover:-translate-y-0.5 hover:bg-[#d63118] hover:shadow-[0_5px_15px_rgba(230,55,27,0.35)] active:bg-[#b02813]'
+			'bg-commerce text-white font-medium hover:-translate-y-0.5 hover:bg-[#d63118] hover:shadow-[0_4px_12px_rgba(230,55,27,0.35)] active:bg-[#b02813]'
 	};
 </script>
 
