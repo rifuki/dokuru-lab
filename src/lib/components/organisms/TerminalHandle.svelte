@@ -95,11 +95,7 @@
 		}
 	}
 
-	const buttonClass = $derived(
-		!open && busy
-			? 'bg-playstation-blue shadow-[0_0_15px_rgba(0,112,204,0.6)] animate-pulse'
-			: 'bg-black shadow-[0_5px_9px_rgba(0,0,0,0.16)] hover:shadow-[0_8px_16px_rgba(0,0,0,0.2)]'
-	);
+	const buttonClass = $derived(!open && busy ? 'bg-playstation-blue shadow-[0_0_15px_rgba(0,112,204,0.6)] animate-pulse' : 'bg-black shadow-[0_5px_9px_rgba(0,0,0,0.16)] hover:shadow-[0_8px_16px_rgba(0,0,0,0.2)]');
 </script>
 
 <div
