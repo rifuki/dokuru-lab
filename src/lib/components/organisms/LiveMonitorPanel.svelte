@@ -43,10 +43,8 @@
 </script>
 
 <Panel
-	id="monitor"
 	title="Live resource monitor"
 	subtitle={connected ? `WebSocket live ${lastUpdated}` : 'WebSocket reconnecting'}
-	class="lg:col-span-12"
 >
 	<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
 		<div class="rounded-xl border border-divider bg-ice p-4">

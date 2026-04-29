@@ -35,7 +35,7 @@
 	}: Props = $props();
 </script>
 
-<Panel id="cgroup" title="Cgroup pressure" subtitle="Rules 5.11, 5.12, 5.29" class="lg:col-span-8">
+<Panel title="Cgroup pressure" subtitle="Rules 5.11, 5.12, 5.29">
 	<div class="mb-4 rounded-xl border border-playstation-blue/20 bg-[#eef7ff] p-4">
 		<strong class="block text-sm text-ink">How to prove PIDs</strong>
 		<p class="m-0 mt-2 text-sm leading-relaxed text-body-gray">

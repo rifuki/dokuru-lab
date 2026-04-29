@@ -62,7 +62,6 @@
 </script>
 
 <Panel
-	id="customer-live"
 	title="Customer Live View"
 	subtitle={connected ? 'victim-checkout live' : 'waiting for stream'}
 	class="lg:col-span-5"
@@ -115,6 +114,6 @@
 	</div>
 
 	<p class="m-0 mt-3 text-sm leading-relaxed text-body-gray">
-		Panel ini membaca latency dari container <code>customer-traffic</code> yang memukul service tetangga <code>victim-checkout</code>. Saat attacker-lab mencuri CPU/memory, sinyal customer tetap berasal dari container terpisah.
+		Latency is sampled by the <code>customer-traffic</code> sidecar hitting the neighbor <code>victim-checkout</code>. Even when the attacker lab steals CPU or memory, this signal originates from a separate container so blast radius is observable end-to-end.
 	</p>
 </Panel>

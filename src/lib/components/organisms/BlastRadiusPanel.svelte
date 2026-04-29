@@ -23,43 +23,44 @@
 	const busy = $derived(Boolean(running));
 </script>
 
-<Panel id="blast-radius" title="Blast-radius scenarios" subtitle="Lab v2" class="lg:col-span-7">
-	<div class="mb-4 rounded-xl border border-commerce/20 bg-[#fff4ef] p-4">
-		<strong class="block text-sm text-ink">Demo story</strong>
-		<p class="m-0 mt-2 text-sm leading-relaxed text-body-gray">
-			Semua tombol ini jalan dari container <code>dokuru-lab</code>, lalu dampaknya dilihat di terminal dan Customer Live View. Setelah Dokuru fix, tombol yang sama harus gagal atau dampaknya terkurung di attacker container.
-		</p>
-	</div>
-
+<Panel title="Blast-radius scenarios" subtitle="Lab v2" class="lg:col-span-7">
 	<div class="grid gap-3 md:grid-cols-2">
 		<div class="rounded-xl border border-divider p-4">
 			<span class="block text-sm font-bold text-ink">Baseline customer</span>
-			<p class="min-h-12 text-sm leading-relaxed text-body-gray">Probe manual ke checkout tetangga untuk bukti awal bahwa customer sehat.</p>
+			<p class="m-0 mt-2 mb-3 min-h-12 text-sm leading-relaxed text-body-gray">
+				Probe <code>victim-checkout</code> directly to confirm the neighbor service is healthy before any payload runs.
+			</p>
 			<Button variant="ghost" onclick={onCustomerProbe} disabled={busy}>Probe checkout</Button>
 		</div>
 
 		<div class="rounded-xl border border-divider p-4">
-			<span class="block text-sm font-bold text-ink">B1 Cryptominer</span>
-			<p class="min-h-12 text-sm leading-relaxed text-body-gray">Spawn 4 CPU miners. Sebelum CPU hardening, latency customer naik.</p>
+			<span class="block text-sm font-bold text-ink">B1 &middot; Cryptominer</span>
+			<p class="m-0 mt-2 mb-3 min-h-12 text-sm leading-relaxed text-body-gray">
+				Spawn 4 short-lived CPU miners. Without rule 5.12, scheduler contention can leak into customer latency.
+			</p>
 			<Button onclick={onCpuBlast} disabled={busy}>Deploy cryptominer</Button>
 		</div>
 
 		<div class="rounded-xl border border-divider p-4">
-			<span class="block text-sm font-bold text-ink">B2 Memory blast</span>
-			<p class="min-h-12 text-sm leading-relaxed text-body-gray">Alokasi 1280 MiB di attacker. Setelah mem_limit, attacker yang OOM, bukan tetangga.</p>
+			<span class="block text-sm font-bold text-ink">B2 &middot; Memory blast</span>
+			<p class="m-0 mt-2 mb-3 min-h-12 text-sm leading-relaxed text-body-gray">
+				Allocate 1280 MiB inside the attacker. After rule 5.11, only the attacker is OOM-killed &mdash; the host stays safe.
+			</p>
 			<Button onclick={onMemoryBlast} disabled={busy}>Trigger memory blast</Button>
 		</div>
 
 		<div class="rounded-xl border border-divider p-4">
-			<span class="block text-sm font-bold text-ink">B3 Secret theft</span>
-			<p class="min-h-12 text-sm leading-relaxed text-body-gray">Cari PID postgres tetangga lalu baca <code>/proc/&lt;pid&gt;/environ</code>.</p>
+			<span class="block text-sm font-bold text-ink">B3 &middot; Secret theft</span>
+			<p class="m-0 mt-2 mb-3 min-h-12 text-sm leading-relaxed text-body-gray">
+				Locate the postgres neighbor PID and read <code>/proc/&lt;pid&gt;/environ</code> to leak <code>POSTGRES_PASSWORD</code>.
+			</p>
 			<Button variant="commerce" onclick={onStealSecrets} disabled={busy}>Steal neighbor secrets</Button>
 		</div>
 
 		<div class="rounded-xl border border-divider p-4 md:col-span-2">
-			<span class="block text-sm font-bold text-ink">B4 Reverse-proxy sabotage</span>
-			<p class="min-h-12 text-sm leading-relaxed text-body-gray">
-				Mengirim <code>SIGSTOP</code> ke proses caddy host, lalu auto-resume beberapa detik setelahnya. Pakai sebagai cadangan karena UI bisa disconnect sementara.
+			<span class="block text-sm font-bold text-ink">B4 &middot; Reverse-proxy sabotage</span>
+			<p class="m-0 mt-2 mb-3 min-h-12 text-sm leading-relaxed text-body-gray">
+				Send <code>SIGSTOP</code> to the host caddy process &mdash; the lab UI disconnects briefly until an automatic <code>SIGCONT</code> resumes it. Use as a fallback only.
 			</p>
 			<Button variant="commerce" onclick={onSabotageProxy} disabled={busy}>Stop caddy briefly</Button>
 		</div>

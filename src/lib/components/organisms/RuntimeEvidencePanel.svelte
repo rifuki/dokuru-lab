@@ -14,7 +14,7 @@
 	let { runtime, ok, onRefresh, onProbe, running }: Props = $props();
 </script>
 
-<Panel id="evidence" title="Runtime evidence" subtitle={ok ? 'Ready' : 'Check'} class="lg:col-span-4">
+<Panel title="Runtime evidence" subtitle={ok ? 'Ready' : 'Check'} class="lg:col-span-5">
 	<p class="m-0 mb-4 text-sm leading-relaxed text-body-gray">
 		Use this card for the quick oral explanation: what user the app runs as, which namespaces it sees, and whether bind-mounted data is still writable after hardening.
 	</p>

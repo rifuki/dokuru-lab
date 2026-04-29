@@ -20,7 +20,7 @@
 	}: Props = $props();
 </script>
 
-<Panel id="namespace" title="Namespace proof" subtitle="Rules 2.10, 5.16, 5.17, 5.21, 5.31" class="lg:col-span-8">
+<Panel title="Namespace proof" subtitle="Rules 2.10, 5.16, 5.17, 5.21, 5.31">
 	<div class="grid gap-3 md:grid-cols-3">
 		<div class="rounded-xl border border-divider bg-ice p-4">
 			<strong class="block text-sm text-ink">UID remap</strong>

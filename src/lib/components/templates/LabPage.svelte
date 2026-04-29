@@ -9,7 +9,8 @@
 	import NamespaceLabPanel from '$lib/components/organisms/NamespaceLabPanel.svelte';
 	import ProofChecklistPanel from '$lib/components/organisms/ProofChecklistPanel.svelte';
 	import RuntimeEvidencePanel from '$lib/components/organisms/RuntimeEvidencePanel.svelte';
-	import TerminalPanel, { type TerminalLine } from '$lib/components/organisms/TerminalPanel.svelte';
+	import TerminalDrawer from '$lib/components/organisms/TerminalDrawer.svelte';
+	import type { TerminalLine } from '$lib/components/organisms/TerminalPanel.svelte';
 	import type { CommandPreset, CustomerSample, LabResponse, RuntimeEvidence } from '$lib/types/lab';
 
 	let command = $state('id; cat /proc/self/uid_map; cat /proc/self/gid_map');
@@ -25,6 +26,7 @@
 	let terminalConnected = $state(false);
 	let monitorConnected = $state(false);
 	let customerConnected = $state(false);
+	let terminalOpen = $state(false);
 	let terminalSocket: WebSocket | null = null;
 	let monitorSocket: WebSocket | null = null;
 	let customerSocket: WebSocket | null = null;
@@ -40,9 +42,13 @@
 	];
 
 	const runtime = $derived(evidenceData?.runtime as RuntimeEvidence | undefined);
+	const terminalBusy = $derived(Boolean(running));
 
 	onMount(() => {
 		mounted = true;
+		if (typeof window !== 'undefined' && window.innerWidth >= 1280) {
+			terminalOpen = true;
+		}
 		connectMonitor();
 		connectTerminal();
 		connectCustomer();
@@ -54,6 +60,14 @@
 			customerSocket?.close();
 		};
 	});
+
+	function toggleTerminal() {
+		terminalOpen = !terminalOpen;
+	}
+
+	function closeTerminal() {
+		terminalOpen = false;
+	}
 
 	function connectMonitor() {
 		monitorSocket = new WebSocket(wsUrl('/ws/monitor'));
@@ -195,6 +209,9 @@
 			return;
 		}
 
+		if (!terminalOpen && typeof window !== 'undefined' && window.innerWidth >= 1280) {
+			terminalOpen = true;
+		}
 		terminalSocket.send(JSON.stringify(payload));
 	}
 
@@ -230,75 +247,158 @@
 	}
 </script>
 
-<Masthead onRefresh={() => refreshEvidence(true)} running={running === 'health'} />
+<div class={`transition-[padding] duration-300 ease-out ${terminalOpen ? 'xl:pr-[460px]' : ''}`}>
+	<Masthead
+		onRefresh={() => refreshEvidence(true)}
+		onToggleTerminal={toggleTerminal}
+		running={running === 'health'}
+		{terminalOpen}
+		{terminalConnected}
+		{terminalBusy}
+	/>
 
-<main>
-	<HeroSection runtime={runtime} onProbe={runProbe} onRunCommand={runExec} {running} />
+	<main>
+		<HeroSection {runtime} onProbe={runProbe} onRunCommand={runExec} {running} />
 
-	<section class="bg-white px-4 py-14 md:px-16 lg:px-24 lg:py-[72px]">
-		<div class="mx-auto mb-5 flex max-w-[1540px] flex-col justify-between gap-4 lg:flex-row lg:items-end">
-			<div>
-				<p class="m-0 mb-2 text-sm font-bold tracking-[0.12em] text-playstation-blue uppercase">Evidence board</p>
-				<h2 class="m-0 text-[clamp(28px,4vw,42px)] leading-tight font-light text-black">Before / after evidence</h2>
+		<!-- Section 01 · Live monitor -->
+		<section id="monitor" class="scroll-mt-20 bg-white px-4 py-14 md:px-10 lg:px-16 lg:py-[72px]">
+			<div class="mx-auto max-w-[1480px]">
+				<header class="mb-6 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
+					<div>
+						<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 01 &middot; Live monitor</p>
+						<h2 class="m-0 text-[clamp(28px,4vw,42px)] leading-tight font-light text-black">Real-time namespace and cgroup signals</h2>
+					</div>
+					<p class="m-0 max-w-xl text-[15px] leading-relaxed text-body-gray">
+						Streamed over <code>/ws/monitor</code> straight from <code>dokuru-lab</code>. Watch each metric move while you trigger payloads from the next section.
+					</p>
+				</header>
+
+				<LiveMonitorPanel {runtime} {lastUpdated} connected={monitorConnected} />
 			</div>
-			<p class="m-0 max-w-2xl text-[16px] leading-relaxed text-body-gray">
-				Start with the WebSocket monitor, run one proof at a time, then read the live terminal stdout/stderr while Dokuru fixes are compared.
-			</p>
+		</section>
+
+		<!-- Section 02 · Blast-radius scenarios -->
+		<section id="scenarios" class="scroll-mt-20 bg-gradient-to-b from-white to-ice px-4 py-14 md:px-10 lg:px-16 lg:py-[72px]">
+			<div class="mx-auto max-w-[1480px]">
+				<header class="mb-6 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
+					<div>
+						<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 02 &middot; Blast radius</p>
+						<h2 class="m-0 text-[clamp(28px,4vw,42px)] leading-tight font-light text-black">Trigger a payload, watch the neighbor</h2>
+					</div>
+					<p class="m-0 max-w-xl text-[15px] leading-relaxed text-body-gray">
+						Each scenario runs from inside <code>dokuru-lab</code>. Open the terminal drawer to follow stdout/stderr while the customer signal updates live.
+					</p>
+				</header>
+
+				<div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+					<CustomerLiveView samples={customerSamples} connected={customerConnected} />
+					<BlastRadiusPanel
+						{running}
+						onCustomerProbe={runCustomerProbe}
+						onCpuBlast={runCpuBlast}
+						onMemoryBlast={runMemoryBlast}
+						onStealSecrets={runStealSecrets}
+						onSabotageProxy={runSabotageProxy}
+					/>
+				</div>
+			</div>
+		</section>
+
+		<!-- Section 03 · Namespace isolation -->
+		<section id="namespace" class="scroll-mt-20 bg-white px-4 py-14 md:px-10 lg:px-16 lg:py-[72px]">
+			<div class="mx-auto max-w-[1480px]">
+				<header class="mb-6 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
+					<div>
+						<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 03 &middot; Namespace isolation</p>
+						<h2 class="m-0 text-[clamp(28px,4vw,42px)] leading-tight font-light text-black">Prove what the container can see</h2>
+					</div>
+					<p class="m-0 max-w-xl text-[15px] leading-relaxed text-body-gray">
+						CIS Docker Benchmark rules <strong>2.10</strong>, <strong>5.16</strong>, <strong>5.17</strong>, <strong>5.21</strong>, <strong>5.31</strong>. Run a proof command and capture the output before and after Dokuru recreates the container.
+					</p>
+				</header>
+
+				<NamespaceLabPanel
+					{command}
+					{presets}
+					{running}
+					onCommandChange={(value) => (command = value)}
+					onRun={runExec}
+				/>
+			</div>
+		</section>
+
+		<!-- Section 04 · Cgroup controls -->
+		<section id="cgroup" class="scroll-mt-20 bg-gradient-to-b from-white to-ice px-4 py-14 md:px-10 lg:px-16 lg:py-[72px]">
+			<div class="mx-auto max-w-[1480px]">
+				<header class="mb-6 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
+					<div>
+						<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 04 &middot; Cgroup controls</p>
+						<h2 class="m-0 text-[clamp(28px,4vw,42px)] leading-tight font-light text-black">Prove how much the container can consume</h2>
+					</div>
+					<p class="m-0 max-w-xl text-[15px] leading-relaxed text-body-gray">
+						CIS Docker Benchmark rules <strong>5.11</strong>, <strong>5.12</strong>, <strong>5.29</strong>. Tune the inputs, run pressure, then read the live monitor while Dokuru applies <code>mem_limit</code>, <code>cpu_shares</code>, and <code>pids_limit</code>.
+					</p>
+				</header>
+
+				<CgroupLabPanel
+					{pidCount}
+					{memoryMb}
+					{cpuSeconds}
+					result={cgroupResult}
+					{running}
+					onPidCountChange={(value) => (pidCount = value)}
+					onMemoryChange={(value) => (memoryMb = value)}
+					onCpuChange={(value) => (cpuSeconds = value)}
+					onPidBomb={runPidBomb}
+					onMemoryBomb={runMemoryBomb}
+					onCpuBurn={runCpuBurn}
+					onCleanup={cleanupPidBomb}
+				/>
+			</div>
+		</section>
+
+		<!-- Section 05 · Evidence -->
+		<section id="evidence" class="scroll-mt-20 bg-white px-4 py-14 md:px-10 lg:px-16 lg:py-[72px]">
+			<div class="mx-auto max-w-[1480px]">
+				<header class="mb-6 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
+					<div>
+						<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 05 &middot; Evidence</p>
+						<h2 class="m-0 text-[clamp(28px,4vw,42px)] leading-tight font-light text-black">Side-by-side reference for the report</h2>
+					</div>
+					<p class="m-0 max-w-xl text-[15px] leading-relaxed text-body-gray">
+						Use these cards as a screenshot crib sheet for the thesis defense. The container stays vulnerable; only the boundary changes.
+					</p>
+				</header>
+
+				<div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+					<RuntimeEvidencePanel
+						{runtime}
+						ok={Boolean(evidenceData?.ok)}
+						onRefresh={() => refreshEvidence(true)}
+						onProbe={runProbe}
+						{running}
+					/>
+					<ProofChecklistPanel />
+				</div>
+			</div>
+		</section>
+	</main>
+
+	<footer class="bg-playstation-blue px-4 py-8 text-sm text-white md:px-10 lg:px-16">
+		<div class="mx-auto flex max-w-[1480px] flex-col justify-between gap-3 lg:flex-row lg:items-center">
+			<strong class="text-base">Dokuru Namespace &amp; Cgroup Lab</strong>
+			<span class="max-w-3xl text-white/85">
+				Run only on a disposable lab host. Endpoints intentionally expose shell execution and resource pressure.
+			</span>
 		</div>
+	</footer>
+</div>
 
-		<div class="mx-auto grid max-w-[1540px] grid-cols-1 gap-4 lg:grid-cols-12">
-			<LiveMonitorPanel runtime={runtime} {lastUpdated} connected={monitorConnected} />
-
-			<CustomerLiveView samples={customerSamples} connected={customerConnected} />
-
-			<BlastRadiusPanel
-				{running}
-				onCustomerProbe={runCustomerProbe}
-				onCpuBlast={runCpuBlast}
-				onMemoryBlast={runMemoryBlast}
-				onStealSecrets={runStealSecrets}
-				onSabotageProxy={runSabotageProxy}
-			/>
-
-			<TerminalPanel lines={terminalLines} connected={terminalConnected} busy={Boolean(running)} onClear={clearTerminal} />
-
-			<RuntimeEvidencePanel
-				runtime={runtime}
-				ok={Boolean(evidenceData?.ok)}
-				onRefresh={() => refreshEvidence(true)}
-				onProbe={runProbe}
-				{running}
-			/>
-
-			<NamespaceLabPanel
-				{command}
-				{presets}
-				{running}
-				onCommandChange={(value) => (command = value)}
-				onRun={runExec}
-			/>
-
-			<CgroupLabPanel
-				{pidCount}
-				{memoryMb}
-				{cpuSeconds}
-				result={cgroupResult}
-				{running}
-				onPidCountChange={(value) => (pidCount = value)}
-				onMemoryChange={(value) => (memoryMb = value)}
-				onCpuChange={(value) => (cpuSeconds = value)}
-				onPidBomb={runPidBomb}
-				onMemoryBomb={runMemoryBomb}
-				onCpuBurn={runCpuBurn}
-				onCleanup={cleanupPidBomb}
-			/>
-
-			<ProofChecklistPanel />
-		</div>
-	</section>
-</main>
-
-<footer class="flex flex-col justify-between gap-3 bg-playstation-blue px-4 py-6 text-sm text-white md:px-16 lg:flex-row lg:px-24">
-	<strong>Dokuru Namespace Cgroup Lab</strong>
-	<span class="max-w-3xl">Run only on a disposable lab host. Endpoints intentionally expose shell execution and resource pressure.</span>
-</footer>
+<TerminalDrawer
+	lines={terminalLines}
+	connected={terminalConnected}
+	busy={terminalBusy}
+	open={terminalOpen}
+	onClear={clearTerminal}
+	onClose={closeTerminal}
+/>
