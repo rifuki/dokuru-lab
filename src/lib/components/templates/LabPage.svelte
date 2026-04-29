@@ -415,7 +415,7 @@
 	}
 </script>
 
-<div class="flex min-h-screen bg-white">
+<div class="flex min-h-screen bg-slate-50 text-ink">
 	<!-- Main column -->
 	<div class="@container/page flex min-w-0 flex-1 flex-col">
 		<Masthead {monitorConnected} monitorLastUpdated={lastUpdated} />
@@ -430,7 +430,7 @@
 			/>
 
 			<!-- Section 01 · Blast-radius scenarios -->
-			<section id="scenarios" class="scroll-mt-20 bg-gradient-to-b from-white to-ice px-4 py-12 sm:px-6 md:px-8 lg:py-16">
+			<section id="scenarios" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
@@ -461,7 +461,7 @@
 			</section>
 
 			<!-- Section 02 · Live monitor -->
-			<section id="monitor" class="scroll-mt-20 bg-white px-4 py-12 sm:px-6 md:px-8 lg:py-16">
+			<section id="monitor" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
@@ -482,7 +482,7 @@
 			</section>
 
 			<!-- Section 03 · Namespace isolation -->
-			<section id="namespace" class="scroll-mt-20 bg-white px-4 py-12 sm:px-6 md:px-8 lg:py-16">
+			<section id="namespace" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
@@ -509,7 +509,7 @@
 			</section>
 
 			<!-- Section 04 · Cgroup controls -->
-			<section id="cgroup" class="scroll-mt-20 bg-gradient-to-b from-white to-ice px-4 py-12 sm:px-6 md:px-8 lg:py-16">
+			<section id="cgroup" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
@@ -543,7 +543,7 @@
 			</section>
 
 			<!-- Section 05 · Evidence -->
-			<section id="evidence" class="scroll-mt-20 bg-white px-4 py-12 sm:px-6 md:px-8 lg:py-16">
+			<section id="evidence" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
