@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Layers, Link2, Terminal as TerminalIcon, UserCog } from '@lucide/svelte';
 	import Button from '$lib/components/atoms/Button.svelte';
 	import Panel from '$lib/components/molecules/Panel.svelte';
 	import type { CommandPreset } from '$lib/types/lab';
@@ -22,22 +23,40 @@
 
 <Panel title="Namespace proof" subtitle="Rules 2.10, 5.16, 5.17, 5.21, 5.31">
 	<div class="grid gap-3 @xl/main:grid-cols-2 @3xl/main:grid-cols-3">
-		<div class="rounded-xl border border-divider bg-ice p-4">
-			<strong class="block text-sm text-ink">UID remap</strong>
-			<p class="m-0 mt-2 text-xs leading-relaxed text-body-gray"><code>uid_map</code> starts as <code>0 0</code>. After Dokuru userns-remap, root maps to a host subuid.</p>
-		</div>
-		<div class="rounded-xl border border-divider bg-ice p-4">
-			<strong class="block text-sm text-ink">PID namespace</strong>
-			<p class="m-0 mt-2 text-xs leading-relaxed text-body-gray">Before hardening, host processes are visible. After the fix, the process list is container-scoped.</p>
-		</div>
-		<div class="rounded-xl border border-divider bg-ice p-4">
-			<strong class="block text-sm text-ink">Namespace links</strong>
-			<p class="m-0 mt-2 text-xs leading-relaxed text-body-gray">Compare <code>/proc/self/ns/*</code> before and after Dokuru recreates the container.</p>
-		</div>
+		<article class="rounded-[12px] border border-divider bg-ice p-4 transition-colors hover:border-black/12">
+			<div class="mb-2 flex items-center gap-2.5">
+				<span class="grid h-7 w-7 place-items-center rounded-md bg-playstation-blue/12 text-playstation-blue" aria-hidden="true">
+					<UserCog size={13} strokeWidth={2.2} />
+				</span>
+				<strong class="text-[13px] font-medium text-ink">UID remap</strong>
+			</div>
+			<p class="m-0 text-[12px] leading-relaxed text-body-gray"><code>uid_map</code> starts as <code>0 0</code>. After Dokuru userns-remap, root maps to a host subuid.</p>
+		</article>
+		<article class="rounded-[12px] border border-divider bg-ice p-4 transition-colors hover:border-black/12">
+			<div class="mb-2 flex items-center gap-2.5">
+				<span class="grid h-7 w-7 place-items-center rounded-md bg-playstation-cyan/15 text-[#0e7fa8]" aria-hidden="true">
+					<Layers size={13} strokeWidth={2.2} />
+				</span>
+				<strong class="text-[13px] font-medium text-ink">PID namespace</strong>
+			</div>
+			<p class="m-0 text-[12px] leading-relaxed text-body-gray">Before hardening, host processes are visible. After the fix, the process list is container-scoped.</p>
+		</article>
+		<article class="rounded-[12px] border border-divider bg-ice p-4 transition-colors hover:border-black/12">
+			<div class="mb-2 flex items-center gap-2.5">
+				<span class="grid h-7 w-7 place-items-center rounded-md bg-[#9ad7ff]/30 text-[#0e7fa8]" aria-hidden="true">
+					<Link2 size={13} strokeWidth={2.2} />
+				</span>
+				<strong class="text-[13px] font-medium text-ink">Namespace links</strong>
+			</div>
+			<p class="m-0 text-[12px] leading-relaxed text-body-gray">Compare <code>/proc/self/ns/*</code> before and after Dokuru recreates the container.</p>
+		</article>
 	</div>
 
-	<div class="mt-4 rounded-xl border border-divider p-4">
-		<label class="mb-2 block text-sm font-bold text-ink" for="command">Run proof command inside the vulnerable container</label>
+	<div class="mt-4 rounded-[12px] border border-divider p-4">
+		<label class="mb-2 flex items-center gap-2 text-[13px] font-medium text-ink" for="command">
+			<TerminalIcon size={13} strokeWidth={2.2} class="text-body-gray" />
+			Run proof command inside the vulnerable container
+		</label>
 		<div class="mb-2.5 flex flex-wrap gap-2">
 			{#each presets as preset}
 				<Button variant="ghost" size="sm" onclick={() => onCommandChange(preset.command)}>{preset.label}</Button>
@@ -51,5 +70,4 @@
 		></textarea>
 		<Button onclick={onRun} disabled={Boolean(running)}>Run command</Button>
 	</div>
-
 </Panel>

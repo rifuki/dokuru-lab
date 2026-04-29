@@ -12,6 +12,7 @@
 	import TerminalDrawer from '$lib/components/organisms/TerminalDrawer.svelte';
 	import TerminalHandle from '$lib/components/organisms/TerminalHandle.svelte';
 	import type { TerminalLine } from '$lib/components/organisms/TerminalPanel.svelte';
+	import { Activity, Bomb, FileSearch, Layers, SlidersHorizontal } from '@lucide/svelte';
 	import type { CommandPreset, CustomerSample, LabResponse, RuntimeEvidence } from '$lib/types/lab';
 
 	let command = $state('id; cat /proc/self/uid_map; cat /proc/self/gid_map');
@@ -314,6 +315,7 @@
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
 							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
+								<Activity size={13} strokeWidth={2.2} class="text-playstation-blue" />
 								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">01</span>
 								<span class="text-playstation-blue">Live monitor</span>
 							</p>
@@ -334,6 +336,7 @@
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
 							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
+								<Bomb size={13} strokeWidth={2.2} class="text-playstation-blue" />
 								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">02</span>
 								<span class="text-playstation-blue">Blast radius</span>
 							</p>
@@ -364,6 +367,7 @@
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
 							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
+								<Layers size={13} strokeWidth={2.2} class="text-playstation-blue" />
 								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">03</span>
 								<span class="text-playstation-blue">Namespace isolation</span>
 							</p>
@@ -390,6 +394,7 @@
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
 							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
+								<SlidersHorizontal size={13} strokeWidth={2.2} class="text-playstation-blue" />
 								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">04</span>
 								<span class="text-playstation-blue">Cgroup controls</span>
 							</p>
@@ -423,6 +428,7 @@
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
 							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
+								<FileSearch size={13} strokeWidth={2.2} class="text-playstation-blue" />
 								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">05</span>
 								<span class="text-playstation-blue">Evidence</span>
 							</p>

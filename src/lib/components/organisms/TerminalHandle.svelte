@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronLeft } from '@lucide/svelte';
+	import { ChevronLeft, GripVertical, Terminal } from '@lucide/svelte';
 
 	type Props = {
 		open: boolean;
@@ -44,8 +44,10 @@
 		dragStartWidth = width;
 		dragMoved = false;
 		(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-		document.body.style.userSelect = 'none';
-		document.body.style.cursor = open ? 'col-resize' : 'pointer';
+		if (open) {
+			document.body.style.userSelect = 'none';
+			document.body.style.cursor = 'col-resize';
+		}
 	}
 
 	function onPointerMove(event: PointerEvent) {
@@ -96,64 +98,73 @@
 
 <div
 	class="pointer-events-none fixed top-0 right-0 z-30 hidden h-screen lg:block"
-	style="transform: translateX(-{open ? width : 0}px); transition: {pointerId === null ? 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)' : 'none'};"
+	style="transform: translateX(-{open ? width : 0}px); transition: {pointerId === null
+		? 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)'
+		: 'none'};"
 	aria-hidden="true"
 >
-	<button
-		type="button"
-		onpointerdown={onPointerDown}
-		onpointermove={onPointerMove}
-		onpointerup={onPointerUp}
-		onpointercancel={onPointerCancel}
-		onkeydown={onKeyDown}
-		aria-label={open ? 'Close terminal sidebar (drag to resize)' : 'Open terminal sidebar'}
-		aria-pressed={open}
-		title={open ? 'Click to close · drag to resize' : 'Open terminal'}
-		class="group pointer-events-auto absolute top-1/2 right-0 flex h-20 w-3.5 -translate-y-1/2 cursor-col-resize touch-none items-center justify-center bg-transparent outline-none transition-all duration-150"
-	>
-		<!-- Hairline track (always visible, thin, subtle) -->
-		<span
-			class="pointer-events-none absolute top-0 right-0 h-full w-px transition-colors duration-150 {open
-				? 'bg-white/10 group-hover:bg-white/30'
-				: 'bg-black/10 group-hover:bg-black/40'}"
-			aria-hidden="true"
-		></span>
-
-		<!-- Grip pill (the visible click target) -->
-		<span
-			class="pointer-events-none relative flex h-14 w-3 flex-col items-center justify-center gap-1 rounded-full transition-all duration-200 group-hover:scale-110 group-hover:shadow-[0_5px_9px_rgba(0,0,0,0.16)] {open
-				? 'bg-white/15 group-hover:bg-white/25'
-				: 'bg-black group-hover:bg-playstation-blue'}"
-			aria-hidden="true"
+	{#if open}
+		<!-- OPEN: thin resize handle at sidebar's left edge -->
+		<button
+			type="button"
+			onpointerdown={onPointerDown}
+			onpointermove={onPointerMove}
+			onpointerup={onPointerUp}
+			onpointercancel={onPointerCancel}
+			onkeydown={onKeyDown}
+			aria-label="Close terminal sidebar (drag to resize)"
+			aria-pressed="true"
+			title="Click to close · drag to resize"
+			class="group pointer-events-auto absolute top-0 right-0 flex h-full w-2 cursor-col-resize touch-none items-center justify-center bg-transparent outline-none"
 		>
-			<!-- Two grip dots -->
-			<span class="block h-1 w-1 rounded-full {open ? 'bg-white/60' : 'bg-white/70'}"></span>
-			<span class="block h-1 w-1 rounded-full {open ? 'bg-white/60' : 'bg-white/70'}"></span>
-		</span>
-
-		<!-- Status badge that pops out on hover when closed -->
-		{#if !open}
+			<!-- Hairline track -->
 			<span
-				class="pointer-events-none absolute top-1/2 right-full mr-2 flex -translate-y-1/2 items-center gap-1.5 rounded-full bg-black px-2.5 py-1.5 font-mono text-[10.5px] tracking-[0.06em] text-white opacity-0 shadow-[0_5px_9px_rgba(0,0,0,0.16)] transition-opacity duration-150 group-hover:opacity-100"
+				class="pointer-events-none absolute top-0 right-0 h-full w-px bg-white/10 transition-colors duration-150 group-hover:bg-white/40"
+				aria-hidden="true"
+			></span>
+			<!-- Grip pill: visible on hover -->
+			<span
+				class="pointer-events-none relative grid h-12 w-5 -translate-x-px place-items-center rounded-full bg-white/10 text-white/70 opacity-0 transition-all duration-200 group-hover:opacity-100"
+				aria-hidden="true"
 			>
-				<span class={`inline-block h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden="true"></span>
-				<span>terminal</span>
-				{#if lineCount > 0}
-					<span class="rounded-full bg-white/15 px-1.5 py-px text-[9.5px] text-white/80">{lineCount > 99 ? '99+' : lineCount}</span>
-				{/if}
+				<GripVertical size={12} strokeWidth={2.2} />
 			</span>
-		{/if}
-
-		<!-- Chevron that flips by state -->
-		<span
-			class="pointer-events-none absolute top-1/2 right-1/2 grid -translate-y-1/2 translate-x-1/2 place-items-center text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-			aria-hidden="true"
+		</button>
+	{:else}
+		<!-- CLOSED: visible "Terminal" tab attached to right edge -->
+		<button
+			type="button"
+			onpointerdown={onPointerDown}
+			onpointerup={onPointerUp}
+			onpointercancel={onPointerCancel}
+			onkeydown={onKeyDown}
+			aria-label="Open terminal sidebar"
+			aria-pressed="false"
+			title="Open terminal"
+			class="group pointer-events-auto absolute top-1/2 right-0 flex h-auto -translate-y-1/2 cursor-pointer touch-none flex-col items-center gap-2 rounded-l-[12px] bg-black px-2.5 py-3.5 text-white shadow-[0_5px_9px_rgba(0,0,0,0.16)] outline-none transition-all duration-200 ease-out hover:bg-playstation-blue hover:px-3 hover:shadow-[0_8px_16px_rgba(0,0,0,0.2)] focus-visible:bg-playstation-blue"
 		>
-			<ChevronLeft
-				size={11}
-				strokeWidth={2.4}
-				class="transition-transform duration-200 {open ? 'rotate-180' : ''}"
-			/>
-		</span>
-	</button>
+			<Terminal size={15} strokeWidth={2} />
+			<!-- Vertical "terminal" label -->
+			<span
+				class="font-mono text-[10.5px] tracking-[0.08em] text-white/85 [writing-mode:vertical-rl] [text-orientation:mixed]"
+			>
+				terminal
+			</span>
+			<!-- Status dot -->
+			<span
+				class={`mt-1 inline-block h-1.5 w-1.5 rounded-full transition-colors ${dotClass}`}
+				aria-hidden="true"
+			></span>
+			<!-- Line count badge (only if any) -->
+			{#if lineCount > 0}
+				<span
+					class="mt-0.5 min-w-[18px] rounded-full bg-white/15 px-1.5 py-px text-center font-mono text-[9.5px] text-white/85 group-hover:bg-white/25"
+				>
+					{lineCount > 99 ? '99+' : lineCount}
+				</span>
+			{/if}
+			<!-- Subtle chevron hint -->
+			<ChevronLeft size={11} strokeWidth={2.4} class="mt-1 opacity-60 transition-opacity group-hover:opacity-100" />
+		</button>
+	{/if}
 </div>

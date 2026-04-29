@@ -1,23 +1,37 @@
 <script lang="ts">
+	import { Cpu, Hash, Layers, MemoryStick, Terminal as TerminalIcon, UserCog } from '@lucide/svelte';
 	import Panel from '$lib/components/molecules/Panel.svelte';
+
+	const rows = [
+		{ label: 'UID map', icon: UserCog, body: 'Before: <code>0 0</code>. After: remapped host UID range.' },
+		{ label: 'PID view', icon: Layers, body: 'Before: host process list. After: only container processes.' },
+		{ label: 'PIDs', icon: Hash, body: 'Before: many sleepers spawn. After: <code>pids.max</code> caps the bomb.' },
+		{ label: 'Memory', icon: MemoryStick, body: 'Before: unlimited or host-sized. After: explicit memory limit.' },
+		{ label: 'CPU', icon: Cpu, body: 'Before: default shares. After: explicit CPU shares/weight.' }
+	] as const;
 </script>
 
 <Panel title="Before / after proof" subtitle="Screenshot guide" class="@4xl/main:col-span-7">
 	<p class="m-0 mb-4 text-sm leading-relaxed text-body-gray">
 		Use these exact changes as the explanation slide. The app remains vulnerable; the container boundary changes.
 	</p>
-	<table class="w-full border-collapse text-left text-[13px] leading-relaxed">
-		<tbody>
-			<tr class="border-b border-divider"><th class="w-24 py-2.5 pr-3 font-bold text-ink">UID map</th><td class="py-2.5 text-body-gray">Before: <code>0 0</code>. After: remapped host UID range.</td></tr>
-			<tr class="border-b border-divider"><th class="w-24 py-2.5 pr-3 font-bold text-ink">PID view</th><td class="py-2.5 text-body-gray">Before: host process list. After: only container processes.</td></tr>
-			<tr class="border-b border-divider"><th class="w-24 py-2.5 pr-3 font-bold text-ink">PIDs</th><td class="py-2.5 text-body-gray">Before: many sleepers spawn. After: <code>pids.max</code> caps the bomb.</td></tr>
-			<tr class="border-b border-divider"><th class="w-24 py-2.5 pr-3 font-bold text-ink">Memory</th><td class="py-2.5 text-body-gray">Before: unlimited or host-sized. After: explicit memory limit.</td></tr>
-			<tr class="border-b border-divider"><th class="w-24 py-2.5 pr-3 font-bold text-ink">CPU</th><td class="py-2.5 text-body-gray">Before: default shares. After: explicit CPU shares/weight.</td></tr>
-		</tbody>
-	</table>
+	<dl class="grid gap-0">
+		{#each rows as { label, icon: Icon, body } (label)}
+			<div class="grid grid-cols-[24px_96px_minmax(0,1fr)] items-start gap-3 border-b border-divider py-2.5 last:border-b-0">
+				<Icon size={13} strokeWidth={2.2} class="mt-0.5 text-body-gray" />
+				<dt class="text-[13px] font-medium text-ink">{label}</dt>
+				<dd class="m-0 text-[13px] leading-relaxed text-body-gray">{@html body}</dd>
+			</div>
+		{/each}
+	</dl>
 
-	<div class="mt-4 grid gap-2 rounded-xl bg-ice p-3.5">
-		<span class="text-[13px] font-medium text-body-gray">Inspect baseline</span>
-		<code class="break-words font-mono text-xs text-ink">docker inspect dokuru-lab</code>
+	<div class="mt-4 flex items-center gap-2.5 rounded-[12px] bg-ice p-3.5">
+		<span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-black text-white" aria-hidden="true">
+			<TerminalIcon size={13} strokeWidth={2} />
+		</span>
+		<div class="min-w-0">
+			<span class="block text-[12px] text-body-gray">Inspect baseline</span>
+			<code class="break-words font-mono text-[12.5px] text-ink">docker inspect dokuru-lab</code>
+		</div>
 	</div>
 </Panel>
