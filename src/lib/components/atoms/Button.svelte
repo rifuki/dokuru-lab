@@ -15,20 +15,20 @@
 		$props();
 
 	const base =
-		'inline-flex cursor-pointer items-center justify-center rounded-full tracking-[0.02em] transition-all duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-50 active:scale-95';
+		'inline-flex cursor-pointer items-center justify-center rounded-full font-medium tracking-[0.02em] transition-all duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.97] active:brightness-95';
 	const sizes: Record<ButtonSize, string> = {
 		sm: 'px-4 py-2 text-[13px]',
 		md: 'px-5 py-2.5 text-[14.5px]'
 	};
 	const variants: Record<ButtonVariant, string> = {
 		primary:
-			'bg-playstation-blue text-white font-medium hover:-translate-y-0.5 hover:bg-[#1eaedb] hover:shadow-[0_4px_12px_rgba(30,174,219,0.35)]',
+			'bg-playstation-blue text-white hover:bg-[#005fa8] hover:shadow-[0_2px_10px_rgba(0,95,168,0.35)]',
 		secondary:
-			'border border-[#d0d0d0] bg-white text-ink font-medium hover:-translate-y-0.5 hover:border-playstation-blue hover:text-playstation-blue hover:shadow-[0_4px_12px_rgba(0,112,204,0.12)]',
+			'border border-[#d0d0d0] bg-white text-ink hover:bg-[#f4f4f4] hover:border-[#b0b0b0] hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)]',
 		ghost:
-			'border border-[#d0d0d0] bg-transparent text-ink font-medium hover:-translate-y-0.5 hover:border-[#b0b0b0] hover:bg-black/[0.04] hover:text-ink',
+			'border border-[#d0d0d0] bg-transparent text-ink hover:bg-[#f0f0f0] hover:border-[#b8b8b8]',
 		commerce:
-			'bg-commerce text-white font-medium hover:-translate-y-0.5 hover:bg-[#d63118] hover:shadow-[0_4px_12px_rgba(230,55,27,0.35)] active:bg-[#b02813]'
+			'bg-commerce text-white hover:bg-[#c5300e] hover:shadow-[0_2px_10px_rgba(197,48,14,0.35)]'
 	};
 </script>
 
