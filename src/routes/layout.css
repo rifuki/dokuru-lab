@@ -2,28 +2,84 @@
 
 @font-face {
 	font-family: 'SST';
-	src: url('/fonts/SST-Light-latin.3cce6.woff2') format('woff2');
+	src: url('/fonts/SSTLight.TTF') format('truetype');
 	font-weight: 300;
 	font-style: normal;
 	font-display: swap;
 }
 @font-face {
 	font-family: 'SST';
-	src: url('/fonts/SST-Roman-latin.40348.woff2') format('woff2');
+	src: url('/fonts/SSTLightIt.TTF') format('truetype');
+	font-weight: 300;
+	font-style: italic;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'SST';
+	src: url('/fonts/SSTRg.TTF') format('truetype');
 	font-weight: 400;
 	font-style: normal;
 	font-display: swap;
 }
 @font-face {
 	font-family: 'SST';
-	src: url('/fonts/SST-Medium-latin.1167b.woff2') format('woff2');
+	src: url('/fonts/SSTRgIt.TTF') format('truetype');
+	font-weight: 400;
+	font-style: italic;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'SST';
+	src: url('/fonts/SSTMedium.TTF') format('truetype');
 	font-weight: 500;
 	font-style: normal;
 	font-display: swap;
 }
 @font-face {
 	font-family: 'SST';
-	src: url('/fonts/SST-Bold-latin.7c968.woff2') format('woff2');
+	src: url('/fonts/SSTMediumIt.TTF') format('truetype');
+	font-weight: 500;
+	font-style: italic;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'SST';
+	src: url('/fonts/SSTBold.TTF') format('truetype');
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'SST';
+	src: url('/fonts/SSTBoldIt.TTF') format('truetype');
+	font-weight: 700;
+	font-style: italic;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'SST';
+	src: url('/fonts/SSTHeavy.TTF') format('truetype');
+	font-weight: 900;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'SST Condensed';
+	src: url('/fonts/SSTRgCn.TTF') format('truetype');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'SST Condensed';
+	src: url('/fonts/SSTMediumCn.TTF') format('truetype');
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'SST Condensed';
+	src: url('/fonts/SSTBoldCn.TTF') format('truetype');
 	font-weight: 700;
 	font-style: normal;
 	font-display: swap;
