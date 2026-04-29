@@ -70,9 +70,9 @@
 		return 'out';
 	}
 
-	const statusLabel = $derived(connected ? (busy ? 'streaming' : 'ready') : 'offline');
+	const statusLabel = $derived(connected ? (busy ? 'streaming' : 'live') : 'connecting');
 	const statusDot = $derived(
-		connected ? (busy ? 'bg-playstation-cyan animate-pulse' : 'bg-emerald-400') : 'bg-commerce'
+		connected ? (busy ? 'bg-playstation-cyan animate-pulse' : 'bg-emerald-400') : 'bg-amber-400 animate-pulse'
 	);
 	const filteredCount = $derived(visibleLines.length);
 	const totalCount = $derived(lines.length);
@@ -114,8 +114,9 @@
 </header>
 {:else}
 <!-- Compact status strip when header is managed by parent -->
-<div class="flex items-center gap-2 border-b border-white/5 px-5 py-2">
-	<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-white/40">{statusLabel}</span>
+<div class="flex items-center gap-1.5 border-b border-white/5 px-4 py-1.5">
+	<span class={`inline-block h-1.5 w-1.5 rounded-full ${statusDot}`} aria-hidden="true"></span>
+	<span class="font-mono text-[10px] tracking-[0.04em] text-white/45">{statusLabel}</span>
 	<div class="ml-auto flex items-center gap-1">
 		<button
 			type="button"
@@ -123,22 +124,22 @@
 			disabled={totalCount === 0}
 			aria-label="Clear"
 			title="Clear"
-			class="grid h-7 w-7 cursor-pointer place-items-center rounded-full text-white/40 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+			class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
 		>
-			<Eraser size={13} strokeWidth={1.5} />
+			<Eraser size={12} strokeWidth={1.6} />
 		</button>
 	</div>
 </div>
 {/if}
 
-<div class="flex items-center gap-4 px-5 py-3 border-b border-white/5 bg-[#0a0a0a]">
+<div class="flex items-center gap-3 border-b border-white/5 bg-[#0a0a0a] px-4 py-1.5">
 	{#each streamMeta as { key, label } (key)}
 		{@const active = activeStreams[key]}
 		<button
 			type="button"
 			onclick={() => toggleStream(key)}
 			aria-pressed={active}
-			class="relative cursor-pointer pb-1 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors {active
+			class="relative cursor-pointer pb-0.5 font-mono text-[10px] tracking-[0.04em] transition-colors {active
 				? key === 'stderr'
 					? 'text-[#ff8278]'
 					: key === 'system'
@@ -148,11 +149,11 @@
 		>
 			{label}
 			{#if active}
-				<span class="absolute bottom-0 left-0 right-0 h-[2px] bg-current"></span>
+				<span class="absolute right-0 bottom-0 left-0 h-[1.5px] bg-current"></span>
 			{/if}
 		</button>
 	{/each}
-	<span class="ml-auto font-mono text-[11px] uppercase tracking-[0.1em] text-white/30">
+	<span class="ml-auto font-mono text-[10px] tracking-[0.02em] text-white/30 tabular-nums">
 		{filteredCount}{filteredCount !== totalCount ? `/${totalCount}` : ''} lines
 	</span>
 </div>

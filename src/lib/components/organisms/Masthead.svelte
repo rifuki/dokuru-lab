@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { FlaskConical, Waves } from '@lucide/svelte';
+	import { FlaskConical } from '@lucide/svelte';
 
 	type Props = {
 		monitorConnected: boolean;
@@ -31,10 +31,13 @@
 			<span
 				class="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.04em] text-white/55"
 				aria-live="polite"
-				title={monitorConnected ? `Monitor stream live ${monitorLastUpdated}` : 'Monitor stream reconnecting'}
+				title={monitorConnected ? `Monitor stream live ${monitorLastUpdated}` : 'Monitor stream connecting'}
 			>
-				<Waves size={11} strokeWidth={2.2} class="text-white/45" aria-hidden="true" />
-				<span class="hidden @sm/page:inline">{monitorConnected ? `monitor ${monitorLastUpdated || 'live'}` : 'reconnecting'}</span>
+				<span
+					class={`inline-block h-1.5 w-1.5 rounded-full ${monitorConnected ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`}
+					aria-hidden="true"
+				></span>
+				<span class="hidden @sm/page:inline">monitor {monitorConnected ? (monitorLastUpdated || 'live') : 'connecting'}</span>
 			</span>
 		</div>
 	</div>

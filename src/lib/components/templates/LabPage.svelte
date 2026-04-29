@@ -13,7 +13,18 @@
 	import TerminalHandle from '$lib/components/organisms/TerminalHandle.svelte';
 	import SidebarMonitor from '$lib/components/organisms/SidebarMonitor.svelte';
 	import type { TerminalLine } from '$lib/components/organisms/TerminalPanel.svelte';
-	import { Activity, AlertOctagon, Bomb, FileSearch, FlaskConical, Layers, SlidersHorizontal } from '@lucide/svelte';
+	import {
+		Activity,
+		AlertOctagon,
+		Bomb,
+		FileSearch,
+		FlaskConical,
+		Layers,
+		SlidersHorizontal,
+		Terminal as TerminalIcon,
+		Trash2,
+		X
+	} from '@lucide/svelte';
 	import type { CommandPreset, CustomerSample, LabResponse, RuntimeEvidence } from '$lib/types/lab';
 
 	let command = $state('id; cat /proc/self/uid_map; cat /proc/self/gid_map');
@@ -33,10 +44,14 @@
 	let terminalWidth = $state(420);
 	let terminalResizing = $state(false);
 	type SidebarPanel = 'terminal' | 'monitor';
+	type SnapZone = 'top' | 'bottom' | 'left' | 'right' | 'replace';
 	let activePanels = $state<SidebarPanel[]>(['terminal']);
 	let splitRatio = $state(0.5);
+	let splitDir = $state<'horizontal' | 'vertical'>('vertical');
 	let splitDragging = $state(false);
 	let splitContainerEl = $state<HTMLDivElement | null>(null);
+	let draggingPanel = $state<SidebarPanel | null>(null);
+	let dragHoverZone = $state<SnapZone | null>(null);
 
 	function onSplitPointerDown(event: PointerEvent) {
 		event.preventDefault();
@@ -46,12 +61,99 @@
 	function onSplitPointerMove(event: PointerEvent) {
 		if (!splitDragging || !splitContainerEl) return;
 		const rect = splitContainerEl.getBoundingClientRect();
-		const r = (event.clientY - rect.top) / rect.height;
+		const r =
+			splitDir === 'horizontal'
+				? (event.clientX - rect.left) / rect.width
+				: (event.clientY - rect.top) / rect.height;
 		splitRatio = Math.max(0.18, Math.min(0.82, r));
 	}
 	function onSplitPointerUp(event: PointerEvent) {
 		splitDragging = false;
 		(event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+	}
+
+	function togglePanel(panel: SidebarPanel) {
+		if (activePanels.includes(panel)) {
+			activePanels = activePanels.filter((p) => p !== panel);
+		} else if (activePanels.length === 0) {
+			activePanels = [panel];
+		} else {
+			splitDir = 'vertical';
+			activePanels = [...activePanels, panel];
+		}
+	}
+
+	function removePanel(panel: SidebarPanel) {
+		activePanels = activePanels.filter((p) => p !== panel);
+	}
+
+	function detectZone(event: DragEvent, target: HTMLElement): SnapZone {
+		const r = target.getBoundingClientRect();
+		const x = (event.clientX - r.left) / r.width;
+		const y = (event.clientY - r.top) / r.height;
+		const dx = Math.min(x, 1 - x);
+		const dy = Math.min(y, 1 - y);
+		if (dx < dy) return x < 0.5 ? 'left' : 'right';
+		return y < 0.5 ? 'top' : 'bottom';
+	}
+
+	function onDropZoneDragOver(event: DragEvent) {
+		event.preventDefault();
+		if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+		const target = event.currentTarget as HTMLElement;
+		if (activePanels.length === 0) {
+			dragHoverZone = 'replace';
+		} else {
+			dragHoverZone = detectZone(event, target);
+		}
+	}
+	function onDropZoneLeave(event: DragEvent) {
+		const related = event.relatedTarget as Node | null;
+		const current = event.currentTarget as HTMLElement;
+		if (related && current.contains(related)) return;
+		dragHoverZone = null;
+	}
+	function onDropZoneDrop(event: DragEvent) {
+		event.preventDefault();
+		const panel = event.dataTransfer?.getData('text/plain') as SidebarPanel;
+		const zone = dragHoverZone;
+		dragHoverZone = null;
+		draggingPanel = null;
+		if (panel === 'terminal' || panel === 'monitor') placePanel(panel, zone);
+	}
+	function placePanel(panel: SidebarPanel, zone: SnapZone | null) {
+		const others = activePanels.filter((p) => p !== panel);
+		if (others.length === 0) {
+			activePanels = [panel];
+			return;
+		}
+		if (zone === 'left') {
+			splitDir = 'horizontal';
+			activePanels = [panel, others[0]];
+		} else if (zone === 'right') {
+			splitDir = 'horizontal';
+			activePanels = [others[0], panel];
+		} else if (zone === 'top') {
+			splitDir = 'vertical';
+			activePanels = [panel, others[0]];
+		} else {
+			splitDir = 'vertical';
+			activePanels = [others[0], panel];
+		}
+	}
+
+	function panelLabel(panel: SidebarPanel): string {
+		return panel === 'terminal' ? 'Terminal' : 'Monitor';
+	}
+	function panelDot(panel: SidebarPanel): string {
+		if (panel === 'terminal') {
+			return terminalConnected
+				? terminalBusy
+					? 'bg-playstation-cyan animate-pulse'
+					: 'bg-emerald-400'
+				: 'bg-amber-400 animate-pulse';
+		}
+		return monitorConnected ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse';
 	}
 	let terminalSocket: WebSocket | null = null;
 	let monitorSocket: WebSocket | null = null;
@@ -503,10 +605,10 @@
 
 			<!-- ── Compact toolbar ────────────────────────────────── -->
 			<div class="flex h-8 shrink-0 items-center gap-1 border-b border-white/[0.07] px-2">
-
-				<!-- Draggable Lego Blocks ──────────────────────────────────── -->
-				<div class="ml-1 flex items-center gap-1.5">
-					{#each (['terminal', 'monitor'] as SidebarPanel[]) as panel}
+				<!-- Draggable Lego Blocks -->
+				<div class="ml-0.5 flex items-center gap-0.5">
+					{#each ['terminal', 'monitor'] as SidebarPanel[] as panel}
+						{@const active = activePanels.includes(panel)}
 						<button
 							type="button"
 							draggable="true"
@@ -515,29 +617,34 @@
 									e.dataTransfer.setData('text/plain', panel);
 									e.dataTransfer.effectAllowed = 'move';
 								}
+								draggingPanel = panel;
 							}}
-							onclick={() => {
-								if (activePanels.includes(panel)) {
-									activePanels = activePanels.filter(p => p !== panel);
-								} else {
-									activePanels.push(panel);
-								}
+							ondragend={() => {
+								draggingPanel = null;
+								dragHoverZone = null;
 							}}
-							class="flex cursor-grab items-center gap-1.5 rounded-[4px] px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-wider transition-all active:scale-95 {activePanels.includes(panel) ? 'bg-white/15 text-white shadow-[0_1px_2px_rgba(0,0,0,0.2)]' : 'bg-transparent text-white/35 hover:bg-white/10 hover:text-white/80'}"
-							title="Click to toggle, drag to reorder"
+							onclick={() => togglePanel(panel)}
+							class="group flex cursor-grab items-center gap-1.5 rounded px-1.5 py-1 text-[11px] font-medium tracking-tight transition-colors active:cursor-grabbing {active
+								? 'bg-white/10 text-white'
+								: 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}"
+							title={active ? 'Click to remove · drag to reposition' : 'Click to add · drag to position'}
 						>
 							{#if panel === 'terminal'}
-								<span class="font-mono text-white/50">{'>_'}</span> Terminal
+								<TerminalIcon size={12} strokeWidth={1.8} />
 							{:else}
-								<span class="font-mono text-emerald-400/70">◉</span> Monitor
+								<Activity size={12} strokeWidth={1.8} />
 							{/if}
+							<span>{panelLabel(panel)}</span>
+							<span class={`ml-0.5 inline-block h-1 w-1 rounded-full ${panelDot(panel)}`} aria-hidden="true"></span>
 						</button>
 					{/each}
 				</div>
 
 				<!-- Lines count pill -->
 				{#if terminalLines.length > 0 && activePanels.includes('terminal')}
-					<span class="ml-1 rounded-full bg-white/10 px-1.5 py-px font-mono text-[9px] text-white/50 tabular-nums">{terminalLines.length > 999 ? '999+' : terminalLines.length}</span>
+					<span class="ml-1 rounded-full bg-white/[0.06] px-1.5 py-px font-mono text-[9.5px] text-white/45 tabular-nums">
+						{terminalLines.length > 999 ? '999+' : terminalLines.length}
+					</span>
 				{/if}
 
 				<!-- Actions -->
@@ -547,96 +654,154 @@
 						onclick={clearTerminal}
 						disabled={terminalLines.length === 0}
 						title="Clear terminal"
-						class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition-colors hover:bg-white/10 hover:text-white/80 disabled:cursor-not-allowed disabled:opacity-25"
+						aria-label="Clear terminal"
+						class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition-colors hover:bg-white/10 hover:text-white/85 disabled:cursor-not-allowed disabled:opacity-25"
 					>
-						<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+						<Trash2 size={12} strokeWidth={1.7} />
 					</button>
 					<button
 						type="button"
 						onclick={closeTerminal}
 						title="Close sidebar"
-						class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition-colors hover:bg-white/10 hover:text-white/80"
+						aria-label="Close sidebar"
+						class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition-colors hover:bg-white/10 hover:text-white/85"
 					>
-						<svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg>
+						<X size={12} strokeWidth={1.8} />
 					</button>
 				</div>
 			</div>
 
 			<!-- ── Sidebar content ───────────────────────────────── -->
-			<div 
-				class="flex min-h-0 flex-1 flex-col overflow-hidden"
-				ondragover={(e) => e.preventDefault()}
-				ondrop={(e) => {
-					e.preventDefault();
-					const panel = e.dataTransfer?.getData('text/plain') as SidebarPanel;
-					if (panel && !activePanels.includes(panel)) {
-						activePanels.push(panel);
-					}
-				}}
+			<div
+				class="relative flex min-h-0 flex-1 flex-col overflow-hidden"
+				role="region"
+				aria-label="Panel drop zone"
+				ondragover={onDropZoneDragOver}
+				ondragleave={onDropZoneLeave}
+				ondrop={onDropZoneDrop}
 			>
 				{#if activePanels.length === 0}
-					<div class="flex h-full flex-col items-center justify-center gap-3 text-white/20">
-						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="opacity-50"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-						<span class="text-[11px] uppercase tracking-widest font-medium">Drag components here</span>
+					<div class="m-3 flex flex-1 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-white/10 bg-white/[0.015] text-white/30">
+						<div class="grid h-8 w-8 place-items-center rounded-full border border-white/10 text-white/35">
+							<TerminalIcon size={13} strokeWidth={1.6} />
+						</div>
+						<p class="m-0 text-[11px] tracking-tight text-white/45">Drop a component here</p>
+						<p class="m-0 font-mono text-[9.5px] tracking-[0.04em] text-white/25">terminal · monitor</p>
 					</div>
 				{:else if activePanels.length === 1}
 					<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
 						{#if activePanels[0] === 'terminal'}
-							<TerminalDrawer lines={terminalLines} connected={terminalConnected} busy={terminalBusy} onClear={clearTerminal} onClose={closeTerminal} hideHeader />
+							<TerminalDrawer
+								lines={terminalLines}
+								connected={terminalConnected}
+								busy={terminalBusy}
+								onClear={clearTerminal}
+								onClose={closeTerminal}
+								hideHeader
+							/>
 						{:else}
-							<SidebarMonitor {runtime} connected={monitorConnected} lastUpdated={lastUpdated} />
+							<SidebarMonitor {runtime} connected={monitorConnected} {lastUpdated} />
 						{/if}
 					</div>
 				{:else}
-					<!-- Split layout with draggable divider -->
-					<div bind:this={splitContainerEl} class="flex min-h-0 flex-1 flex-col overflow-hidden">
-						<!-- Top panel -->
-						<div style="height: {splitRatio * 100}%" class="flex min-h-0 flex-col overflow-hidden relative"
-							ondragover={(e) => e.preventDefault()}
-							ondrop={(e) => {
-								e.preventDefault();
-								e.stopPropagation();
-								const panel = e.dataTransfer?.getData('text/plain') as SidebarPanel;
-								if (panel && activePanels.includes(panel)) {
-									activePanels = [panel, activePanels.find(p => p !== panel)!];
-								}
-							}}
+					<!-- Split layout with draggable divider (vertical or horizontal) -->
+					<div
+						bind:this={splitContainerEl}
+						class="flex min-h-0 flex-1 overflow-hidden {splitDir === 'horizontal' ? 'flex-row' : 'flex-col'}"
+					>
+						<!-- First panel (top or left) -->
+						<div
+							style={splitDir === 'horizontal'
+								? `width: ${splitRatio * 100}%`
+								: `height: ${splitRatio * 100}%`}
+							class="group/pane relative flex min-h-0 flex-col overflow-hidden"
 						>
 							{#if activePanels[0] === 'terminal'}
-								<TerminalDrawer lines={terminalLines} connected={terminalConnected} busy={terminalBusy} onClear={clearTerminal} onClose={closeTerminal} hideHeader />
+								<TerminalDrawer
+									lines={terminalLines}
+									connected={terminalConnected}
+									busy={terminalBusy}
+									onClear={clearTerminal}
+									onClose={closeTerminal}
+									hideHeader
+								/>
 							{:else}
-								<SidebarMonitor {runtime} connected={monitorConnected} lastUpdated={lastUpdated} />
+								<SidebarMonitor {runtime} connected={monitorConnected} {lastUpdated} />
 							{/if}
+							<button
+								type="button"
+								onclick={() => removePanel(activePanels[0])}
+								title="Remove {panelLabel(activePanels[0])}"
+								aria-label="Remove {panelLabel(activePanels[0])}"
+								class="absolute top-1 right-1 z-10 grid h-5 w-5 cursor-pointer place-items-center rounded text-white/30 opacity-0 transition-opacity hover:bg-white/10 hover:text-white/85 group-hover/pane:opacity-100"
+							>
+								<X size={11} strokeWidth={1.8} />
+							</button>
 						</div>
 						<!-- Drag divider -->
 						<div
 							role="separator"
 							aria-label="Drag to resize panels"
-							class="group relative z-10 h-[4px] shrink-0 cursor-row-resize bg-white/[0.05] transition-colors hover:bg-white/[0.18] {splitDragging ? 'bg-playstation-blue/40' : ''}"
+							class="group relative z-10 shrink-0 bg-white/[0.05] transition-colors hover:bg-white/[0.18] {splitDragging
+								? 'bg-playstation-blue/40'
+								: ''} {splitDir === 'horizontal' ? 'w-[4px] cursor-col-resize' : 'h-[4px] cursor-row-resize'}"
 							onpointerdown={onSplitPointerDown}
 							onpointermove={onSplitPointerMove}
 							onpointerup={onSplitPointerUp}
 							onpointercancel={onSplitPointerUp}
 						>
-							<div class="absolute inset-x-0 top-1/2 mx-auto h-[2px] w-8 -translate-y-1/2 rounded-full bg-white/20 opacity-0 transition-opacity group-hover:opacity-100"></div>
+							<div
+								class="absolute rounded-full bg-white/20 opacity-0 transition-opacity group-hover:opacity-100 {splitDir ===
+								'horizontal'
+									? 'inset-y-0 left-1/2 my-auto h-8 w-[2px] -translate-x-1/2'
+									: 'inset-x-0 top-1/2 mx-auto h-[2px] w-8 -translate-y-1/2'}"
+							></div>
 						</div>
-						<!-- Bottom panel -->
-						<div class="flex min-h-0 flex-1 flex-col overflow-hidden relative"
-							ondragover={(e) => e.preventDefault()}
-							ondrop={(e) => {
-								e.preventDefault();
-								e.stopPropagation();
-								const panel = e.dataTransfer?.getData('text/plain') as SidebarPanel;
-								if (panel && activePanels.includes(panel)) {
-									activePanels = [activePanels.find(p => p !== panel)!, panel];
-								}
-							}}
-						>
+						<!-- Second panel (bottom or right) -->
+						<div class="group/pane relative flex min-h-0 flex-1 flex-col overflow-hidden">
 							{#if activePanels[1] === 'terminal'}
-								<TerminalDrawer lines={terminalLines} connected={terminalConnected} busy={terminalBusy} onClear={clearTerminal} onClose={closeTerminal} hideHeader />
+								<TerminalDrawer
+									lines={terminalLines}
+									connected={terminalConnected}
+									busy={terminalBusy}
+									onClear={clearTerminal}
+									onClose={closeTerminal}
+									hideHeader
+								/>
 							{:else}
-								<SidebarMonitor {runtime} connected={monitorConnected} lastUpdated={lastUpdated} />
+								<SidebarMonitor {runtime} connected={monitorConnected} {lastUpdated} />
 							{/if}
+							<button
+								type="button"
+								onclick={() => removePanel(activePanels[1])}
+								title="Remove {panelLabel(activePanels[1])}"
+								aria-label="Remove {panelLabel(activePanels[1])}"
+								class="absolute top-1 right-1 z-10 grid h-5 w-5 cursor-pointer place-items-center rounded text-white/30 opacity-0 transition-opacity hover:bg-white/10 hover:text-white/85 group-hover/pane:opacity-100"
+							>
+								<X size={11} strokeWidth={1.8} />
+							</button>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Snap-zone preview overlay (during drag) -->
+				{#if draggingPanel && dragHoverZone}
+					<div
+						class="pointer-events-none absolute z-20 border border-playstation-blue/55 bg-playstation-blue/15 backdrop-blur-[1px] transition-[top,left,right,bottom,width,height] duration-150 ease-out"
+						style={dragHoverZone === 'top'
+							? 'top:0;left:0;right:0;height:50%;'
+							: dragHoverZone === 'bottom'
+								? 'bottom:0;left:0;right:0;height:50%;'
+								: dragHoverZone === 'left'
+									? 'top:0;bottom:0;left:0;width:50%;'
+									: dragHoverZone === 'right'
+										? 'top:0;bottom:0;right:0;width:50%;'
+										: 'inset:0;'}
+					>
+						<div class="grid h-full w-full place-items-center">
+							<span class="rounded bg-black/55 px-2 py-1 font-mono text-[10px] tracking-tight text-white/85">
+								{dragHoverZone === 'replace' ? 'place here' : `snap ${dragHoverZone}`}
+							</span>
 						</div>
 					</div>
 				{/if}
