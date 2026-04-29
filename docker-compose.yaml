@@ -29,21 +29,112 @@ services:
     ipc: host
     uts: host
     userns_mode: host
+    cap_add:
+      - SYS_PTRACE
     environment:
       NODE_ENV: production
       HOST: ${HOST:-0.0.0.0}
       PORT: ${PORT:-8080}
       LAB_DATA_DIR: ${LAB_DATA_DIR:-/app/data}
+      VICTIM_CHECKOUT_URL: ${VICTIM_CHECKOUT_URL:-http://victim-checkout:3000/checkout}
     volumes:
       - ./data:/app/data
     expose:
       - "8080"
+    depends_on:
+      victim-checkout:
+        condition: service_healthy
+      victim-secrets:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:$${PORT:-8080}/api/health >/dev/null"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 15s
+    networks:
+      - dokuru-lab
+
+  victim-checkout:
+    image: node:20-alpine
+    container_name: dokuru-lab-victim-checkout
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - |
+        cat > /tmp/victim-checkout.js <<'EOF'
+        const http = require('node:http');
+
+        function checkoutWork() {
+          let checksum = 0;
+          for (let i = 0; i < 1800000; i += 1) checksum = (checksum + i) % 9973;
+          return checksum;
+        }
+
+        const server = http.createServer((request, response) => {
+          const started = Date.now();
+          if (request.url === '/health') {
+            response.writeHead(200, { 'content-type': 'application/json' });
+            response.end(JSON.stringify({ ok: true, service: 'victim-checkout' }));
+            return;
+          }
+
+          const checksum = checkoutWork();
+          response.writeHead(200, { 'content-type': 'application/json' });
+          response.end(JSON.stringify({ ok: true, service: 'victim-checkout', checksum, latency_ms: Date.now() - started }));
+        });
+
+        server.listen(3000, '0.0.0.0', () => console.log('victim-checkout listening on :3000'));
+        EOF
+        node /tmp/victim-checkout.js
+    mem_limit: 256m
+    cpu_shares: 1024
+    pids_limit: 100
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - dokuru-lab
+
+  victim-secrets:
+    image: postgres:16-alpine
+    container_name: dokuru-lab-victim-secrets
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: prod_user
+      POSTGRES_PASSWORD: SuperSecretP@ssw0rd123
+      POSTGRES_DB: customer_data
+    mem_limit: 256m
+    cpu_shares: 512
+    pids_limit: 100
+    networks:
+      - dokuru-lab
+
+  customer-traffic:
+    image: curlimages/curl:8.16.0
+    container_name: dokuru-lab-customer-traffic
+    restart: unless-stopped
+    user: root
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          { date -u +%Y-%m-%dT%H:%M:%SZ | tr '\n' ' '; curl -sS -m 2 -o /dev/null -w 'status=%{http_code} latency_s=%{time_total}\n' http://victim-checkout:3000/checkout 2>/dev/null || true; } | tee -a /data/customer-traffic.log
+          sleep 0.5
+        done
+    depends_on:
+      victim-checkout:
+        condition: service_healthy
+    volumes:
+      - ./data:/data
+    mem_limit: 64m
+    cpu_shares: 256
+    pids_limit: 50
     networks:
       - dokuru-lab
 

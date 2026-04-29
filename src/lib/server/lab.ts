@@ -127,7 +127,7 @@ export function spawnPidBomb(count: unknown): LabResponse {
 }
 
 export function allocateMemory(mb: unknown): LabResponse {
-	const requested = clamp(Number(mb || 128), 1, 1024);
+	const requested = clamp(Number(mb || 128), 1, 1536);
 
 	for (let index = 0; index < requested; index += 1) {
 		memoryHold.push(Buffer.alloc(1024 * 1024, 'a'));

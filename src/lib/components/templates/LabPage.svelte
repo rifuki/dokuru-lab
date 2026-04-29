@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import BlastRadiusPanel from '$lib/components/organisms/BlastRadiusPanel.svelte';
 	import CgroupLabPanel from '$lib/components/organisms/CgroupLabPanel.svelte';
+	import CustomerLiveView from '$lib/components/organisms/CustomerLiveView.svelte';
 	import HeroSection from '$lib/components/organisms/HeroSection.svelte';
 	import LiveMonitorPanel from '$lib/components/organisms/LiveMonitorPanel.svelte';
 	import Masthead from '$lib/components/organisms/Masthead.svelte';
@@ -8,7 +10,7 @@
 	import ProofChecklistPanel from '$lib/components/organisms/ProofChecklistPanel.svelte';
 	import RuntimeEvidencePanel from '$lib/components/organisms/RuntimeEvidencePanel.svelte';
 	import TerminalPanel, { type TerminalLine } from '$lib/components/organisms/TerminalPanel.svelte';
-	import type { CommandPreset, LabResponse, RuntimeEvidence } from '$lib/types/lab';
+	import type { CommandPreset, CustomerSample, LabResponse, RuntimeEvidence } from '$lib/types/lab';
 
 	let command = $state('id; cat /proc/self/uid_map; cat /proc/self/gid_map');
 	let pidCount = $state(120);
@@ -19,10 +21,13 @@
 	let cgroupResult = $state<LabResponse | null>(null);
 	let lastUpdated = $state('');
 	let terminalLines = $state<TerminalLine[]>([]);
+	let customerSamples = $state<CustomerSample[]>([]);
 	let terminalConnected = $state(false);
 	let monitorConnected = $state(false);
+	let customerConnected = $state(false);
 	let terminalSocket: WebSocket | null = null;
 	let monitorSocket: WebSocket | null = null;
+	let customerSocket: WebSocket | null = null;
 	let mounted = false;
 
 	const presets: CommandPreset[] = [
@@ -40,11 +45,13 @@
 		mounted = true;
 		connectMonitor();
 		connectTerminal();
+		connectCustomer();
 		void refreshEvidence(true);
 		return () => {
 			mounted = false;
 			terminalSocket?.close();
 			monitorSocket?.close();
+			customerSocket?.close();
 		};
 	});
 
@@ -93,6 +100,22 @@
 		};
 	}
 
+	function connectCustomer() {
+		customerSocket = new WebSocket(wsUrl('/ws/customer'));
+		customerSocket.onopen = () => (customerConnected = true);
+		customerSocket.onmessage = (event) => {
+			const message = parseSocketMessage(event.data);
+			if (message?.type !== 'customer.sample') return;
+			const sample = message.sample as CustomerSample | undefined;
+			if (!sample) return;
+			customerSamples = [...customerSamples, sample].slice(-120);
+		};
+		customerSocket.onclose = () => {
+			customerConnected = false;
+			if (mounted) window.setTimeout(connectCustomer, 900);
+		};
+	}
+
 	async function refreshEvidence(showLoading = true) {
 		if (showLoading) running = 'health';
 		const result = await requestJson('/api/evidence');
@@ -125,6 +148,26 @@
 
 	function runCpuBurn() {
 		sendTerminal({ type: 'cpu-burn', seconds: cpuSeconds });
+	}
+
+	function runCustomerProbe() {
+		sendTerminal({ type: 'customer-probe' });
+	}
+
+	function runCpuBlast() {
+		sendTerminal({ type: 'cpu-blast', workers: 4, seconds: 25 });
+	}
+
+	function runMemoryBlast() {
+		sendTerminal({ type: 'memory-bomb', mb: 1280 });
+	}
+
+	function runStealSecrets() {
+		sendTerminal({ type: 'steal-secrets' });
+	}
+
+	function runSabotageProxy() {
+		sendTerminal({ type: 'sabotage-proxy', seconds: 6 });
 	}
 
 	function cleanupPidBomb() {
@@ -205,6 +248,17 @@
 
 		<div class="mx-auto grid max-w-[1540px] grid-cols-1 gap-4 lg:grid-cols-12">
 			<LiveMonitorPanel runtime={runtime} {lastUpdated} connected={monitorConnected} />
+
+			<CustomerLiveView samples={customerSamples} connected={customerConnected} />
+
+			<BlastRadiusPanel
+				{running}
+				onCustomerProbe={runCustomerProbe}
+				onCpuBlast={runCpuBlast}
+				onMemoryBlast={runMemoryBlast}
+				onStealSecrets={runStealSecrets}
+				onSabotageProxy={runSabotageProxy}
+			/>
 
 			<TerminalPanel lines={terminalLines} connected={terminalConnected} busy={Boolean(running)} onClear={clearTerminal} />
 

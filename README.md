@@ -48,6 +48,14 @@ Caddy terminates HTTPS for `lab.dokuru.rifuki.dev` and proxies to `dokuru-lab:80
 
 These settings make Dokuru namespace and cgroup audit findings visible before hardening. Caddy uses normal isolation and resource limits so the audit noise stays focused on `dokuru-lab`.
 
+Lab v2 adds victim services in the same Compose stack so the demo can show cross-container blast radius, not only introspection:
+
+- `victim-checkout`: healthy customer-facing API used by Customer Live View.
+- `victim-secrets`: PostgreSQL neighbor with a visible demo password for `/proc/<pid>/environ` theft when `SYS_PTRACE` and `pid: host` are present.
+- `customer-traffic`: background curl loop that writes real customer latency to `./data/customer-traffic.log` for the UI.
+
+The attacker lab intentionally includes `cap_add: [SYS_PTRACE]` to model the common debug-capability mistake and make rule 5.3/5.16 impact visible. After Dokuru fixes PID namespace sharing, the same secret-theft command should stop finding the postgres PID.
+
 Point DNS for `lab.dokuru.rifuki.dev` to the VPS, then deploy:
 
 On the VPS, create `.env` from `.env.example` only if you want to override the app runtime values:
@@ -82,6 +90,7 @@ The browser lab uses:
 
 - `wss://lab.dokuru.rifuki.dev/ws/monitor` for live namespace and cgroup metrics.
 - `wss://lab.dokuru.rifuki.dev/ws/terminal` for real stdout/stderr from commands and pressure tests.
+- `wss://lab.dokuru.rifuki.dev/ws/customer` for real checkout latency samples against `victim-checkout`.
 
 Set these repository variables for automatic deployment from `main`:
 
@@ -148,6 +157,13 @@ curl -X POST http://localhost:8080/api/cpu-burn \
   -H 'content-type: application/json' \
   -d '{"seconds":5}'
 ```
+
+Blast-radius terminal actions are available from the browser UI over `/ws/terminal`:
+
+- `cpu-blast`: spawn 4 short-lived CPU miners and watch Customer Live View latency.
+- `memory-bomb` with `mb=1280`: push host memory pressure before rule 5.11 is fixed.
+- `steal-secrets`: find postgres neighbor PID and read `/proc/<pid>/environ`.
+- `sabotage-proxy`: briefly `SIGSTOP` caddy, with automatic `SIGCONT` recovery.
 
 ## Dokuru Validation Flow
 

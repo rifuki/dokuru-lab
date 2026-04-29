@@ -34,6 +34,17 @@ export type LabResponse = {
 	[key: string]: unknown;
 };
 
+export type CustomerSample = {
+	ok: boolean;
+	status: number | string;
+	latency_ms: number;
+	url?: string;
+	source?: string;
+	observed_at?: string;
+	body?: string;
+	error?: string;
+};
+
 export type CommandPreset = {
 	label: string;
 	command: string;

