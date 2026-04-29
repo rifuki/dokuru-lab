@@ -6,9 +6,10 @@
 		runtime?: RuntimeEvidence;
 		connected: boolean;
 		lastUpdated: string;
+		onClose?: () => void;
 	};
 
-	let { runtime, connected, lastUpdated }: Props = $props();
+	let { runtime, connected, lastUpdated, onClose }: Props = $props();
 
 	function asNumber(value?: string): number | null {
 		if (!value || value === 'max' || value === 'unavailable') return null;
@@ -46,12 +47,19 @@
 </script>
 
 <!-- Compact status strip -->
-<div class="flex items-center gap-1.5 border-b border-white/5 px-4 py-1.5">
-	<span
-		class={`inline-block h-1.5 w-1.5 rounded-full ${connected ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`}
-		aria-hidden="true"
-	></span>
-	<span class="font-mono text-[10px] tracking-[0.04em] text-white/45">{connected ? lastUpdated || 'live' : 'connecting'}</span>
+<div class="flex items-center justify-between border-b border-white/5 px-4 py-1.5 min-h-[32px]">
+	<span class="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-white/40">Monitor</span>
+	{#if onClose}
+		<button
+			type="button"
+			onclick={onClose}
+			aria-label="Close"
+			title="Close panel"
+			class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition hover:bg-white/10 hover:text-white"
+		>
+			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+		</button>
+	{/if}
 </div>
 
 <!-- Metrics -->

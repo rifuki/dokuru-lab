@@ -71,9 +71,6 @@
 	}
 
 	const statusLabel = $derived(connected ? (busy ? 'streaming' : 'live') : 'connecting');
-	const statusDot = $derived(
-		connected ? (busy ? 'bg-playstation-cyan animate-pulse' : 'bg-emerald-400') : 'bg-amber-400 animate-pulse'
-	);
 	const filteredCount = $derived(visibleLines.length);
 	const totalCount = $derived(lines.length);
 
@@ -114,19 +111,27 @@
 </header>
 {:else}
 <!-- Compact status strip when header is managed by parent -->
-<div class="flex items-center gap-1.5 border-b border-white/5 px-4 py-1.5">
-	<span class={`inline-block h-1.5 w-1.5 rounded-full ${statusDot}`} aria-hidden="true"></span>
-	<span class="font-mono text-[10px] tracking-[0.04em] text-white/45">{statusLabel}</span>
+<div class="flex items-center justify-between border-b border-white/5 px-4 py-1.5 min-h-[32px]">
+	<span class="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-white/40">Terminal</span>
 	<div class="ml-auto flex items-center gap-1">
 		<button
 			type="button"
 			onclick={onClear}
 			disabled={totalCount === 0}
-			aria-label="Clear"
-			title="Clear"
+			aria-label="Clear terminal"
+			title="Clear terminal"
 			class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
 		>
-			<Eraser size={12} strokeWidth={1.6} />
+			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+		</button>
+		<button
+			type="button"
+			onclick={onClose}
+			aria-label="Close"
+			title="Close panel"
+			class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition hover:bg-white/10 hover:text-white"
+		>
+			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
 		</button>
 	</div>
 </div>

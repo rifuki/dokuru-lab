@@ -27,18 +27,6 @@
 				<a class="text-white/85 no-underline transition hover:text-[#1883fd]" href="#cgroup">Cgroup</a>
 				<a class="text-white/85 no-underline transition hover:text-[#1883fd]" href="#evidence">Evidence</a>
 			</div>
-
-			<span
-				class="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.04em] text-white/55"
-				aria-live="polite"
-				title={monitorConnected ? `Monitor stream live ${monitorLastUpdated}` : 'Monitor stream connecting'}
-			>
-				<span
-					class={`inline-block h-1.5 w-1.5 rounded-full ${monitorConnected ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`}
-					aria-hidden="true"
-				></span>
-				<span class="hidden @sm/page:inline">monitor {monitorConnected ? (monitorLastUpdated || 'live') : 'connecting'}</span>
-			</span>
 		</div>
 	</div>
 </nav>

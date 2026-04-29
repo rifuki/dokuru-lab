@@ -149,11 +149,11 @@
 		if (panel === 'terminal') {
 			return terminalConnected
 				? terminalBusy
-					? 'bg-playstation-cyan animate-pulse'
+					? 'bg-playstation-cyan'
 					: 'bg-emerald-400'
-				: 'bg-amber-400 animate-pulse';
+				: 'bg-white/20';
 		}
-		return monitorConnected ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse';
+		return monitorConnected ? 'bg-emerald-400' : 'bg-white/20';
 	}
 	let terminalSocket: WebSocket | null = null;
 	let monitorSocket: WebSocket | null = null;
@@ -646,29 +646,6 @@
 						{terminalLines.length > 999 ? '999+' : terminalLines.length}
 					</span>
 				{/if}
-
-				<!-- Actions -->
-				<div class="ml-auto flex items-center gap-0.5">
-					<button
-						type="button"
-						onclick={clearTerminal}
-						disabled={terminalLines.length === 0}
-						title="Clear terminal"
-						aria-label="Clear terminal"
-						class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition-colors hover:bg-white/10 hover:text-white/85 disabled:cursor-not-allowed disabled:opacity-25"
-					>
-						<Trash2 size={12} strokeWidth={1.7} />
-					</button>
-					<button
-						type="button"
-						onclick={closeTerminal}
-						title="Close sidebar"
-						aria-label="Close sidebar"
-						class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition-colors hover:bg-white/10 hover:text-white/85"
-					>
-						<X size={12} strokeWidth={1.8} />
-					</button>
-				</div>
 			</div>
 
 			<!-- ── Sidebar content ───────────────────────────────── -->
@@ -696,11 +673,11 @@
 								connected={terminalConnected}
 								busy={terminalBusy}
 								onClear={clearTerminal}
-								onClose={closeTerminal}
+								onClose={() => removePanel('terminal')}
 								hideHeader
 							/>
 						{:else}
-							<SidebarMonitor {runtime} connected={monitorConnected} {lastUpdated} />
+							<SidebarMonitor {runtime} connected={monitorConnected} {lastUpdated} onClose={() => removePanel('monitor')} />
 						{/if}
 					</div>
 				{:else}
@@ -722,21 +699,12 @@
 									connected={terminalConnected}
 									busy={terminalBusy}
 									onClear={clearTerminal}
-									onClose={closeTerminal}
+									onClose={() => removePanel('terminal')}
 									hideHeader
 								/>
 							{:else}
-								<SidebarMonitor {runtime} connected={monitorConnected} {lastUpdated} />
+								<SidebarMonitor {runtime} connected={monitorConnected} {lastUpdated} onClose={() => removePanel('monitor')} />
 							{/if}
-							<button
-								type="button"
-								onclick={() => removePanel(activePanels[0])}
-								title="Remove {panelLabel(activePanels[0])}"
-								aria-label="Remove {panelLabel(activePanels[0])}"
-								class="absolute top-1 right-1 z-10 grid h-5 w-5 cursor-pointer place-items-center rounded text-white/30 opacity-0 transition-opacity hover:bg-white/10 hover:text-white/85 group-hover/pane:opacity-100"
-							>
-								<X size={11} strokeWidth={1.8} />
-							</button>
 						</div>
 						<!-- Drag divider -->
 						<div
@@ -765,21 +733,12 @@
 									connected={terminalConnected}
 									busy={terminalBusy}
 									onClear={clearTerminal}
-									onClose={closeTerminal}
+									onClose={() => removePanel('terminal')}
 									hideHeader
 								/>
 							{:else}
-								<SidebarMonitor {runtime} connected={monitorConnected} {lastUpdated} />
+								<SidebarMonitor {runtime} connected={monitorConnected} {lastUpdated} onClose={() => removePanel('monitor')} />
 							{/if}
-							<button
-								type="button"
-								onclick={() => removePanel(activePanels[1])}
-								title="Remove {panelLabel(activePanels[1])}"
-								aria-label="Remove {panelLabel(activePanels[1])}"
-								class="absolute top-1 right-1 z-10 grid h-5 w-5 cursor-pointer place-items-center rounded text-white/30 opacity-0 transition-opacity hover:bg-white/10 hover:text-white/85 group-hover/pane:opacity-100"
-							>
-								<X size={11} strokeWidth={1.8} />
-							</button>
 						</div>
 					</div>
 				{/if}
