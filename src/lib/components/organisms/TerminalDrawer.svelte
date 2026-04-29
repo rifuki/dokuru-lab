@@ -190,21 +190,21 @@
 </div>
 
 <footer class="flex items-center justify-between border-t border-white/5 px-4 py-2">
-	<button
-		type="button"
-		onclick={() => {
-			stickToBottom = !stickToBottom;
-			if (stickToBottom) jumpToLatest();
-		}}
-		class="inline-flex cursor-pointer items-center gap-1.5 font-mono text-[10px] tracking-[0.04em] transition-colors duration-150 {stickToBottom
-			? 'text-emerald-400 hover:text-emerald-300'
-			: 'text-white/30 hover:text-white/55'}"
-		title={stickToBottom ? 'Auto-scroll ON — click to pause' : 'Auto-scroll OFF — click to resume'}
-		aria-pressed={stickToBottom}
-		aria-label="Toggle auto-scroll"
-	>
-		<span class="inline-block h-1.5 w-1.5 rounded-full transition-colors {stickToBottom ? 'bg-emerald-400' : 'bg-white/25'}"></span>
-		auto-scroll
-	</button>
+	<div class="flex items-center gap-2">
+		<span class="font-mono text-[10px] tracking-[0.04em] {stickToBottom ? 'text-white/40' : 'text-white/20'}">auto-scroll</span>
+		<button
+			type="button"
+			onclick={() => {
+				stickToBottom = !stickToBottom;
+				if (stickToBottom) jumpToLatest();
+			}}
+			class="relative inline-flex h-[14px] w-[26px] cursor-pointer items-center rounded-full transition-colors duration-200 {stickToBottom ? 'bg-emerald-500' : 'bg-white/15'}"
+			title={stickToBottom ? 'Auto-scroll ON — click to pause' : 'Auto-scroll OFF — click to resume'}
+			aria-pressed={stickToBottom}
+			aria-label="Toggle auto-scroll"
+		>
+			<span class="absolute inline-block h-[10px] w-[10px] rounded-full bg-white shadow-sm transition-transform duration-200 {stickToBottom ? 'translate-x-[14px]' : 'translate-x-[2px]'}"></span>
+		</button>
+	</div>
 	<span class="font-mono text-[10px] tracking-[0.04em] text-white/25">drag edge to resize</span>
 </footer>
