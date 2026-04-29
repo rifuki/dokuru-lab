@@ -82,51 +82,54 @@
 </script>
 
 {#snippet filterStrip(compact: boolean)}
-	<div class="flex items-center gap-3 border-b border-white/5 bg-[#0a0a0a] px-4 py-1.5 min-h-[32px]">
+	<div class="flex items-center border-b border-white/5 bg-[#0a0a0a] px-4 py-1.5 min-h-[32px]">
 		{#if compact}
-			<span class="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-white/40 mr-2">Terminal</span>
+			<span class="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-white/40">Terminal</span>
 		{/if}
-		<div class="flex items-center gap-2.5">
-			{#each streamMeta as { key, label } (key)}
-				{@const active = activeStreams[key]}
-				<button
-					type="button"
-					onclick={() => toggleStream(key)}
-					aria-pressed={active}
-					class="cursor-pointer font-mono text-[10px] transition-colors {active
-						? 'text-white/70'
-						: 'text-white/20 hover:text-white/50'}"
-				>
-					{label}
-				</button>
-			{/each}
-		</div>
-		<span class="ml-auto font-mono text-[10px] tracking-[0.02em] text-white/30 tabular-nums">
-			{filteredCount}{filteredCount !== totalCount ? `/${totalCount}` : ''} lines
-		</span>
-		{#if compact}
-			<div class="flex items-center gap-1 border-l border-white/10 pl-2 ml-1">
-				<button
-					type="button"
-					onclick={onClear}
-					disabled={totalCount === 0}
-					aria-label="Clear terminal"
-					title="Clear terminal"
-					class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-				>
-					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-				</button>
-				<button
-					type="button"
-					onclick={onClose}
-					aria-label="Close"
-					title="Close panel"
-					class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition hover:bg-white/10 hover:text-white"
-				>
-					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-				</button>
+		<div class="ml-auto flex items-center gap-3">
+			<span class="font-mono text-[10px] tracking-[0.02em] text-white/30 tabular-nums">
+				{filteredCount}{filteredCount !== totalCount ? `/${totalCount}` : ''} lines
+			</span>
+			<div class="flex items-center gap-2">
+				{#each streamMeta as { key, label } (key)}
+					{@const active = activeStreams[key]}
+					<button
+						type="button"
+						onclick={() => toggleStream(key)}
+						aria-pressed={active}
+						style="font-size: 10px;"
+						class="cursor-pointer font-mono transition-colors {active
+							? 'text-white/70'
+							: 'text-white/20 hover:text-white/50'}"
+					>
+						{label}
+					</button>
+				{/each}
 			</div>
-		{/if}
+			{#if compact}
+				<div class="flex items-center gap-1 border-l border-white/10 pl-3 ml-1">
+					<button
+						type="button"
+						onclick={onClear}
+						disabled={totalCount === 0}
+						aria-label="Clear terminal"
+						title="Clear terminal"
+						class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+					>
+						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+					</button>
+					<button
+						type="button"
+						onclick={onClose}
+						aria-label="Close"
+						title="Close panel"
+						class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition hover:bg-white/10 hover:text-white"
+					>
+						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+					</button>
+				</div>
+			{/if}
+		</div>
 	</div>
 {/snippet}
 
