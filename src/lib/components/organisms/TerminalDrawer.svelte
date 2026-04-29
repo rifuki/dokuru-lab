@@ -87,7 +87,6 @@
 {#if !hideHeader}
 <header class="flex items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-white/5">
 	<div class="flex min-w-0 items-center gap-3">
-		<span class={`inline-block h-2 w-2 shrink-0 rounded-full ${statusDot}`} aria-hidden="true"></span>
 		<span class="truncate font-mono text-[13px] uppercase tracking-[0.1em] text-white">Terminal</span>
 		<span class="font-mono text-[11px] uppercase tracking-[0.05em] text-white/40">{statusLabel}</span>
 	</div>
@@ -116,8 +115,7 @@
 {:else}
 <!-- Compact status strip when header is managed by parent -->
 <div class="flex items-center gap-2 border-b border-white/5 px-5 py-2">
-	<span class={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${statusDot}`} aria-hidden="true"></span>
-	<span class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-white/40">{statusLabel}</span>
+	<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-white/40">{statusLabel}</span>
 	<div class="ml-auto flex items-center gap-1">
 		<button
 			type="button"

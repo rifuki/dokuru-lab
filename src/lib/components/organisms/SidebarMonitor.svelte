@@ -47,7 +47,6 @@
 
 <!-- Compact status strip -->
 <div class="flex items-center gap-2 border-b border-white/5 px-5 py-2">
-	<span class={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${connected ? 'bg-emerald-400' : 'bg-commerce animate-pulse'}`} aria-hidden="true"></span>
 	<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-white/40">{connected ? lastUpdated || 'live' : 'reconnecting'}</span>
 </div>
 

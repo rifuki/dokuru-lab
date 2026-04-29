@@ -34,10 +34,6 @@
 				title={monitorConnected ? `Monitor stream live ${monitorLastUpdated}` : 'Monitor stream reconnecting'}
 			>
 				<Waves size={11} strokeWidth={2.2} class="text-white/45" aria-hidden="true" />
-				<span
-					class={`inline-block h-1.5 w-1.5 rounded-full ${monitorConnected ? 'bg-emerald-400' : 'bg-commerce'}`}
-					aria-hidden="true"
-				></span>
 				<span class="hidden @sm/page:inline">{monitorConnected ? `monitor ${monitorLastUpdated || 'live'}` : 'reconnecting'}</span>
 			</span>
 		</div>
