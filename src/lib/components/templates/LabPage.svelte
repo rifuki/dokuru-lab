@@ -420,7 +420,7 @@
 	<div class="@container/page flex min-w-0 flex-1 flex-col">
 		<Masthead {monitorConnected} monitorLastUpdated={lastUpdated} />
 
-		<main class="@container/main flex-1">
+		<main class="@container/main flex flex-1 flex-col">
 			<HeroSection
 				{monitorConnected}
 				{terminalConnected}

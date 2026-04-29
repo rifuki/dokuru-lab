@@ -84,7 +84,7 @@
 	}
 </script>
 
-<section class="relative flex min-h-[calc(100svh-54px)] flex-col justify-center bg-black px-4 py-8 text-white sm:px-6 md:px-8 lg:py-10">
+<section class="relative flex flex-1 flex-col justify-center bg-black px-4 py-8 text-white sm:px-6 md:px-8 lg:py-10">
 	<div class="mx-auto w-full max-w-[1480px]">
 	<!-- Live status strip -->
 		<div class="animate-rise-in mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11.5px] tracking-[0.04em] text-white/65">
