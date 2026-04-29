@@ -430,35 +430,14 @@
 				{running}
 			/>
 
-			<!-- Section 01 · Live monitor -->
-			<section id="monitor" class="scroll-mt-20 bg-white px-4 py-12 sm:px-6 md:px-8 lg:py-16">
-				<div class="mx-auto max-w-[1480px]">
-					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
-						<div>
-							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
-								<Activity size={18} strokeWidth={1.5} class="text-playstation-blue" />
-								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">01</span>
-								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Live monitor</span>
-							</p>
-							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Real-time namespace and cgroup signals</h2>
-						</div>
-						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
-							Streamed over <code>/ws/monitor</code> straight from <code>dokuru-lab</code>. Each metric reacts as you trigger payloads from the next section.
-						</p>
-					</header>
-
-					<LiveMonitorPanel {runtime} {lastUpdated} connected={monitorConnected} />
-				</div>
-			</section>
-
-			<!-- Section 02 · Blast-radius scenarios -->
+			<!-- Section 01 · Blast-radius scenarios -->
 			<section id="scenarios" class="scroll-mt-20 bg-gradient-to-b from-white to-ice px-4 py-12 sm:px-6 md:px-8 lg:py-16">
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
 							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
 								<Bomb size={18} strokeWidth={1.5} class="text-playstation-blue" />
-								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">02</span>
+								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">01</span>
 								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Blast radius</span>
 							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Trigger a payload, watch the neighbor</h2>
@@ -479,6 +458,27 @@
 							onSabotageProxy={runSabotageProxy}
 						/>
 					</div>
+				</div>
+			</section>
+
+			<!-- Section 02 · Live monitor -->
+			<section id="monitor" class="scroll-mt-20 bg-white px-4 py-12 sm:px-6 md:px-8 lg:py-16">
+				<div class="mx-auto max-w-[1480px]">
+					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
+						<div>
+							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
+								<Activity size={18} strokeWidth={1.5} class="text-playstation-blue" />
+								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">02</span>
+								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Live monitor</span>
+							</p>
+							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Real-time namespace and cgroup signals</h2>
+						</div>
+						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
+							Streamed over <code>/ws/monitor</code> straight from <code>dokuru-lab</code>. See the exact limits and isolation status below.
+						</p>
+					</header>
+
+					<LiveMonitorPanel {runtime} {lastUpdated} connected={monitorConnected} />
 				</div>
 			</section>
 

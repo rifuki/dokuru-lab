@@ -48,79 +48,79 @@
 	subtitle={connected ? `WebSocket live ${lastUpdated}` : 'WebSocket reconnecting'}
 >
 	<div class="grid gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-		<article class="relative overflow-hidden rounded-[19px] border border-transparent bg-white p-6 shadow-[0_5px_9px_rgba(0,0,0,0.06)] ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_15px_rgba(0,0,0,0.08)] hover:ring-black/10">
+		<article class="relative overflow-hidden rounded-[19px] border border-black/5 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-black/10">
 			<div class="mb-5 flex items-start justify-between gap-3">
 				<div class="flex items-center gap-3">
 					<span class="grid h-10 w-10 place-items-center rounded-xl bg-playstation-blue/10 text-playstation-blue transition-colors group-hover:bg-playstation-blue/15" aria-hidden="true">
-						<Hash size={18} strokeWidth={1.5} />
+						<Hash size={18} strokeWidth={2} />
 					</span>
 					<div>
-						<span class="block text-[14px] font-semibold tracking-wide text-ink">PIDs</span>
-						<span class="font-mono text-[11px] text-body-gray">Rule 5.29</span>
+						<span class="block text-[15px] font-bold tracking-tight text-black">Process Limits</span>
+						<span class="font-mono text-[11px] font-medium text-black/60">Rule 5.29: Restrict PIDs</span>
 					</div>
 				</div>
-				<strong class="font-mono text-[14px] font-medium text-ink tabular-nums">{runtime?.cgroup.pids_current || '...'} / {runtime?.cgroup.pids_max || '...'}</strong>
+				<strong class="font-mono text-[15px] font-bold text-black tabular-nums">{runtime?.cgroup.pids_current || '...'} / {runtime?.cgroup.pids_max || '...'}</strong>
 			</div>
-			<div class="h-1.5 overflow-hidden rounded-full bg-black/5">
+			<div class="h-2 overflow-hidden rounded-full bg-black/5">
 				<div class="h-full rounded-full bg-playstation-blue transition-all duration-500" style={`width: ${percent(runtime?.cgroup.pids_current, runtime?.cgroup.pids_max)}%`}></div>
 			</div>
-			<p class="mt-4 m-0 text-[13px] leading-relaxed text-body-gray">
-				PID sleepers: <strong class="font-mono text-ink">{runtime?.processes.pid_bomb_sleepers || '0'}</strong>. Run PID bomb and watch this climb.
+			<p class="mt-4 m-0 text-[13.5px] leading-relaxed text-black/70">
+				PID sleepers: <strong class="font-mono font-bold text-black">{runtime?.processes.pid_bomb_sleepers || '0'}</strong>. Run PID bomb and watch this climb.
 			</p>
 		</article>
 
-		<article class="relative overflow-hidden rounded-[19px] border border-transparent bg-white p-6 shadow-[0_5px_9px_rgba(0,0,0,0.06)] ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_15px_rgba(0,0,0,0.08)] hover:ring-black/10">
+		<article class="relative overflow-hidden rounded-[19px] border border-black/5 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-black/10">
 			<div class="mb-5 flex items-start justify-between gap-3">
 				<div class="flex items-center gap-3">
 					<span class="grid h-10 w-10 place-items-center rounded-xl bg-playstation-cyan/15 text-[#0e7fa8] transition-colors" aria-hidden="true">
-						<MemoryStick size={18} strokeWidth={1.5} />
+						<MemoryStick size={18} strokeWidth={2} />
 					</span>
 					<div>
-						<span class="block text-[14px] font-semibold tracking-wide text-ink">Memory</span>
-						<span class="font-mono text-[11px] text-body-gray">Rule 5.11</span>
+						<span class="block text-[15px] font-bold tracking-tight text-black">Memory Sandbox</span>
+						<span class="font-mono text-[11px] font-medium text-black/60">Rule 5.11: Memory Quota</span>
 					</div>
 				</div>
-				<strong class="text-right font-mono text-[14px] font-medium text-ink tabular-nums">{formatBytes(runtime?.cgroup.memory_current)}</strong>
+				<strong class="text-right font-mono text-[15px] font-bold text-black tabular-nums">{formatBytes(runtime?.cgroup.memory_current)}</strong>
 			</div>
-			<div class="h-1.5 overflow-hidden rounded-full bg-black/5">
+			<div class="h-2 overflow-hidden rounded-full bg-black/5">
 				<div class="h-full rounded-full bg-playstation-cyan transition-all duration-500" style={`width: ${percent(runtime?.cgroup.memory_current, runtime?.cgroup.memory_max)}%`}></div>
 			</div>
-			<p class="mt-4 m-0 text-[13px] leading-relaxed text-body-gray">
-				Limit: <strong class="font-mono text-ink">{formatBytes(runtime?.cgroup.memory_max)}</strong>
+			<p class="mt-4 m-0 text-[13.5px] leading-relaxed text-black/70">
+				Limit: <strong class="font-mono font-bold text-black">{formatBytes(runtime?.cgroup.memory_max)}</strong>
 			</p>
 		</article>
 
-		<article class="relative overflow-hidden rounded-[19px] border border-transparent bg-white p-6 shadow-[0_5px_9px_rgba(0,0,0,0.06)] ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_15px_rgba(0,0,0,0.08)] hover:ring-black/10">
+		<article class="relative overflow-hidden rounded-[19px] border border-black/5 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-black/10">
 			<div class="mb-5 flex items-center gap-3">
 				<span class="grid h-10 w-10 place-items-center rounded-xl bg-commerce/10 text-commerce transition-colors" aria-hidden="true">
-					<Cpu size={18} strokeWidth={1.5} />
+					<Cpu size={18} strokeWidth={2} />
 				</span>
 				<div>
-					<span class="block text-[14px] font-semibold tracking-wide text-ink">CPU</span>
-					<span class="font-mono text-[11px] text-body-gray">Rule 5.12</span>
+					<span class="block text-[15px] font-bold tracking-tight text-black">CPU Throttling</span>
+					<span class="font-mono text-[11px] font-medium text-black/60">Rule 5.12: Core Isolation</span>
 				</div>
 			</div>
-			<dl class="mt-4 grid gap-3 text-[13px]">
-				<div class="flex justify-between gap-3 border-b border-black/5 pb-2"><dt class="text-body-gray">cpu.weight</dt><dd class="m-0 font-mono text-ink tabular-nums">{runtime?.cgroup.cpu_weight || '...'}</dd></div>
-				<div class="flex justify-between gap-3 border-b border-black/5 pb-2"><dt class="text-body-gray">cpu.max</dt><dd class="m-0 font-mono text-ink tabular-nums">{runtime?.cgroup.cpu_max || '...'}</dd></div>
-				<div class="flex justify-between gap-3"><dt class="text-body-gray">burners</dt><dd class="m-0 font-mono text-ink tabular-nums">{runtime?.processes.cpu_burners || '0'}</dd></div>
+			<dl class="mt-4 grid gap-3 text-[13.5px]">
+				<div class="flex justify-between gap-3 border-b border-black/5 pb-2"><dt class="font-medium text-black/70">cpu.weight</dt><dd class="m-0 font-mono font-bold text-black tabular-nums">{runtime?.cgroup.cpu_weight || '...'}</dd></div>
+				<div class="flex justify-between gap-3 border-b border-black/5 pb-2"><dt class="font-medium text-black/70">cpu.max</dt><dd class="m-0 font-mono font-bold text-black tabular-nums">{runtime?.cgroup.cpu_max || '...'}</dd></div>
+				<div class="flex justify-between gap-3"><dt class="font-medium text-black/70">Active burners</dt><dd class="m-0 font-mono font-bold text-black tabular-nums">{runtime?.processes.cpu_burners || '0'}</dd></div>
 			</dl>
 		</article>
 
-		<article class="relative overflow-hidden rounded-[19px] border border-transparent bg-white p-6 shadow-[0_5px_9px_rgba(0,0,0,0.06)] ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_15px_rgba(0,0,0,0.08)] hover:ring-black/10">
+		<article class="relative overflow-hidden rounded-[19px] border border-black/5 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-black/10">
 			<div class="mb-5 flex items-center gap-3">
-				<span class="grid h-10 w-10 place-items-center rounded-xl bg-[#9ad7ff]/20 text-[#0e7fa8] transition-colors" aria-hidden="true">
-					<Boxes size={18} strokeWidth={1.5} />
+				<span class="grid h-10 w-10 place-items-center rounded-xl bg-[#9ad7ff]/30 text-[#0e7fa8] transition-colors" aria-hidden="true">
+					<Boxes size={18} strokeWidth={2} />
 				</span>
 				<div>
-					<span class="block text-[14px] font-semibold tracking-wide text-ink">Namespace</span>
-					<span class="font-mono text-[11px] text-body-gray">Rules 2.10, 5.16, 5.17, 5.21, 5.31</span>
+					<span class="block text-[15px] font-bold tracking-tight text-black">Namespace Reality</span>
+					<span class="font-mono text-[11px] font-medium text-black/60">Rules 5.16, 5.17, 5.21, 5.31</span>
 				</div>
 			</div>
-			<dl class="mt-4 grid gap-3 text-[13px]">
-				<div class="border-b border-black/5 pb-2"><dt class="mb-1 text-body-gray">UID map</dt><dd class="m-0 break-words font-mono text-[11px] text-ink">{firstLine(runtime?.uid_map)}</dd></div>
-				<div class="border-b border-black/5 pb-2"><dt class="mb-1 text-body-gray">PID ns</dt><dd class="m-0 break-words font-mono text-[11px] text-ink">{runtime?.pid_namespace || 'loading'}</dd></div>
-				<div class="flex justify-between gap-3"><dt class="text-body-gray">Processes visible</dt><dd class="m-0 font-mono text-ink tabular-nums">{runtime?.processes.process_count || '...'}</dd></div>
+			<dl class="mt-4 grid gap-3 text-[13.5px]">
+				<div class="border-b border-black/5 pb-2"><dt class="mb-1 font-medium text-black/70">UID Mapping (User NS)</dt><dd class="m-0 break-words font-mono text-[12px] font-bold text-black">{firstLine(runtime?.uid_map)}</dd></div>
+				<div class="border-b border-black/5 pb-2"><dt class="mb-1 font-medium text-black/70">PID Boundary</dt><dd class="m-0 break-words font-mono text-[12px] font-bold text-black">{runtime?.pid_namespace || 'loading'}</dd></div>
+				<div class="flex justify-between gap-3"><dt class="font-medium text-black/70">Total processes visible</dt><dd class="m-0 font-mono font-bold text-black tabular-nums">{runtime?.processes.process_count || '...'}</dd></div>
 			</dl>
 		</article>
 	</div>
