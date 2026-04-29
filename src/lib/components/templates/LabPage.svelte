@@ -201,10 +201,7 @@
 					terminalWidth = Math.max(TERMINAL_MIN_WIDTH, Math.min(TERMINAL_MAX_WIDTH, parsed));
 				}
 			}
-			const storedOpen = window.localStorage.getItem(TERMINAL_OPEN_KEY);
-			if (storedOpen === 'true' && window.innerWidth >= 1024) {
-				terminalOpen = true;
-			}
+			// Sidebar now defaults to closed on load to prevent intrusive auto-opening
 		} catch {
 			/* localStorage unavailable */
 		}
