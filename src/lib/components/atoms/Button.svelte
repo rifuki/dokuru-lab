@@ -15,20 +15,20 @@
 		$props();
 
 	const base =
-		'inline-flex items-center justify-center rounded-full tracking-[0.4px] transition-all duration-[180ms] ease-out disabled:cursor-wait disabled:opacity-55 active:opacity-60';
+		'inline-flex cursor-pointer items-center justify-center rounded-full tracking-[0.02em] transition-all duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-50 active:scale-95';
 	const sizes: Record<ButtonSize, string> = {
-		sm: 'px-4 py-2 text-[14px]',
-		md: 'px-6 py-3 text-[18px]'
+		sm: 'px-4 py-2 text-[13px]',
+		md: 'px-5 py-2.5 text-[14.5px]'
 	};
 	const variants: Record<ButtonVariant, string> = {
 		primary:
-			'bg-playstation-blue text-white font-medium hover:scale-[1.2] hover:bg-playstation-cyan hover:shadow-[0_0_0_2px_#ffffff,0_0_0_4px_#0070cc] focus-visible:bg-playstation-cyan focus-visible:shadow-[0_0_0_2px_#ffffff,0_0_0_4px_#0070cc]',
+			'bg-playstation-blue text-white font-medium hover:-translate-y-0.5 hover:bg-[#1eaedb] hover:shadow-[0_5px_15px_rgba(30,174,219,0.35)]',
 		secondary:
-			'border-[2px] border-black border-outset bg-white text-playstation-blue font-semibold hover:scale-[1.2] hover:bg-playstation-cyan hover:text-white hover:border-transparent hover:shadow-[0_0_0_2px_#ffffff,0_0_0_4px_#0070cc]',
+			'border border-[#dcdcdc] bg-white text-ink font-medium hover:-translate-y-0.5 hover:border-playstation-blue hover:text-playstation-blue hover:shadow-[0_5px_15px_rgba(0,112,204,0.15)]',
 		ghost:
-			'border border-[#dedede] bg-transparent text-ink font-medium hover:scale-[1.2] hover:bg-playstation-cyan hover:text-white hover:border-transparent hover:shadow-[0_0_0_2px_#ffffff,0_0_0_4px_#0070cc] active:text-[#0072ce]',
+			'border border-transparent bg-transparent text-body-gray font-medium hover:-translate-y-0.5 hover:bg-black/5 hover:text-ink',
 		commerce:
-			'bg-commerce text-white font-bold tracking-[0.45px] hover:scale-[1.2] hover:bg-playstation-cyan hover:shadow-[0_0_0_2px_#ffffff,0_0_0_4px_#0070cc] active:bg-commerce-active'
+			'bg-commerce text-white font-medium hover:-translate-y-0.5 hover:bg-[#d63118] hover:shadow-[0_5px_15px_rgba(230,55,27,0.35)] active:bg-[#b02813]'
 	};
 </script>
 
