@@ -11,6 +11,7 @@
 	import RuntimeEvidencePanel from '$lib/components/organisms/RuntimeEvidencePanel.svelte';
 	import TerminalDrawer from '$lib/components/organisms/TerminalDrawer.svelte';
 	import TerminalHandle from '$lib/components/organisms/TerminalHandle.svelte';
+	import SidebarMonitor from '$lib/components/organisms/SidebarMonitor.svelte';
 	import type { TerminalLine } from '$lib/components/organisms/TerminalPanel.svelte';
 	import { Activity, AlertOctagon, Bomb, FileSearch, FlaskConical, Layers, SlidersHorizontal } from '@lucide/svelte';
 	import type { CommandPreset, CustomerSample, LabResponse, RuntimeEvidence } from '$lib/types/lab';
@@ -31,6 +32,7 @@
 	let terminalOpen = $state(false);
 	let terminalWidth = $state(420);
 	let terminalResizing = $state(false);
+	let sidebarTab = $state<'terminal' | 'monitor'>('terminal');
 	let terminalSocket: WebSocket | null = null;
 	let monitorSocket: WebSocket | null = null;
 	let customerSocket: WebSocket | null = null;
@@ -478,13 +480,63 @@
 		aria-hidden={!terminalOpen}
 	>
 		<div class="flex h-full flex-col" style="width: {terminalWidth}px;">
-			<TerminalDrawer
-				lines={terminalLines}
-				connected={terminalConnected}
-				busy={terminalBusy}
-				onClear={clearTerminal}
-				onClose={closeTerminal}
-			/>
+			<!-- Tab switcher -->
+			<div class="flex shrink-0 items-center gap-1 border-b border-white/5 bg-black px-3 pt-3 pb-0">
+				<button
+					type="button"
+					onclick={() => sidebarTab = 'terminal'}
+					class="relative cursor-pointer pb-3 px-3 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors duration-150 {sidebarTab === 'terminal' ? 'text-white' : 'text-white/35 hover:text-white/65'}"
+				>
+					Terminal
+					{#if terminalLines.length > 0}
+						<span class="ml-1.5 rounded-full bg-white/15 px-1.5 py-px font-mono text-[9px]">{terminalLines.length > 99 ? '99+' : terminalLines.length}</span>
+					{/if}
+					{#if sidebarTab === 'terminal'}
+						<span class="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-t-full"></span>
+					{/if}
+				</button>
+				<button
+					type="button"
+					onclick={() => sidebarTab = 'monitor'}
+					class="relative cursor-pointer pb-3 px-3 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors duration-150 {sidebarTab === 'monitor' ? 'text-white' : 'text-white/35 hover:text-white/65'}"
+				>
+					Monitor
+					{#if monitorConnected}
+						<span class="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+					{/if}
+					{#if sidebarTab === 'monitor'}
+						<span class="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-t-full"></span>
+					{/if}
+				</button>
+				<button
+					type="button"
+					onclick={closeTerminal}
+					aria-label="Close sidebar"
+					class="ml-auto cursor-pointer pb-3 px-2 text-white/30 transition-colors hover:text-white/70"
+				>
+					<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg>
+				</button>
+			</div>
+
+			<!-- Tab content -->
+			<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+				{#if sidebarTab === 'terminal'}
+					<TerminalDrawer
+						lines={terminalLines}
+						connected={terminalConnected}
+						busy={terminalBusy}
+						onClear={clearTerminal}
+						onClose={closeTerminal}
+						hideHeader
+					/>
+				{:else}
+					<SidebarMonitor
+						{runtime}
+						connected={monitorConnected}
+						lastUpdated={lastUpdated}
+					/>
+				{/if}
+			</div>
 		</div>
 	</aside>
 </div>

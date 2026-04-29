@@ -9,11 +9,12 @@
 		lines: TerminalLine[];
 		connected: boolean;
 		busy: boolean;
+		hideHeader?: boolean;
 		onClear: () => void;
 		onClose: () => void;
 	};
 
-	let { lines, connected, busy, onClear, onClose }: Props = $props();
+	let { lines, connected, busy, hideHeader = false, onClear, onClose }: Props = $props();
 	let viewport = $state<HTMLDivElement | null>(null);
 	let stickToBottom = $state(true);
 	let pendingCount = $state(0);
@@ -83,6 +84,7 @@
 	];
 </script>
 
+{#if !hideHeader}
 <header class="flex items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-white/5">
 	<div class="flex min-w-0 items-center gap-3">
 		<span class={`inline-block h-2 w-2 shrink-0 rounded-full ${statusDot}`} aria-hidden="true"></span>
@@ -111,6 +113,25 @@
 		</button>
 	</div>
 </header>
+{:else}
+<!-- Compact status strip when header is managed by parent -->
+<div class="flex items-center gap-2 border-b border-white/5 px-5 py-2">
+	<span class={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${statusDot}`} aria-hidden="true"></span>
+	<span class="font-mono text-[10.5px] uppercase tracking-[0.08em] text-white/40">{statusLabel}</span>
+	<div class="ml-auto flex items-center gap-1">
+		<button
+			type="button"
+			onclick={onClear}
+			disabled={totalCount === 0}
+			aria-label="Clear"
+			title="Clear"
+			class="grid h-7 w-7 cursor-pointer place-items-center rounded-full text-white/40 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+		>
+			<Eraser size={13} strokeWidth={1.5} />
+		</button>
+	</div>
+</div>
+{/if}
 
 <div class="flex items-center gap-4 px-5 py-3 border-b border-white/5 bg-[#0a0a0a]">
 	{#each streamMeta as { key, label } (key)}
