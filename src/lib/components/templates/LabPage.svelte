@@ -315,9 +315,9 @@
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
 							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
-								<Activity size={13} strokeWidth={2.2} class="text-playstation-blue" />
+								<Activity size={18} strokeWidth={1.5} class="text-playstation-blue" />
 								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">01</span>
-								<span class="text-playstation-blue">Live monitor</span>
+								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Live monitor</span>
 							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Real-time namespace and cgroup signals</h2>
 						</div>
@@ -336,9 +336,9 @@
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
 							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
-								<Bomb size={13} strokeWidth={2.2} class="text-playstation-blue" />
+								<Bomb size={18} strokeWidth={1.5} class="text-playstation-blue" />
 								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">02</span>
-								<span class="text-playstation-blue">Blast radius</span>
+								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Blast radius</span>
 							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Trigger a payload, watch the neighbor</h2>
 						</div>
@@ -367,9 +367,9 @@
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
 							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
-								<Layers size={13} strokeWidth={2.2} class="text-playstation-blue" />
+								<Layers size={18} strokeWidth={1.5} class="text-playstation-blue" />
 								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">03</span>
-								<span class="text-playstation-blue">Namespace isolation</span>
+								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Namespace isolation</span>
 							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Prove what the container can see</h2>
 						</div>
@@ -394,9 +394,9 @@
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
 							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
-								<SlidersHorizontal size={13} strokeWidth={2.2} class="text-playstation-blue" />
+								<SlidersHorizontal size={18} strokeWidth={1.5} class="text-playstation-blue" />
 								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">04</span>
-								<span class="text-playstation-blue">Cgroup controls</span>
+								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Cgroup controls</span>
 							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Prove how much the container can consume</h2>
 						</div>
@@ -428,9 +428,9 @@
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
 							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
-								<FileSearch size={13} strokeWidth={2.2} class="text-playstation-blue" />
+								<FileSearch size={18} strokeWidth={1.5} class="text-playstation-blue" />
 								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">05</span>
-								<span class="text-playstation-blue">Evidence</span>
+								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Evidence</span>
 							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Side-by-side reference for the report</h2>
 						</div>
@@ -457,12 +457,12 @@
 			<div class="mx-auto flex max-w-[1480px] flex-col justify-between gap-4 @3xl/page:flex-row @3xl/page:items-center">
 				<div class="flex items-center gap-2.5">
 					<span class="grid h-8 w-8 place-items-center rounded-full bg-white text-playstation-blue" aria-hidden="true">
-						<FlaskConical size={15} strokeWidth={2.2} />
+						<FlaskConical size={18} strokeWidth={1.5} />
 					</span>
 					<strong class="text-[15px] font-semibold">Dokuru Namespace &amp; Cgroup Lab</strong>
 				</div>
 				<span class="flex max-w-3xl items-start gap-2 text-[13px] text-white/85">
-					<AlertOctagon size={15} strokeWidth={2.2} class="mt-0.5 shrink-0" />
+					<AlertOctagon size={18} strokeWidth={1.5} class="mt-0.5 shrink-0" />
 					<span>Run only on a disposable lab host. Endpoints intentionally expose shell execution and resource pressure.</span>
 				</span>
 			</div>
@@ -530,12 +530,12 @@
 		type="button"
 		onclick={toggleTerminal}
 		aria-label="Open terminal"
-		class="fixed right-4 bottom-4 z-30 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2.5 text-[12.5px] font-medium text-white shadow-[0_5px_9px_rgba(0,0,0,0.16)] transition hover:scale-[1.05] hover:bg-playstation-blue lg:hidden"
+		class="fixed right-4 bottom-4 z-30 inline-flex items-center gap-2.5 rounded-full bg-playstation-blue px-5 py-3.5 text-[14px] font-medium text-white shadow-[0_5px_15px_rgba(0,0,0,0.5)] transition-all duration-300 hover:scale-[1.05] hover:bg-[#1eaedb] hover:shadow-[0_8px_25px_rgba(30,174,219,0.3)] lg:hidden"
 	>
-		<span class={`inline-block h-1.5 w-1.5 rounded-full ${terminalConnected ? (terminalBusy ? 'bg-playstation-cyan animate-pulse' : 'bg-emerald-400') : 'bg-commerce'}`} aria-hidden="true"></span>
-		Terminal
+		<span class={`inline-block h-2 w-2 rounded-full shadow-[0_0_8px_currentColor] ${terminalConnected ? (terminalBusy ? 'bg-playstation-cyan animate-pulse' : 'bg-emerald-400') : 'bg-commerce'}`} aria-hidden="true"></span>
+		<span class="tracking-wide">Terminal</span>
 		{#if terminalLines.length > 0}
-			<span class="rounded-full bg-white/15 px-1.5 py-px font-mono text-[10px] text-white/80">{terminalLines.length > 99 ? '99+' : terminalLines.length}</span>
+			<span class="ml-1 rounded-full bg-white/20 px-2 py-0.5 font-mono text-[11px] text-white">{terminalLines.length > 99 ? '99+' : terminalLines.length}</span>
 		{/if}
 	</button>
 {/if}

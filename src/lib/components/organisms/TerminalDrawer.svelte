@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { ArrowDown, ChevronRight, Eraser, X } from '@lucide/svelte';
+	import { ArrowDown, ChevronRight, Eraser, Terminal as TerminalIcon, X } from '@lucide/svelte';
 	import type { TerminalLine } from '$lib/components/organisms/TerminalPanel.svelte';
 
 	type StreamKey = 'stdout' | 'stderr' | 'system';
@@ -83,55 +83,57 @@
 	];
 </script>
 
-<header class="flex items-center justify-between gap-3 px-4 pt-4 pb-3">
-	<div class="flex min-w-0 items-center gap-2.5">
-		<span class={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${statusDot}`} aria-hidden="true"></span>
-		<span class="truncate font-mono text-[12px] text-white/85">terminal</span>
-		<span class="font-mono text-[10.5px] text-white/35">·</span>
-		<span class="font-mono text-[10.5px] text-white/55">{statusLabel}</span>
+<header class="flex items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-white/5">
+	<div class="flex min-w-0 items-center gap-3">
+		<span class={`inline-block h-2 w-2 shrink-0 rounded-full ${statusDot}`} aria-hidden="true"></span>
+		<span class="truncate font-mono text-[13px] uppercase tracking-[0.1em] text-white">Terminal</span>
+		<span class="font-mono text-[11px] uppercase tracking-[0.05em] text-white/40">{statusLabel}</span>
 	</div>
-	<div class="flex shrink-0 items-center gap-1">
+	<div class="flex shrink-0 items-center gap-2">
 		<button
 			type="button"
 			onclick={onClear}
 			disabled={totalCount === 0}
 			aria-label="Clear terminal"
 			title="Clear"
-			class="grid h-7 w-7 place-items-center rounded-md text-white/55 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+			class="grid h-8 w-8 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
 		>
-			<Eraser size={13} strokeWidth={2} />
+			<Eraser size={14} strokeWidth={1.5} />
 		</button>
 		<button
 			type="button"
 			onclick={onClose}
 			aria-label="Close terminal"
 			title="Close"
-			class="grid h-7 w-7 place-items-center rounded-md text-white/55 transition hover:bg-white/10 hover:text-white"
+			class="grid h-8 w-8 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white"
 		>
-			<X size={14} strokeWidth={2} />
+			<X size={16} strokeWidth={1.5} />
 		</button>
 	</div>
 </header>
 
-<div class="flex items-center gap-1.5 px-4 pb-3">
+<div class="flex items-center gap-4 px-5 py-3 border-b border-white/5 bg-[#0a0a0a]">
 	{#each streamMeta as { key, label } (key)}
 		{@const active = activeStreams[key]}
 		<button
 			type="button"
 			onclick={() => toggleStream(key)}
 			aria-pressed={active}
-			class="h-6 rounded-md border px-2 font-mono text-[10.5px] tracking-[0.04em] transition {active
+			class="relative pb-1 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors {active
 				? key === 'stderr'
-					? 'border-[#ff827833] bg-[#ff82781f] text-[#ffb1aa] hover:bg-[#ff82782e]'
+					? 'text-[#ff8278]'
 					: key === 'system'
-					? 'border-[#9ad7ff33] bg-[#9ad7ff1f] text-[#bce4ff] hover:bg-[#9ad7ff2e]'
-					: 'border-white/15 bg-white/8 text-white/85 hover:bg-white/15'
-				: 'border-white/8 bg-transparent text-white/30 hover:border-white/15 hover:text-white/55'}"
+					? 'text-[#9ad7ff]'
+					: 'text-white'
+				: 'text-white/30 hover:text-white/70'}"
 		>
 			{label}
+			{#if active}
+				<span class="absolute bottom-0 left-0 right-0 h-[2px] bg-current"></span>
+			{/if}
 		</button>
 	{/each}
-	<span class="ml-auto font-mono text-[10.5px] text-white/40">
+	<span class="ml-auto font-mono text-[11px] uppercase tracking-[0.1em] text-white/30">
 		{filteredCount}{filteredCount !== totalCount ? `/${totalCount}` : ''} lines
 	</span>
 </div>
@@ -139,36 +141,37 @@
 <div
 	bind:this={viewport}
 	onscroll={onScroll}
-	class="relative flex-1 overflow-auto bg-black font-mono text-[12px] leading-[1.55]"
+	class="relative flex-1 overflow-auto bg-[#050505] font-mono text-[12px] leading-[1.6]"
 	role="log"
 	aria-live="polite"
 >
 	{#if totalCount === 0}
-		<div class="px-4 pt-2 pb-4 text-white/40">
-			<p class="m-0 flex items-center gap-1.5 text-[12px] text-white/55">
-				<ChevronRight size={12} strokeWidth={2.2} class="text-white/40" />
-				awaiting websocket
-			</p>
-			<p class="m-0 mt-1 pl-[18px] text-[11.5px] text-white/30">
-				trigger a scenario to stream stdout, stderr, and system events here
-			</p>
-			<span class="mt-3 ml-[18px] inline-block h-3 w-1.5 animate-pulse bg-white/40" aria-hidden="true"></span>
+		<div class="flex h-full flex-col items-center justify-center p-8 text-center text-white/40">
+			<TerminalIcon size={32} strokeWidth={1} class="mb-4 text-white/20" />
+			<p class="m-0 text-[13px] text-white/60">Awaiting websocket connection</p>
+			<p class="m-0 mt-2 max-w-xs text-[12px] text-white/30">Trigger a scenario to stream stdout, stderr, and system events here.</p>
 		</div>
 	{:else if filteredCount === 0}
-		<div class="px-4 pt-2 pb-4 text-[11.5px] text-white/35">
-			<p class="m-0">no lines match the active filter</p>
+		<div class="flex h-full items-center justify-center p-8 text-center text-[12px] text-white/30">
+			<p class="m-0">No lines match the active filter</p>
 		</div>
 	{:else}
-		<ol class="m-0 list-none p-0">
+		<ol class="m-0 list-none p-0 py-2">
 			{#each visibleLines as line, idx (idx)}
-				<li class="group flex gap-3 px-4 py-[3px] transition-colors hover:bg-white/[0.04]">
-					<span class="shrink-0 select-none font-mono text-[10.5px] text-white/30 tabular-nums" aria-hidden="true">
+				<li class="group relative flex items-start gap-4 px-5 py-[2px] hover:bg-white/[0.03]">
+					<span class="mt-0.5 shrink-0 select-none font-mono text-[10px] text-white/20 tabular-nums" aria-hidden="true">
 						{line.at}
 					</span>
-					<span class={`shrink-0 select-none text-[10.5px] tracking-[0.04em] opacity-60 ${streamColor(line.stream)}`} aria-hidden="true">
-						{streamGlyph(line.stream)}
-					</span>
-					<pre class={`m-0 min-w-0 flex-1 whitespace-pre-wrap break-words ${streamColor(line.stream)}`}>{line.text}</pre>
+					<!-- Colored left border indicator based on stream -->
+					<div class={`absolute left-0 top-0 bottom-0 w-[2px] opacity-0 group-hover:opacity-100 transition-opacity ${
+						line.stream === 'stderr' ? 'bg-[#ff8278]' : 
+						line.stream === 'system' ? 'bg-[#9ad7ff]' : 'bg-white/40'
+					}`}></div>
+					
+					<pre class={`m-0 min-w-0 flex-1 whitespace-pre-wrap break-words font-mono text-[12px] leading-[1.6] ${
+						line.stream === 'stderr' ? 'text-[#ff8278]/90' : 
+						line.stream === 'system' ? 'text-[#9ad7ff]/90' : 'text-white/80'
+					}`}>{line.text}</pre>
 				</li>
 			{/each}
 		</ol>

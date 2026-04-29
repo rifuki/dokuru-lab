@@ -117,25 +117,25 @@
 			<p class="mb-7 max-w-3xl text-[16px] leading-relaxed text-[#dcdcdc]">
 				A three-container playground that stays intentionally vulnerable. You trigger payloads from <code class="font-mono text-[14px] text-white">dokuru-lab</code>, and Dokuru changes what that container can see and how much it can consume — without rewriting the app.
 			</p>
-			<div class="flex flex-wrap items-center gap-2.5">
+			<div class="flex flex-wrap items-center gap-4">
 				<Button onclick={onProbe} disabled={Boolean(running)}>
 					<span class="inline-flex items-center gap-2">
-						<Play size={14} strokeWidth={2.4} fill="currentColor" />
+						<Play size={16} strokeWidth={1.5} fill="currentColor" />
 						Run recovery probe
 					</span>
 				</Button>
 				<Button variant="secondary" onclick={onRunCommand} disabled={Boolean(running)}>
 					<span class="inline-flex items-center gap-2">
-						<TerminalIcon size={14} strokeWidth={2.2} />
+						<TerminalIcon size={16} strokeWidth={1.5} />
 						Run selected command
 					</span>
 				</Button>
 				<a
 					href="#scenarios"
-					class="group inline-flex items-center gap-1.5 rounded-full px-3 py-2.5 text-[13px] font-medium text-white/70 transition hover:text-white"
+					class="group inline-flex items-center gap-2 rounded-full px-4 py-3 text-[14px] tracking-wide font-medium text-white/60 transition-all hover:text-white"
 				>
 					or jump to scenarios
-					<ArrowRight size={13} strokeWidth={2} class="transition-transform duration-200 group-hover:translate-x-0.5" />
+					<ArrowRight size={14} strokeWidth={1.5} class="transition-transform duration-300 ease-out group-hover:translate-x-1" />
 				</a>
 			</div>
 		</div>
@@ -158,18 +158,18 @@
 				{#each setup as { no, role, id, body, Icon, tint } (no)}
 					{@const t = tintToken(tint)}
 					<article
-						class={`group relative overflow-hidden rounded-[19px] border border-white/[0.08] bg-white/[0.025] p-5 ring-1 ring-transparent transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/[0.04] hover:shadow-[0_5px_9px_rgba(0,0,0,0.16)] ${t.ring}`}
+						class={`group relative overflow-hidden rounded-[19px] border border-white/5 bg-white/[0.02] p-6 ring-1 ring-transparent transition-all duration-300 ease-out hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.05] hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] ${t.ring}`}
 					>
-						<div class="mb-4 flex items-start justify-between gap-3">
-							<span class={`grid h-9 w-9 place-items-center rounded-[10px] transition-colors ${t.swatch}`} aria-hidden="true">
-								<Icon size={17} strokeWidth={2} />
+						<div class="mb-5 flex items-start justify-between gap-3">
+							<span class={`grid h-10 w-10 place-items-center rounded-xl transition-colors ${t.swatch}`} aria-hidden="true">
+								<Icon size={20} strokeWidth={1.25} />
 							</span>
-							<span class={`font-mono text-[11px] tracking-[0.08em] ${t.ink}`}>{no}</span>
+							<span class={`font-mono text-[12px] tracking-[0.1em] ${t.ink}`}>{no}</span>
 						</div>
 
-						<p class={`m-0 mb-1 text-[14.5px] font-medium ${t.ink}`}>{role}</p>
-						<p class="m-0 mb-3 font-mono text-[13px] text-white">{id}</p>
-						<p class="m-0 text-[13px] leading-[1.55] text-white/70">{body}</p>
+						<p class={`m-0 mb-1.5 text-[15px] font-medium tracking-wide ${t.ink}`}>{role}</p>
+						<p class="m-0 mb-4 font-mono text-[13px] text-white opacity-90">{id}</p>
+						<p class="m-0 text-[13.5px] leading-[1.6] text-white/60 group-hover:text-white/80 transition-colors">{body}</p>
 					</article>
 				{/each}
 			</div>

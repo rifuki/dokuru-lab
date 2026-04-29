@@ -18,7 +18,7 @@
 	<dl class="grid gap-0">
 		{#each rows as { label, icon: Icon, body } (label)}
 			<div class="grid grid-cols-[24px_96px_minmax(0,1fr)] items-start gap-3 border-b border-divider py-2.5 last:border-b-0">
-				<Icon size={13} strokeWidth={2.2} class="mt-0.5 text-body-gray" />
+				<Icon size={16} strokeWidth={1.5} class="mt-0.5 text-body-gray" />
 				<dt class="text-[13px] font-medium text-ink">{label}</dt>
 				<dd class="m-0 text-[13px] leading-relaxed text-body-gray">{@html body}</dd>
 			</div>
@@ -26,8 +26,8 @@
 	</dl>
 
 	<div class="mt-4 flex items-center gap-2.5 rounded-[12px] bg-ice p-3.5">
-		<span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-black text-white" aria-hidden="true">
-			<TerminalIcon size={13} strokeWidth={2} />
+		<span class="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-black text-white" aria-hidden="true">
+			<TerminalIcon size={16} strokeWidth={1.5} />
 		</span>
 		<div class="min-w-0">
 			<span class="block text-[12px] text-body-gray">Inspect baseline</span>

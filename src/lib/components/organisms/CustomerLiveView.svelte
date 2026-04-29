@@ -94,32 +94,32 @@
 			{/each}
 		</div>
 
-		<div class="mt-4 grid grid-cols-3 gap-2 text-xs">
-			<div class="rounded-[12px] bg-white/8 p-3">
-				<div class="flex items-center gap-1.5 text-white/55">
-					<TrendingUp size={11} strokeWidth={2.2} />
+		<div class="mt-4 grid grid-cols-3 gap-2 text-[12px]">
+			<div class="rounded-xl bg-white/5 p-4 transition-colors hover:bg-white/10">
+				<div class="flex items-center gap-2 text-white/60">
+					<TrendingUp size={14} strokeWidth={1.5} />
 					<span>Average</span>
 				</div>
-				<strong class="mt-1 block font-mono text-white tabular-nums">{avgLatency}</strong>
+				<strong class="mt-2 block font-mono text-[14px] text-white tabular-nums">{avgLatency}</strong>
 			</div>
-			<div class="rounded-[12px] bg-white/8 p-3">
-				<div class="flex items-center gap-1.5 text-white/55">
-					<AlertTriangle size={11} strokeWidth={2.2} />
+			<div class="rounded-xl bg-white/5 p-4 transition-colors hover:bg-white/10">
+				<div class="flex items-center gap-2 text-white/60">
+					<AlertTriangle size={14} strokeWidth={1.5} />
 					<span>Failures</span>
 				</div>
-				<strong class="mt-1 block font-mono text-white tabular-nums">{failures}</strong>
+				<strong class="mt-2 block font-mono text-[14px] text-white tabular-nums">{failures}</strong>
 			</div>
-			<div class="rounded-[12px] bg-white/8 p-3">
-				<div class="flex items-center gap-1.5 text-white/55">
-					<BarChart3 size={11} strokeWidth={2.2} />
+			<div class="rounded-xl bg-white/5 p-4 transition-colors hover:bg-white/10">
+				<div class="flex items-center gap-2 text-white/60">
+					<BarChart3 size={14} strokeWidth={1.5} />
 					<span>Samples</span>
 				</div>
-				<strong class="mt-1 block font-mono text-white tabular-nums">{recent.length}</strong>
+				<strong class="mt-2 block font-mono text-[14px] text-white tabular-nums">{recent.length}</strong>
 			</div>
 		</div>
 
-		<div class="mt-3 flex items-center gap-2 rounded-[12px] bg-white/8 p-3 text-xs text-white/70">
-			<Radio size={12} strokeWidth={2.2} class="shrink-0 text-white/55" />
+		<div class="mt-3 flex items-center gap-3 rounded-xl bg-white/5 p-4 text-[12px] text-white/70">
+			<Radio size={14} strokeWidth={1.5} class="shrink-0 text-white/50" />
 			<span class="min-w-0 flex-1 truncate">
 				Source: <strong class="font-mono text-white">{latest?.source || 'direct-probe'}</strong>
 				{#if latest?.observed_at}

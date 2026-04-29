@@ -54,38 +54,46 @@
 		</div>
 	</div>
 
-	<div class="grid gap-3 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-		<article class="grid gap-2.5 rounded-[12px] border border-divider p-3.5 transition-colors hover:border-black/12">
-			<div class="flex items-center gap-2 text-body-gray">
-				<Hash size={13} strokeWidth={2.4} class="text-playstation-blue" />
-				<span class="text-[11px] font-mono tracking-[0.04em] text-body-gray">processes</span>
+	<div class="grid gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
+		<article class="grid gap-4 rounded-2xl border border-transparent bg-white p-5 shadow-[0_5px_9px_rgba(0,0,0,0.06)] ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_15px_rgba(0,0,0,0.08)] hover:ring-black/10">
+			<div class="flex items-center gap-3 border-b border-black/5 pb-2">
+				<span class="grid h-8 w-8 place-items-center rounded-lg bg-playstation-blue/10 text-playstation-blue" aria-hidden="true">
+					<Hash size={16} strokeWidth={1.5} />
+				</span>
+				<span class="text-[12px] font-mono uppercase tracking-[0.1em] text-body-gray">processes</span>
 			</div>
 			<Field id="pid-count" label="PIDs" type="number" min={1} max={500} value={pidCount} oninput={(value) => onPidCountChange(Number(value))} />
 			<Button onclick={onPidBomb} disabled={Boolean(running)}>Run PID bomb</Button>
 		</article>
-		<article class="grid gap-2.5 rounded-[12px] border border-divider p-3.5 transition-colors hover:border-black/12">
-			<div class="flex items-center gap-2 text-body-gray">
-				<MemoryStick size={13} strokeWidth={2.2} class="text-[#0e7fa8]" />
-				<span class="text-[11px] font-mono tracking-[0.04em] text-body-gray">allocation</span>
+		<article class="grid gap-4 rounded-2xl border border-transparent bg-white p-5 shadow-[0_5px_9px_rgba(0,0,0,0.06)] ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_15px_rgba(0,0,0,0.08)] hover:ring-black/10">
+			<div class="flex items-center gap-3 border-b border-black/5 pb-2">
+				<span class="grid h-8 w-8 place-items-center rounded-lg bg-playstation-cyan/15 text-[#0e7fa8]" aria-hidden="true">
+					<MemoryStick size={16} strokeWidth={1.5} />
+				</span>
+				<span class="text-[12px] font-mono uppercase tracking-[0.1em] text-body-gray">allocation</span>
 			</div>
 			<Field id="memory-mb" label="Memory MB" type="number" min={1} max={1024} value={memoryMb} oninput={(value) => onMemoryChange(Number(value))} />
 			<Button onclick={onMemoryBomb} disabled={Boolean(running)}>Allocate</Button>
 		</article>
-		<article class="grid gap-2.5 rounded-[12px] border border-divider p-3.5 transition-colors hover:border-black/12">
-			<div class="flex items-center gap-2 text-body-gray">
-				<Cpu size={13} strokeWidth={2.2} class="text-commerce" />
-				<span class="text-[11px] font-mono tracking-[0.04em] text-body-gray">scheduler</span>
+		<article class="grid gap-4 rounded-2xl border border-transparent bg-white p-5 shadow-[0_5px_9px_rgba(0,0,0,0.06)] ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_15px_rgba(0,0,0,0.08)] hover:ring-black/10">
+			<div class="flex items-center gap-3 border-b border-black/5 pb-2">
+				<span class="grid h-8 w-8 place-items-center rounded-lg bg-commerce/10 text-commerce" aria-hidden="true">
+					<Cpu size={16} strokeWidth={1.5} />
+				</span>
+				<span class="text-[12px] font-mono uppercase tracking-[0.1em] text-body-gray">scheduler</span>
 			</div>
 			<Field id="cpu-seconds" label="CPU seconds" type="number" min={1} max={30} value={cpuSeconds} oninput={(value) => onCpuChange(Number(value))} />
 			<Button onclick={onCpuBurn} disabled={Boolean(running)}>Burn CPU</Button>
 		</article>
-		<article class="grid content-between gap-2.5 rounded-[12px] border border-divider p-3.5 transition-colors hover:border-black/12">
+		<article class="grid content-between gap-4 rounded-2xl border border-transparent bg-white p-5 shadow-[0_5px_9px_rgba(0,0,0,0.06)] ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_15px_rgba(0,0,0,0.08)] hover:ring-black/10">
 			<div>
-				<div class="mb-1.5 flex items-center gap-2">
-					<Trash2 size={13} strokeWidth={2.2} class="text-commerce" />
-					<span class="text-[13px] font-medium text-ink">Cleanup</span>
+				<div class="mb-3 flex items-center gap-3 border-b border-black/5 pb-2">
+					<span class="grid h-8 w-8 place-items-center rounded-lg bg-commerce/10 text-commerce" aria-hidden="true">
+						<Trash2 size={16} strokeWidth={1.5} />
+					</span>
+					<span class="text-[14px] font-semibold tracking-wide text-ink">Cleanup</span>
 				</div>
-				<p class="m-0 text-[12.5px] leading-snug text-body-gray">Kill sleeper processes after PID tests.</p>
+				<p class="m-0 text-[13px] leading-relaxed text-body-gray">Kill sleeper processes after PID tests to reset the environment.</p>
 			</div>
 			<Button variant="commerce" onclick={onCleanup} disabled={Boolean(running)}>Cleanup</Button>
 		</article>
