@@ -9,8 +9,8 @@
 	let { monitorConnected, monitorLastUpdated }: Props = $props();
 </script>
 
-<nav class="sticky top-0 z-30 border-b border-white/5 bg-black text-white" aria-label="Primary">
-	<div class="mx-auto flex max-w-[1540px] items-center justify-between gap-6 px-4 py-3 sm:px-6 md:px-8">
+<nav class="sticky top-0 z-30 h-[54px] border-b border-white/5 bg-black text-white" aria-label="Primary">
+	<div class="mx-auto flex h-full max-w-[1540px] items-center justify-between gap-6 px-4 sm:px-6 md:px-8">
 		<a class="inline-flex items-center gap-2.5 text-[15px] font-semibold text-white no-underline" href="/" aria-label="Dokuru Lab home">
 			<span class="grid h-7 w-7 place-items-center rounded-full bg-white text-playstation-blue" aria-hidden="true">
 				<FlaskConical size={14} strokeWidth={2.2} />
