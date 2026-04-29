@@ -93,7 +93,7 @@
 					type="button"
 					onclick={() => toggleStream(key)}
 					aria-pressed={active}
-					class="cursor-pointer font-mono text-[9px] uppercase tracking-wider transition-colors {active
+					class="cursor-pointer font-mono text-[10px] transition-colors {active
 						? 'text-white/70'
 						: 'text-white/20 hover:text-white/50'}"
 				>
