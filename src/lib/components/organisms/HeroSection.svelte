@@ -84,10 +84,10 @@
 	}
 </script>
 
-<section class="relative bg-black px-4 py-12 text-white sm:px-6 md:px-8 lg:py-16">
+<section class="relative bg-black px-4 py-8 text-white sm:px-6 md:px-8 lg:py-10">
 	<div class="mx-auto max-w-[1480px]">
 	<!-- Live status strip -->
-		<div class="animate-rise-in mb-8 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11.5px] tracking-[0.04em] text-white/65">
+		<div class="animate-rise-in mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11.5px] tracking-[0.04em] text-white/65">
 			<span class="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1">
 				<Waves size={11} strokeWidth={2.2} class="text-white/45" />
 				<span class={`inline-block h-1.5 w-1.5 rounded-full ${dot(monitorConnected)}`} aria-hidden="true"></span>
@@ -107,14 +107,14 @@
 
 		<!-- Headline + CTAs -->
 		<div class="animate-rise-in max-w-4xl">
-			<p class="mb-3 inline-flex items-center gap-2 text-[13px] font-medium text-[#1883fd]">
+			<p class="mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-[#1883fd]">
 				<span class="inline-block h-1 w-1 rounded-full bg-[#1883fd]" aria-hidden="true"></span>
 				Container isolation lab
 			</p>
-			<h1 class="mb-5 text-[clamp(32px,4.4vw,56px)] leading-[1.04] font-light tracking-[-0.4px]">
+			<h1 class="mb-3 text-[clamp(32px,4.4vw,56px)] leading-[1.04] font-light tracking-[-0.4px]">
 				Show the exploit, <span class="text-white/55">then show the boundary.</span>
 			</h1>
-			<p class="mb-7 max-w-3xl text-[16px] leading-relaxed text-[#dcdcdc]">
+			<p class="mb-5 max-w-3xl text-[16px] leading-relaxed text-[#dcdcdc]">
 				A three-container playground that stays intentionally vulnerable. You trigger payloads from <code class="font-mono text-[14px] text-white">dokuru-lab</code>, and Dokuru changes what that container can see and how much it can consume — without rewriting the app.
 			</p>
 			<div class="flex flex-wrap items-center gap-4">
@@ -132,7 +132,7 @@
 				</Button>
 				<a
 					href="#scenarios"
-					class="group inline-flex items-center gap-2 rounded-full px-4 py-3 text-[14px] tracking-wide font-medium text-white/60 transition-all hover:text-white"
+					class="group inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[14px] tracking-wide font-medium text-white/60 transition-all hover:text-white"
 				>
 					or jump to scenarios
 					<ArrowRight size={14} strokeWidth={1.5} class="transition-transform duration-300 ease-out group-hover:translate-x-1" />
@@ -141,8 +141,8 @@
 		</div>
 
 		<!-- The setup · three Docker containers -->
-		<div class="mt-12 lg:mt-14">
-			<div class="mb-5 flex items-end justify-between gap-4">
+		<div class="mt-8 lg:mt-10">
+			<div class="mb-4 flex items-end justify-between gap-4">
 				<div>
 					<p class="m-0 mb-1 text-[12px] font-medium text-white/50">The setup</p>
 					<h2 class="m-0 text-[20px] leading-tight font-light tracking-tight text-white">
@@ -158,9 +158,9 @@
 				{#each setup as { no, role, id, body, Icon, tint } (no)}
 					{@const t = tintToken(tint)}
 					<article
-						class={`group relative overflow-hidden rounded-[19px] border border-white/5 bg-white/[0.02] p-6 ring-1 ring-transparent transition-all duration-300 ease-out hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.05] hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] ${t.ring}`}
+						class={`group relative overflow-hidden rounded-[19px] border border-white/5 bg-white/[0.02] p-5 ring-1 ring-transparent transition-all duration-300 ease-out hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.05] hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] ${t.ring}`}
 					>
-						<div class="mb-5 flex items-start justify-between gap-3">
+						<div class="mb-4 flex items-start justify-between gap-3">
 							<span class={`grid h-10 w-10 place-items-center rounded-xl transition-colors ${t.swatch}`} aria-hidden="true">
 								<Icon size={20} strokeWidth={1.25} />
 							</span>
@@ -168,14 +168,14 @@
 						</div>
 
 						<p class={`m-0 mb-1.5 text-[15px] font-medium tracking-wide ${t.ink}`}>{role}</p>
-						<p class="m-0 mb-4 font-mono text-[13px] text-white opacity-90">{id}</p>
+						<p class="m-0 mb-3 font-mono text-[13px] text-white opacity-90">{id}</p>
 						<p class="m-0 text-[13.5px] leading-[1.6] text-white/60 group-hover:text-white/80 transition-colors">{body}</p>
 					</article>
 				{/each}
 			</div>
 
 			<!-- Faint flow line · decorative -->
-			<div class="mt-5 flex items-center gap-3 font-mono text-[11px] tracking-[0.04em] text-white/40 @xl/main:hidden">
+			<div class="mt-4 flex items-center gap-3 font-mono text-[11px] tracking-[0.04em] text-white/40 @xl/main:hidden">
 				<Activity size={12} strokeWidth={2} />
 				<span>signal measures blast radius after every payload</span>
 			</div>
