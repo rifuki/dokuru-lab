@@ -86,20 +86,16 @@
 		{#if compact}
 			<span class="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-white/40 mr-2">Terminal</span>
 		{/if}
-		<div class="flex items-center rounded border border-white/[0.03] bg-white/[0.02] p-[2px]">
+		<div class="flex items-center gap-2.5">
 			{#each streamMeta as { key, label } (key)}
 				{@const active = activeStreams[key]}
 				<button
 					type="button"
 					onclick={() => toggleStream(key)}
 					aria-pressed={active}
-					class="cursor-pointer rounded-[3px] px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] transition-all {active
-						? key === 'stderr'
-							? 'bg-[#ff8278]/15 text-[#ff8278]'
-							: key === 'system'
-							? 'bg-[#9ad7ff]/15 text-[#9ad7ff]'
-							: 'bg-white/15 text-white'
-						: 'text-white/30 hover:bg-white/5 hover:text-white/60'}"
+					class="cursor-pointer font-mono text-[9.5px] transition-colors {active
+						? 'text-white/85'
+						: 'text-white/25 hover:text-white/50'}"
 				>
 					{label}
 				</button>
