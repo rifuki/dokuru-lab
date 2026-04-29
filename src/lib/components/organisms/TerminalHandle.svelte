@@ -103,8 +103,8 @@
 		: 'none'};"
 	aria-hidden="true"
 >
+	<!-- Resize handle: Only active when open -->
 	{#if open}
-		<!-- OPEN: thin resize handle at sidebar's left edge -->
 		<button
 			type="button"
 			onpointerdown={onPointerDown}
@@ -112,9 +112,9 @@
 			onpointerup={onPointerUp}
 			onpointercancel={onPointerCancel}
 			onkeydown={onKeyDown}
-			aria-label="Close terminal sidebar (drag to resize)"
+			aria-label="Resize terminal sidebar"
 			aria-pressed="true"
-			title="Click to close · drag to resize"
+			title="Drag to resize"
 			class="group pointer-events-auto absolute top-0 right-0 flex h-full w-2 cursor-col-resize touch-none items-center justify-center bg-transparent outline-none"
 		>
 			<!-- Hairline track -->
@@ -130,41 +130,41 @@
 				<GripVertical size={12} strokeWidth={2.2} />
 			</span>
 		</button>
-	{:else}
-		<!-- CLOSED: visible "Terminal" tab attached to right edge -->
-		<button
-			type="button"
-			onpointerdown={onPointerDown}
-			onpointerup={onPointerUp}
-			onpointercancel={onPointerCancel}
-			onkeydown={onKeyDown}
-			aria-label="Open terminal sidebar"
-			aria-pressed="false"
-			title="Open terminal"
-			class="group pointer-events-auto absolute top-1/2 right-0 flex h-auto -translate-y-1/2 cursor-pointer touch-none flex-col items-center gap-2 rounded-l-[12px] bg-black px-2.5 py-3.5 text-white shadow-[0_5px_9px_rgba(0,0,0,0.16)] outline-none transition-all duration-200 ease-out hover:bg-playstation-blue hover:px-3 hover:shadow-[0_8px_16px_rgba(0,0,0,0.2)] focus-visible:bg-playstation-blue"
-		>
-			<Terminal size={15} strokeWidth={2} />
-			<!-- Vertical "terminal" label -->
-			<span
-				class="font-mono text-[10.5px] tracking-[0.08em] text-white/85 [writing-mode:vertical-rl] [text-orientation:mixed]"
-			>
-				terminal
-			</span>
-			<!-- Status dot -->
-			<span
-				class={`mt-1 inline-block h-1.5 w-1.5 rounded-full transition-colors ${dotClass}`}
-				aria-hidden="true"
-			></span>
-			<!-- Line count badge (only if any) -->
-			{#if lineCount > 0}
-				<span
-					class="mt-0.5 min-w-[18px] rounded-full bg-white/15 px-1.5 py-px text-center font-mono text-[9.5px] text-white/85 group-hover:bg-white/25"
-				>
-					{lineCount > 99 ? '99+' : lineCount}
-				</span>
-			{/if}
-			<!-- Subtle chevron hint -->
-			<ChevronLeft size={11} strokeWidth={2.4} class="mt-1 opacity-60 transition-opacity group-hover:opacity-100" />
-		</button>
 	{/if}
+
+	<!-- Always visible "Terminal" toggle tab attached to right edge -->
+	<button
+		type="button"
+		onpointerdown={onPointerDown}
+		onpointerup={onPointerUp}
+		onpointercancel={onPointerCancel}
+		onkeydown={onKeyDown}
+		aria-label={open ? "Close terminal sidebar" : "Open terminal sidebar"}
+		aria-pressed={open}
+		title={open ? "Close terminal" : "Open terminal"}
+		class="group pointer-events-auto absolute top-1/2 right-0 flex h-auto -translate-y-1/2 cursor-pointer touch-none flex-col items-center gap-2 rounded-l-[12px] bg-black px-2.5 py-3.5 text-white shadow-[0_5px_9px_rgba(0,0,0,0.16)] outline-none transition-all duration-200 ease-out hover:bg-playstation-blue hover:px-3 hover:shadow-[0_8px_16px_rgba(0,0,0,0.2)] focus-visible:bg-playstation-blue"
+	>
+		<Terminal size={15} strokeWidth={2} />
+		<!-- Vertical "terminal" label -->
+		<span
+			class="font-mono text-[10.5px] tracking-[0.08em] text-white/85 [writing-mode:vertical-rl] [text-orientation:mixed]"
+		>
+			terminal
+		</span>
+		<!-- Status dot -->
+		<span
+			class={`mt-1 inline-block h-1.5 w-1.5 rounded-full transition-colors ${dotClass}`}
+			aria-hidden="true"
+		></span>
+		<!-- Line count badge (only if any) -->
+		{#if lineCount > 0}
+			<span
+				class="mt-0.5 min-w-[18px] rounded-full bg-white/15 px-1.5 py-px text-center font-mono text-[9.5px] text-white/85 group-hover:bg-white/25"
+			>
+				{lineCount > 99 ? '99+' : lineCount}
+			</span>
+		{/if}
+		<!-- Chevron hint -->
+		<ChevronLeft size={11} strokeWidth={2.4} class="mt-1 opacity-60 transition-transform duration-300 group-hover:opacity-100 {open ? 'rotate-180' : ''}" />
+	</button>
 </div>
