@@ -6,7 +6,8 @@
 		Play,
 		Radio,
 		ShoppingCart,
-		Terminal as TerminalIcon
+		Terminal as TerminalIcon,
+		Waves
 	} from '@lucide/svelte';
 	import Button from '$lib/components/atoms/Button.svelte';
 
@@ -85,19 +86,22 @@
 
 <section class="relative bg-black px-4 py-12 text-white sm:px-6 md:px-8 lg:py-16">
 	<div class="mx-auto max-w-[1480px]">
-		<!-- Live status strip -->
-		<div class="animate-rise-in mb-8 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[11.5px] tracking-[0.04em] text-white/65">
-			<span class="inline-flex items-center gap-2">
+	<!-- Live status strip -->
+		<div class="animate-rise-in mb-8 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11.5px] tracking-[0.04em] text-white/65">
+			<span class="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1">
+				<Waves size={11} strokeWidth={2.2} class="text-white/45" />
 				<span class={`inline-block h-1.5 w-1.5 rounded-full ${dot(monitorConnected)}`} aria-hidden="true"></span>
-				/ws/monitor
+				<span>/ws/monitor</span>
 			</span>
-			<span class="inline-flex items-center gap-2">
+			<span class="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1">
+				<TerminalIcon size={11} strokeWidth={2.2} class="text-white/45" />
 				<span class={`inline-block h-1.5 w-1.5 rounded-full ${dot(terminalConnected)}`} aria-hidden="true"></span>
-				/ws/terminal
+				<span>/ws/terminal</span>
 			</span>
-			<span class="inline-flex items-center gap-2">
+			<span class="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1">
+				<Radio size={11} strokeWidth={2.2} class="text-white/45" />
 				<span class={`inline-block h-1.5 w-1.5 rounded-full ${dot(customerConnected)}`} aria-hidden="true"></span>
-				/ws/customer
+				<span>/ws/customer</span>
 			</span>
 		</div>
 

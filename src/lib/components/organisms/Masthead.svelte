@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { FlaskConical, Waves } from '@lucide/svelte';
+
 	type Props = {
 		monitorConnected: boolean;
 		monitorLastUpdated: string;
@@ -10,7 +12,9 @@
 <nav class="sticky top-0 z-30 border-b border-white/5 bg-black text-white" aria-label="Primary">
 	<div class="mx-auto flex max-w-[1540px] items-center justify-between gap-6 px-4 py-3 sm:px-6 md:px-8">
 		<a class="inline-flex items-center gap-2.5 text-[15px] font-semibold text-white no-underline" href="/" aria-label="Dokuru Lab home">
-			<span class="grid h-7 w-7 place-items-center rounded-full bg-white font-bold text-playstation-blue">D</span>
+			<span class="grid h-7 w-7 place-items-center rounded-full bg-white text-playstation-blue" aria-hidden="true">
+				<FlaskConical size={14} strokeWidth={2.2} />
+			</span>
 			<span>Dokuru Lab</span>
 			<span class="hidden rounded-full border border-white/12 px-2 py-[2px] font-mono text-[10px] tracking-[0.04em] text-white/55 @md/page:inline">v2 &middot; namespace + cgroup</span>
 		</a>
@@ -25,10 +29,11 @@
 			</div>
 
 			<span
-				class="inline-flex items-center gap-2 font-mono text-[11px] tracking-[0.06em] text-white/55"
+				class="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.04em] text-white/55"
 				aria-live="polite"
 				title={monitorConnected ? `Monitor stream live ${monitorLastUpdated}` : 'Monitor stream reconnecting'}
 			>
+				<Waves size={11} strokeWidth={2.2} class="text-white/45" aria-hidden="true" />
 				<span
 					class={`inline-block h-1.5 w-1.5 rounded-full ${monitorConnected ? 'bg-emerald-400' : 'bg-commerce'}`}
 					aria-hidden="true"

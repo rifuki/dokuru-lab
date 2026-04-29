@@ -12,7 +12,7 @@
 	import TerminalDrawer from '$lib/components/organisms/TerminalDrawer.svelte';
 	import TerminalHandle from '$lib/components/organisms/TerminalHandle.svelte';
 	import type { TerminalLine } from '$lib/components/organisms/TerminalPanel.svelte';
-	import { Activity, Bomb, FileSearch, Layers, SlidersHorizontal } from '@lucide/svelte';
+	import { Activity, AlertOctagon, Bomb, FileSearch, FlaskConical, Layers, SlidersHorizontal } from '@lucide/svelte';
 	import type { CommandPreset, CustomerSample, LabResponse, RuntimeEvidence } from '$lib/types/lab';
 
 	let command = $state('id; cat /proc/self/uid_map; cat /proc/self/gid_map');
@@ -454,10 +454,16 @@
 		</main>
 
 		<footer class="bg-playstation-blue px-4 py-7 text-sm text-white sm:px-6 md:px-8">
-			<div class="mx-auto flex max-w-[1480px] flex-col justify-between gap-3 @3xl/page:flex-row @3xl/page:items-center">
-				<strong class="text-base">Dokuru Namespace &amp; Cgroup Lab</strong>
-				<span class="max-w-3xl text-white/85">
-					Run only on a disposable lab host. Endpoints intentionally expose shell execution and resource pressure.
+			<div class="mx-auto flex max-w-[1480px] flex-col justify-between gap-4 @3xl/page:flex-row @3xl/page:items-center">
+				<div class="flex items-center gap-2.5">
+					<span class="grid h-8 w-8 place-items-center rounded-full bg-white text-playstation-blue" aria-hidden="true">
+						<FlaskConical size={15} strokeWidth={2.2} />
+					</span>
+					<strong class="text-[15px] font-semibold">Dokuru Namespace &amp; Cgroup Lab</strong>
+				</div>
+				<span class="flex max-w-3xl items-start gap-2 text-[13px] text-white/85">
+					<AlertOctagon size={15} strokeWidth={2.2} class="mt-0.5 shrink-0" />
+					<span>Run only on a disposable lab host. Endpoints intentionally expose shell execution and resource pressure.</span>
 				</span>
 			</div>
 		</footer>

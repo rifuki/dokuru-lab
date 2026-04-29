@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { AlertTriangle, BarChart3, Radio, TrendingUp } from '@lucide/svelte';
 	import Panel from '$lib/components/molecules/Panel.svelte';
 	import type { CustomerSample } from '$lib/types/lab';
 
@@ -94,25 +95,37 @@
 		</div>
 
 		<div class="mt-4 grid grid-cols-3 gap-2 text-xs">
-			<div class="rounded-xl bg-white/8 p-3">
-				<span class="block text-white/55">Average</span>
-				<strong class="font-mono text-white">{avgLatency}</strong>
+			<div class="rounded-[12px] bg-white/8 p-3">
+				<div class="flex items-center gap-1.5 text-white/55">
+					<TrendingUp size={11} strokeWidth={2.2} />
+					<span>Average</span>
+				</div>
+				<strong class="mt-1 block font-mono text-white tabular-nums">{avgLatency}</strong>
 			</div>
-			<div class="rounded-xl bg-white/8 p-3">
-				<span class="block text-white/55">Failures</span>
-				<strong class="font-mono text-white">{failures}</strong>
+			<div class="rounded-[12px] bg-white/8 p-3">
+				<div class="flex items-center gap-1.5 text-white/55">
+					<AlertTriangle size={11} strokeWidth={2.2} />
+					<span>Failures</span>
+				</div>
+				<strong class="mt-1 block font-mono text-white tabular-nums">{failures}</strong>
 			</div>
-			<div class="rounded-xl bg-white/8 p-3">
-				<span class="block text-white/55">Samples</span>
-				<strong class="font-mono text-white">{recent.length}</strong>
+			<div class="rounded-[12px] bg-white/8 p-3">
+				<div class="flex items-center gap-1.5 text-white/55">
+					<BarChart3 size={11} strokeWidth={2.2} />
+					<span>Samples</span>
+				</div>
+				<strong class="mt-1 block font-mono text-white tabular-nums">{recent.length}</strong>
 			</div>
 		</div>
 
-		<div class="mt-3 rounded-xl bg-white/8 p-3 text-xs text-white/70">
-			Source: <strong class="font-mono text-white">{latest?.source || 'direct-probe'}</strong>
-			{#if latest?.observed_at}
-				<span class="ml-2">observed {latest.observed_at}</span>
-			{/if}
+		<div class="mt-3 flex items-center gap-2 rounded-[12px] bg-white/8 p-3 text-xs text-white/70">
+			<Radio size={12} strokeWidth={2.2} class="shrink-0 text-white/55" />
+			<span class="min-w-0 flex-1 truncate">
+				Source: <strong class="font-mono text-white">{latest?.source || 'direct-probe'}</strong>
+				{#if latest?.observed_at}
+					<span class="ml-2">observed {latest.observed_at}</span>
+				{/if}
+			</span>
 		</div>
 	</div>
 
