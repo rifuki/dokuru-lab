@@ -81,6 +81,60 @@
 	];
 </script>
 
+{#snippet filterStrip(compact: boolean)}
+	<div class="flex items-center gap-3 border-b border-white/5 bg-[#0a0a0a] px-4 py-1.5 min-h-[32px]">
+		{#if compact}
+			<span class="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-white/40 mr-2">Terminal</span>
+		{/if}
+		{#each streamMeta as { key, label } (key)}
+			{@const active = activeStreams[key]}
+			<button
+				type="button"
+				onclick={() => toggleStream(key)}
+				aria-pressed={active}
+				class="relative cursor-pointer pb-0.5 font-mono text-[10px] tracking-[0.04em] transition-colors {active
+					? key === 'stderr'
+						? 'text-[#ff8278]'
+						: key === 'system'
+						? 'text-[#9ad7ff]'
+						: 'text-white'
+					: 'text-white/30 hover:text-white/70'}"
+			>
+				{label}
+				{#if active}
+					<span class="absolute right-0 bottom-0 left-0 h-[1.5px] bg-current"></span>
+				{/if}
+			</button>
+		{/each}
+		<span class="ml-auto font-mono text-[10px] tracking-[0.02em] text-white/30 tabular-nums">
+			{filteredCount}{filteredCount !== totalCount ? `/${totalCount}` : ''} lines
+		</span>
+		{#if compact}
+			<div class="flex items-center gap-1 border-l border-white/10 pl-2 ml-1">
+				<button
+					type="button"
+					onclick={onClear}
+					disabled={totalCount === 0}
+					aria-label="Clear terminal"
+					title="Clear terminal"
+					class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+				>
+					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+				</button>
+				<button
+					type="button"
+					onclick={onClose}
+					aria-label="Close"
+					title="Close panel"
+					class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition hover:bg-white/10 hover:text-white"
+				>
+					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+				</button>
+			</div>
+		{/if}
+	</div>
+{/snippet}
+
 {#if !hideHeader}
 <header class="flex items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-white/5">
 	<div class="flex min-w-0 items-center gap-3">
@@ -109,59 +163,10 @@
 		</button>
 	</div>
 </header>
+{@render filterStrip(false)}
 {:else}
-<!-- Compact status strip when header is managed by parent -->
-<div class="flex items-center justify-between border-b border-white/5 px-4 py-1.5 min-h-[32px]">
-	<span class="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-white/40">Terminal</span>
-	<div class="ml-auto flex items-center gap-1">
-		<button
-			type="button"
-			onclick={onClear}
-			disabled={totalCount === 0}
-			aria-label="Clear terminal"
-			title="Clear terminal"
-			class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-		>
-			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-		</button>
-		<button
-			type="button"
-			onclick={onClose}
-			aria-label="Close"
-			title="Close panel"
-			class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition hover:bg-white/10 hover:text-white"
-		>
-			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-		</button>
-	</div>
-</div>
+{@render filterStrip(true)}
 {/if}
-
-<div class="flex items-center gap-3 border-b border-white/5 bg-[#0a0a0a] px-4 py-1.5">
-	{#each streamMeta as { key, label } (key)}
-		{@const active = activeStreams[key]}
-		<button
-			type="button"
-			onclick={() => toggleStream(key)}
-			aria-pressed={active}
-			class="relative cursor-pointer pb-0.5 font-mono text-[10px] tracking-[0.04em] transition-colors {active
-				? key === 'stderr'
-					? 'text-[#ff8278]'
-					: key === 'system'
-					? 'text-[#9ad7ff]'
-					: 'text-white'
-				: 'text-white/30 hover:text-white/70'}"
-		>
-			{label}
-			{#if active}
-				<span class="absolute right-0 bottom-0 left-0 h-[1.5px] bg-current"></span>
-			{/if}
-		</button>
-	{/each}
-	<span class="ml-auto font-mono text-[10px] tracking-[0.02em] text-white/30 tabular-nums">
-		{filteredCount}{filteredCount !== totalCount ? `/${totalCount}` : ''} lines
-	</span>
-</div>
 
 <div
 	bind:this={viewport}
