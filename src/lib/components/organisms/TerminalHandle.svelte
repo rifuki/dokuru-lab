@@ -94,6 +94,12 @@
 			onResizeEnd();
 		}
 	}
+
+	const buttonClass = $derived(
+		!open && busy
+			? 'bg-playstation-blue shadow-[0_0_15px_rgba(0,112,204,0.6)] animate-pulse'
+			: 'bg-black shadow-[0_5px_9px_rgba(0,0,0,0.16)] hover:shadow-[0_8px_16px_rgba(0,0,0,0.2)]'
+	);
 </script>
 
 <div
@@ -142,7 +148,7 @@
 		aria-label={open ? "Close terminal sidebar" : "Open terminal sidebar"}
 		aria-pressed={open}
 		title={open ? "Close terminal" : "Open terminal"}
-		class="group pointer-events-auto absolute top-1/2 right-0 flex h-auto -translate-y-1/2 cursor-pointer touch-none flex-col items-center gap-2 rounded-l-[12px] bg-black px-2.5 py-3.5 text-white shadow-[0_5px_9px_rgba(0,0,0,0.16)] outline-none transition-all duration-200 ease-out hover:bg-playstation-blue hover:px-3 hover:shadow-[0_8px_16px_rgba(0,0,0,0.2)] focus-visible:bg-playstation-blue"
+		class="group pointer-events-auto absolute top-1/2 right-0 flex h-auto -translate-y-1/2 cursor-pointer touch-none flex-col items-center gap-2 rounded-l-[12px] px-2.5 py-3.5 text-white outline-none transition-all duration-200 ease-out hover:bg-playstation-blue hover:px-3 focus-visible:bg-playstation-blue {buttonClass}"
 	>
 		<Terminal size={15} strokeWidth={2} />
 		<!-- Vertical "terminal" label -->
