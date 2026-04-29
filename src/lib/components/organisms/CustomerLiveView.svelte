@@ -42,11 +42,11 @@
 	}
 
 	function statusLabel(sample?: CustomerSample): string {
-		if (!sample) return 'NO DATA';
-		if (!sample.ok) return 'DOWN';
-		if (isSlow(sample)) return 'SLOW';
-		if (isDegraded(sample)) return 'DEGRADED';
-		return `HTTP ${sample.status}`;
+		if (!sample) return 'no data';
+		if (!sample.ok) return 'down';
+		if (isSlow(sample)) return 'slow';
+		if (isDegraded(sample)) return 'degraded';
+		return `http ${sample.status}`;
 	}
 
 	function barClass(sample: CustomerSample): string {
@@ -66,13 +66,16 @@
 	subtitle={connected ? 'victim-checkout live' : 'waiting for stream'}
 	class="@4xl/main:col-span-5"
 >
-	<div class="rounded-2xl border border-divider bg-[#061826] p-4 text-white">
+	<div class="rounded-[19px] border border-white/8 bg-[#061826] p-4 text-white">
 		<div class="mb-4 flex items-start justify-between gap-4">
 			<div>
-				<p class="m-0 text-xs font-bold tracking-[0.16em] text-[#9ad7ff] uppercase">Real customer path</p>
-				<strong class="mt-1 block text-[34px] leading-none font-light">{latencyLabel(latest)}</strong>
+				<p class="m-0 inline-flex items-center gap-2 text-[12.5px] font-medium text-[#9ad7ff]">
+					<span class="inline-block h-1 w-1 rounded-full bg-[#9ad7ff]" aria-hidden="true"></span>
+					Real customer path
+				</p>
+				<strong class="mt-1 block text-[34px] leading-none font-light tabular-nums">{latencyLabel(latest)}</strong>
 			</div>
-			<span class={`rounded-full px-3 py-1 text-xs font-bold ${statusClass(latest)}`}>
+			<span class={`rounded-full px-3 py-1 text-[11.5px] font-medium ${statusClass(latest)}`}>
 				{statusLabel(latest)}
 			</span>
 		</div>

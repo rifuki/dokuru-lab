@@ -1,19 +1,36 @@
 @import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @theme {
-	--font-sans: Arial, Helvetica, sans-serif;
-	--font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+	--font-sans: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+	--font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Roboto Mono', Consolas, 'Liberation Mono', monospace;
 	--color-playstation-blue: #0070cc;
 	--color-playstation-cyan: #1eaedb;
+	--color-link-hover: #1883fd;
 	--color-console-black: #000000;
+	--color-shadow-black: #121314;
 	--color-ink: #1f1f1f;
 	--color-body-gray: #6b6b6b;
+	--color-mute-gray: #cccccc;
 	--color-divider: #f3f3f3;
 	--color-paper: #ffffff;
 	--color-ice: #f5f7fa;
 	--color-commerce: #d53b00;
-	--animate-panel-in: panel-in 420ms ease both;
-	--animate-rise-in: rise-in 520ms ease both;
+	--color-commerce-active: #aa2f00;
+
+	--shadow-ps-1: 0 5px 9px rgba(0, 0, 0, 0.06);
+	--shadow-ps-2: 0 5px 9px rgba(0, 0, 0, 0.08);
+	--shadow-ps-3: 0 5px 9px rgba(0, 0, 0, 0.16);
+
+	--radius-ps-input: 3px;
+	--radius-ps-compact: 6px;
+	--radius-ps-image: 12px;
+	--radius-ps-feature: 19px;
+	--radius-ps-hero: 24px;
+	--radius-ps-pill: 999px;
+
+	--animate-panel-in: panel-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+	--animate-rise-in: rise-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes panel-in {
@@ -40,13 +57,26 @@
 
 html {
 	scroll-behavior: smooth;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-rendering: optimizeLegibility;
 }
 
 body {
 	margin: 0;
 	background: #ffffff;
 	color: #1f1f1f;
-	font-family: Arial, Helvetica, sans-serif;
+	font-family: var(--font-sans);
+	font-feature-settings: 'cv11', 'ss01', 'ss03';
+}
+
+code,
+kbd,
+pre,
+samp {
+	font-family: var(--font-mono);
+	font-feature-settings: 'calt', 'liga', 'zero';
+	font-variant-ligatures: contextual;
 }
 
 button,
@@ -60,4 +90,9 @@ input:focus-visible,
 textarea:focus-visible {
 	outline: 2px solid #0070cc;
 	outline-offset: 2px;
+}
+
+::selection {
+	background: rgba(0, 112, 204, 0.18);
+	color: #1f1f1f;
 }

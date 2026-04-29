@@ -10,7 +10,7 @@
 	import ProofChecklistPanel from '$lib/components/organisms/ProofChecklistPanel.svelte';
 	import RuntimeEvidencePanel from '$lib/components/organisms/RuntimeEvidencePanel.svelte';
 	import TerminalDrawer from '$lib/components/organisms/TerminalDrawer.svelte';
-	import TerminalTab from '$lib/components/organisms/TerminalTab.svelte';
+	import TerminalHandle from '$lib/components/organisms/TerminalHandle.svelte';
 	import type { TerminalLine } from '$lib/components/organisms/TerminalPanel.svelte';
 	import type { CommandPreset, CustomerSample, LabResponse, RuntimeEvidence } from '$lib/types/lab';
 
@@ -28,10 +28,17 @@
 	let monitorConnected = $state(false);
 	let customerConnected = $state(false);
 	let terminalOpen = $state(false);
+	let terminalWidth = $state(420);
+	let terminalResizing = $state(false);
 	let terminalSocket: WebSocket | null = null;
 	let monitorSocket: WebSocket | null = null;
 	let customerSocket: WebSocket | null = null;
 	let mounted = false;
+
+	const TERMINAL_MIN_WIDTH = 320;
+	const TERMINAL_MAX_WIDTH = 720;
+	const TERMINAL_WIDTH_KEY = 'dokuru-lab.terminal.width';
+	const TERMINAL_OPEN_KEY = 'dokuru-lab.terminal.open';
 
 	const presets: CommandPreset[] = [
 		{ label: 'UID map', command: 'id; cat /proc/self/uid_map; cat /proc/self/gid_map' },
@@ -47,6 +54,7 @@
 
 	onMount(() => {
 		mounted = true;
+		restoreTerminalState();
 		connectMonitor();
 		connectTerminal();
 		connectCustomer();
@@ -59,12 +67,55 @@
 		};
 	});
 
+	function restoreTerminalState() {
+		try {
+			const storedWidth = window.localStorage.getItem(TERMINAL_WIDTH_KEY);
+			if (storedWidth) {
+				const parsed = Number(storedWidth);
+				if (Number.isFinite(parsed)) {
+					terminalWidth = Math.max(TERMINAL_MIN_WIDTH, Math.min(TERMINAL_MAX_WIDTH, parsed));
+				}
+			}
+			const storedOpen = window.localStorage.getItem(TERMINAL_OPEN_KEY);
+			if (storedOpen === 'true' && window.innerWidth >= 1024) {
+				terminalOpen = true;
+			}
+		} catch {
+			/* localStorage unavailable */
+		}
+	}
+
 	function toggleTerminal() {
 		terminalOpen = !terminalOpen;
+		try {
+			window.localStorage.setItem(TERMINAL_OPEN_KEY, String(terminalOpen));
+		} catch {
+			/* ignore */
+		}
 	}
 
 	function closeTerminal() {
+		if (!terminalOpen) return;
 		terminalOpen = false;
+		try {
+			window.localStorage.setItem(TERMINAL_OPEN_KEY, 'false');
+		} catch {
+			/* ignore */
+		}
+	}
+
+	function handleTerminalResize(next: number) {
+		terminalResizing = true;
+		terminalWidth = next;
+	}
+
+	function handleTerminalResizeEnd() {
+		terminalResizing = false;
+		try {
+			window.localStorage.setItem(TERMINAL_WIDTH_KEY, String(terminalWidth));
+		} catch {
+			/* ignore */
+		}
 	}
 
 	function connectMonitor() {
@@ -262,7 +313,10 @@
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
-							<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 01 &middot; Live monitor</p>
+							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
+								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">01</span>
+								<span class="text-playstation-blue">Live monitor</span>
+							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Real-time namespace and cgroup signals</h2>
 						</div>
 						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
@@ -279,7 +333,10 @@
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
-							<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 02 &middot; Blast radius</p>
+							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
+								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">02</span>
+								<span class="text-playstation-blue">Blast radius</span>
+							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Trigger a payload, watch the neighbor</h2>
 						</div>
 						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
@@ -306,7 +363,10 @@
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
-							<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 03 &middot; Namespace isolation</p>
+							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
+								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">03</span>
+								<span class="text-playstation-blue">Namespace isolation</span>
+							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Prove what the container can see</h2>
 						</div>
 						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
@@ -329,7 +389,10 @@
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
-							<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 04 &middot; Cgroup controls</p>
+							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
+								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">04</span>
+								<span class="text-playstation-blue">Cgroup controls</span>
+							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Prove how much the container can consume</h2>
 						</div>
 						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
@@ -359,7 +422,10 @@
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
 						<div>
-							<p class="m-0 mb-2 text-[12px] font-bold tracking-[0.16em] text-playstation-blue uppercase">Section 05 &middot; Evidence</p>
+							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
+								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">05</span>
+								<span class="text-playstation-blue">Evidence</span>
+							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Side-by-side reference for the report</h2>
 						</div>
 						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
@@ -391,9 +457,15 @@
 		</footer>
 	</div>
 
-	<!-- In-flow sidebar (lg+ only) -->
-	{#if terminalOpen}
-		<aside class="sticky top-0 hidden h-screen w-[360px] shrink-0 flex-col self-start border-l border-divider bg-black text-white lg:flex xl:w-[400px]">
+	<!-- Always-rendered sidebar; width animates between 0 and terminalWidth -->
+	<aside
+		class="sticky top-0 hidden h-screen shrink-0 self-start overflow-hidden bg-black text-white lg:block"
+		style="width: {terminalOpen ? terminalWidth : 0}px; transition: {terminalResizing
+			? 'none'
+			: 'width 220ms cubic-bezier(0.22, 1, 0.36, 1)'};"
+		aria-hidden={!terminalOpen}
+	>
+		<div class="flex h-full flex-col" style="width: {terminalWidth}px;">
 			<TerminalDrawer
 				lines={terminalLines}
 				connected={terminalConnected}
@@ -401,9 +473,23 @@
 				onClear={clearTerminal}
 				onClose={closeTerminal}
 			/>
-		</aside>
-	{/if}
+		</div>
+	</aside>
 </div>
+
+<!-- Desktop resize/toggle handle -->
+<TerminalHandle
+	open={terminalOpen}
+	width={terminalWidth}
+	minWidth={TERMINAL_MIN_WIDTH}
+	maxWidth={TERMINAL_MAX_WIDTH}
+	connected={terminalConnected}
+	busy={terminalBusy}
+	lineCount={terminalLines.length}
+	onToggle={toggleTerminal}
+	onResize={handleTerminalResize}
+	onResizeEnd={handleTerminalResizeEnd}
+/>
 
 <!-- Mobile / tablet overlay drawer (<lg) -->
 {#if terminalOpen}
@@ -426,12 +512,18 @@
 	</div>
 {/if}
 
-<!-- Floating right-edge tab handle (only when drawer is closed) -->
+<!-- Mobile floating button (only on <lg, since handle is hidden) -->
 {#if !terminalOpen}
-	<TerminalTab
-		connected={terminalConnected}
-		busy={terminalBusy}
-		lineCount={terminalLines.length}
-		onOpen={toggleTerminal}
-	/>
+	<button
+		type="button"
+		onclick={toggleTerminal}
+		aria-label="Open terminal"
+		class="fixed right-4 bottom-4 z-30 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2.5 text-[12.5px] font-medium text-white shadow-[0_5px_9px_rgba(0,0,0,0.16)] transition hover:scale-[1.05] hover:bg-playstation-blue lg:hidden"
+	>
+		<span class={`inline-block h-1.5 w-1.5 rounded-full ${terminalConnected ? (terminalBusy ? 'bg-playstation-cyan animate-pulse' : 'bg-emerald-400') : 'bg-commerce'}`} aria-hidden="true"></span>
+		Terminal
+		{#if terminalLines.length > 0}
+			<span class="rounded-full bg-white/15 px-1.5 py-px font-mono text-[10px] text-white/80">{terminalLines.length > 99 ? '99+' : terminalLines.length}</span>
+		{/if}
+	</button>
 {/if}

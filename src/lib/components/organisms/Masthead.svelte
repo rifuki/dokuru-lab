@@ -12,7 +12,7 @@
 		<a class="inline-flex items-center gap-2.5 text-[15px] font-semibold text-white no-underline" href="/" aria-label="Dokuru Lab home">
 			<span class="grid h-7 w-7 place-items-center rounded-full bg-white font-bold text-playstation-blue">D</span>
 			<span>Dokuru Lab</span>
-			<span class="hidden rounded-full border border-white/15 px-2 py-[2px] font-mono text-[10px] tracking-[0.14em] text-white/55 uppercase @md/page:inline">v2 &middot; namespace + cgroup</span>
+			<span class="hidden rounded-full border border-white/12 px-2 py-[2px] font-mono text-[10px] tracking-[0.04em] text-white/55 @md/page:inline">v2 &middot; namespace + cgroup</span>
 		</a>
 
 		<div class="flex items-center gap-5 text-[13px] font-medium">
