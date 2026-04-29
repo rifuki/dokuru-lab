@@ -604,9 +604,9 @@
 		<div class="flex h-full flex-col" style="width: {terminalWidth}px;">
 
 			<!-- ── Compact toolbar ────────────────────────────────── -->
-			<div class="flex h-8 shrink-0 items-center gap-1 border-b border-white/[0.07] px-2">
+			<div class="flex h-8 shrink-0 items-center gap-1 border-b border-white/[0.07] px-4">
 				<!-- Draggable Lego Blocks -->
-				<div class="ml-0.5 flex items-center gap-0.5">
+				<div class="flex items-center gap-1.5">
 					{#each ['terminal', 'monitor'] as SidebarPanel[] as panel}
 						{@const active = activePanels.includes(panel)}
 						<button
@@ -624,9 +624,10 @@
 								dragHoverZone = null;
 							}}
 							onclick={() => togglePanel(panel)}
-							class="group flex cursor-grab items-center gap-1.5 rounded px-1.5 py-1 text-[11px] font-medium tracking-tight transition-colors active:cursor-grabbing {active
-								? 'bg-white/10 text-white'
-								: 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}"
+							style="font-size: 11px;"
+							class="group flex cursor-grab items-center gap-1.5 rounded-[5px] border px-2 py-0.5 font-medium tracking-tight transition-all active:cursor-grabbing {active
+								? 'border-white/10 bg-white/[0.08] text-white shadow-sm'
+								: 'border-transparent text-white/45 hover:bg-white/[0.04] hover:text-white/80'}"
 							title={active ? 'Click to remove · drag to reposition' : 'Click to add · drag to position'}
 						>
 							{#if panel === 'terminal'}
@@ -635,7 +636,7 @@
 								<Activity size={12} strokeWidth={1.8} />
 							{/if}
 							<span>{panelLabel(panel)}</span>
-							<span class={`ml-0.5 inline-block h-1 w-1 rounded-full ${panelDot(panel)}`} aria-hidden="true"></span>
+							<span class={`ml-0.5 inline-block h-[3px] w-[3px] rounded-full ${panelDot(panel)}`} aria-hidden="true"></span>
 						</button>
 					{/each}
 				</div>
