@@ -32,7 +32,27 @@
 	let terminalOpen = $state(false);
 	let terminalWidth = $state(420);
 	let terminalResizing = $state(false);
-	let sidebarTab = $state<'terminal' | 'monitor'>('terminal');
+	type SidebarMode = 'terminal' | 'monitor' | 'split-tm' | 'split-mt';
+	let sidebarMode = $state<SidebarMode>('terminal');
+	let splitRatio = $state(0.5);
+	let splitDragging = $state(false);
+	let splitContainerEl = $state<HTMLDivElement | null>(null);
+
+	function onSplitPointerDown(event: PointerEvent) {
+		event.preventDefault();
+		splitDragging = true;
+		(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+	}
+	function onSplitPointerMove(event: PointerEvent) {
+		if (!splitDragging || !splitContainerEl) return;
+		const rect = splitContainerEl.getBoundingClientRect();
+		const r = (event.clientY - rect.top) / rect.height;
+		splitRatio = Math.max(0.18, Math.min(0.82, r));
+	}
+	function onSplitPointerUp(event: PointerEvent) {
+		splitDragging = false;
+		(event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+	}
 	let terminalSocket: WebSocket | null = null;
 	let monitorSocket: WebSocket | null = null;
 	let customerSocket: WebSocket | null = null;
@@ -480,47 +500,102 @@
 		aria-hidden={!terminalOpen}
 	>
 		<div class="flex h-full flex-col" style="width: {terminalWidth}px;">
-			<!-- Tab switcher -->
-			<div class="flex shrink-0 items-center gap-1 border-b border-white/5 bg-black px-3 pt-3 pb-0">
-				<button
-					type="button"
-					onclick={() => sidebarTab = 'terminal'}
-					class="relative cursor-pointer pb-3 px-3 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors duration-150 {sidebarTab === 'terminal' ? 'text-white' : 'text-white/35 hover:text-white/65'}"
-				>
-					Terminal
-					{#if terminalLines.length > 0}
-						<span class="ml-1.5 rounded-full bg-white/15 px-1.5 py-px font-mono text-[9px]">{terminalLines.length > 99 ? '99+' : terminalLines.length}</span>
-					{/if}
-					{#if sidebarTab === 'terminal'}
-						<span class="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-t-full"></span>
-					{/if}
-				</button>
-				<button
-					type="button"
-					onclick={() => sidebarTab = 'monitor'}
-					class="relative cursor-pointer pb-3 px-3 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors duration-150 {sidebarTab === 'monitor' ? 'text-white' : 'text-white/35 hover:text-white/65'}"
-				>
-					Monitor
-					{#if monitorConnected}
-						<span class="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-					{/if}
-					{#if sidebarTab === 'monitor'}
-						<span class="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-t-full"></span>
-					{/if}
-				</button>
-				<button
-					type="button"
-					onclick={closeTerminal}
-					aria-label="Close sidebar"
-					class="ml-auto cursor-pointer pb-3 px-2 text-white/30 transition-colors hover:text-white/70"
-				>
-					<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg>
-				</button>
+
+			<!-- ── Compact toolbar ────────────────────────────────── -->
+			<div class="flex h-8 shrink-0 items-center gap-1 border-b border-white/[0.07] px-2">
+
+				<!-- Connection status -->
+				<span
+					class="inline-block h-1.5 w-1.5 shrink-0 rounded-full transition-colors {terminalConnected ? 'bg-emerald-400' : 'bg-commerce animate-pulse'}"
+					title={terminalConnected ? 'Terminal connected' : 'Offline'}
+				></span>
+
+				<!-- Layout picker ──────────────────────────────────── -->
+				<div class="ml-1.5 flex items-center gap-px rounded-md bg-white/[0.06] p-px">
+					<!-- Terminal full -->
+					<button
+						type="button"
+						onclick={() => sidebarMode = 'terminal'}
+						title="Terminal only"
+						class="grid h-[22px] w-[22px] cursor-pointer place-items-center rounded transition-colors {sidebarMode === 'terminal' ? 'bg-white/15 text-white' : 'text-white/30 hover:text-white/65'}"
+					>
+						<svg width="12" height="9" viewBox="0 0 12 9" fill="none">
+							<rect width="12" height="9" rx="1.5" fill="currentColor" opacity=".55"/>
+							<path d="M2.5 3.5l2 1.5-2 1.5" stroke="black" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
+							<line x1="6" y1="6.5" x2="9.5" y2="6.5" stroke="black" stroke-width="0.8" opacity=".4"/>
+						</svg>
+					</button>
+					<!-- Monitor full -->
+					<button
+						type="button"
+						onclick={() => sidebarMode = 'monitor'}
+						title="Monitor only"
+						class="grid h-[22px] w-[22px] cursor-pointer place-items-center rounded transition-colors {sidebarMode === 'monitor' ? 'bg-white/15 text-white' : 'text-white/30 hover:text-white/65'}"
+					>
+						<svg width="12" height="9" viewBox="0 0 12 9" fill="none">
+							<rect width="12" height="9" rx="1.5" fill="currentColor" opacity=".55"/>
+							<circle cx="3" cy="3.8" r="1.3" fill="black" opacity=".5"/>
+							<line x1="5.5" y1="3" x2="9.5" y2="3" stroke="black" stroke-width="0.8" opacity=".35"/>
+							<line x1="5.5" y1="4.8" x2="9.5" y2="4.8" stroke="black" stroke-width="0.8" opacity=".35"/>
+							<line x1="5.5" y1="6.5" x2="8" y2="6.5" stroke="black" stroke-width="0.8" opacity=".25"/>
+						</svg>
+					</button>
+					<!-- Split: Terminal top, Monitor bottom -->
+					<button
+						type="button"
+						onclick={() => sidebarMode = 'split-tm'}
+						title="Terminal (top) + Monitor (bottom)"
+						class="grid h-[22px] w-[22px] cursor-pointer place-items-center rounded transition-colors {sidebarMode === 'split-tm' ? 'bg-white/15 text-white' : 'text-white/30 hover:text-white/65'}"
+					>
+						<svg width="12" height="9" viewBox="0 0 12 9" fill="none">
+							<rect width="12" height="4" rx="1.5" fill="currentColor" opacity=".4"/>
+							<rect y="5" width="12" height="4" rx="1.5" fill="currentColor" opacity=".7"/>
+						</svg>
+					</button>
+					<!-- Split: Monitor top, Terminal bottom -->
+					<button
+						type="button"
+						onclick={() => sidebarMode = 'split-mt'}
+						title="Monitor (top) + Terminal (bottom)"
+						class="grid h-[22px] w-[22px] cursor-pointer place-items-center rounded transition-colors {sidebarMode === 'split-mt' ? 'bg-white/15 text-white' : 'text-white/30 hover:text-white/65'}"
+					>
+						<svg width="12" height="9" viewBox="0 0 12 9" fill="none">
+							<rect width="12" height="4" rx="1.5" fill="currentColor" opacity=".7"/>
+							<rect y="5" width="12" height="4" rx="1.5" fill="currentColor" opacity=".4"/>
+						</svg>
+					</button>
+				</div>
+
+				<!-- Lines count pill -->
+				{#if terminalLines.length > 0 && (sidebarMode === 'terminal' || sidebarMode === 'split-tm' || sidebarMode === 'split-mt')}
+					<span class="ml-1 rounded-full bg-white/10 px-1.5 py-px font-mono text-[9px] text-white/50 tabular-nums">{terminalLines.length > 999 ? '999+' : terminalLines.length}</span>
+				{/if}
+
+				<!-- Actions -->
+				<div class="ml-auto flex items-center gap-0.5">
+					<button
+						type="button"
+						onclick={clearTerminal}
+						disabled={terminalLines.length === 0}
+						title="Clear terminal"
+						class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition-colors hover:bg-white/10 hover:text-white/80 disabled:cursor-not-allowed disabled:opacity-25"
+					>
+						<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+					</button>
+					<button
+						type="button"
+						onclick={closeTerminal}
+						title="Close sidebar"
+						class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition-colors hover:bg-white/10 hover:text-white/80"
+					>
+						<svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg>
+					</button>
+				</div>
 			</div>
 
-			<!-- Tab content -->
-			<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-				{#if sidebarTab === 'terminal'}
+			<!-- ── Sidebar content ───────────────────────────────── -->
+			{#if sidebarMode === 'terminal'}
+				<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
 					<TerminalDrawer
 						lines={terminalLines}
 						connected={terminalConnected}
@@ -529,14 +604,45 @@
 						onClose={closeTerminal}
 						hideHeader
 					/>
-				{:else}
-					<SidebarMonitor
-						{runtime}
-						connected={monitorConnected}
-						lastUpdated={lastUpdated}
-					/>
-				{/if}
-			</div>
+				</div>
+			{:else if sidebarMode === 'monitor'}
+				<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+					<SidebarMonitor {runtime} connected={monitorConnected} lastUpdated={lastUpdated} />
+				</div>
+			{:else}
+				<!-- Split layout with draggable divider -->
+				<div bind:this={splitContainerEl} class="flex min-h-0 flex-1 flex-col overflow-hidden">
+					<!-- Top panel -->
+					<div style="height: {splitRatio * 100}%" class="flex min-h-0 flex-col overflow-hidden">
+						{#if sidebarMode === 'split-tm'}
+							<TerminalDrawer lines={terminalLines} connected={terminalConnected} busy={terminalBusy} onClear={clearTerminal} onClose={closeTerminal} hideHeader />
+						{:else}
+							<SidebarMonitor {runtime} connected={monitorConnected} lastUpdated={lastUpdated} />
+						{/if}
+					</div>
+					<!-- Drag divider -->
+					<div
+						role="separator"
+						aria-label="Drag to resize panels"
+						class="group relative z-10 h-[4px] shrink-0 cursor-row-resize bg-white/[0.05] transition-colors hover:bg-white/[0.18] {splitDragging ? 'bg-playstation-blue/40' : ''}"
+						onpointerdown={onSplitPointerDown}
+						onpointermove={onSplitPointerMove}
+						onpointerup={onSplitPointerUp}
+						onpointercancel={onSplitPointerUp}
+					>
+						<div class="absolute inset-x-0 top-1/2 mx-auto h-[2px] w-8 -translate-y-1/2 rounded-full bg-white/20 opacity-0 transition-opacity group-hover:opacity-100"></div>
+					</div>
+					<!-- Bottom panel -->
+					<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+						{#if sidebarMode === 'split-tm'}
+							<SidebarMonitor {runtime} connected={monitorConnected} lastUpdated={lastUpdated} />
+						{:else}
+							<TerminalDrawer lines={terminalLines} connected={terminalConnected} busy={terminalBusy} onClear={clearTerminal} onClose={closeTerminal} hideHeader />
+						{/if}
+					</div>
+				</div>
+			{/if}
+
 		</div>
 	</aside>
 </div>
