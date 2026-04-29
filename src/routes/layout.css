@@ -2,28 +2,28 @@
 
 @font-face {
 	font-family: 'SST';
-	src: url('https://static.playstation.com/font-stack/v1/fonts/SST/SST-Light-latin.3cce6.woff2') format('woff2');
+	src: url('/fonts/SST-Light-latin.3cce6.woff2') format('woff2');
 	font-weight: 300;
 	font-style: normal;
 	font-display: swap;
 }
 @font-face {
 	font-family: 'SST';
-	src: url('https://static.playstation.com/font-stack/v1/fonts/SST/SST-Roman-latin.40348.woff2') format('woff2');
+	src: url('/fonts/SST-Roman-latin.40348.woff2') format('woff2');
 	font-weight: 400;
 	font-style: normal;
 	font-display: swap;
 }
 @font-face {
 	font-family: 'SST';
-	src: url('https://static.playstation.com/font-stack/v1/fonts/SST/SST-Medium-latin.1167b.woff2') format('woff2');
+	src: url('/fonts/SST-Medium-latin.1167b.woff2') format('woff2');
 	font-weight: 500;
 	font-style: normal;
 	font-display: swap;
 }
 @font-face {
 	font-family: 'SST';
-	src: url('https://static.playstation.com/font-stack/v1/fonts/SST/SST-Bold-latin.7c968.woff2') format('woff2');
+	src: url('/fonts/SST-Bold-latin.7c968.woff2') format('woff2');
 	font-weight: 700;
 	font-style: normal;
 	font-display: swap;
