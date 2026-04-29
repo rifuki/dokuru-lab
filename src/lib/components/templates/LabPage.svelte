@@ -426,7 +426,6 @@
 				{terminalConnected}
 				{customerConnected}
 				onProbe={runProbe}
-				onRunCommand={runExec}
 				{running}
 			/>
 

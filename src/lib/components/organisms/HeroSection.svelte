@@ -16,7 +16,6 @@
 		terminalConnected: boolean;
 		customerConnected: boolean;
 		onProbe: () => void | Promise<void>;
-		onRunCommand: () => void | Promise<void>;
 		running: string;
 	};
 
@@ -25,7 +24,6 @@
 		terminalConnected,
 		customerConnected,
 		onProbe,
-		onRunCommand,
 		running
 	}: Props = $props();
 
@@ -122,12 +120,6 @@
 					<span class="inline-flex items-center gap-2">
 						<Play size={16} strokeWidth={1.5} fill="currentColor" />
 						Run recovery probe
-					</span>
-				</Button>
-				<Button variant="secondary" onclick={onRunCommand} disabled={Boolean(running)}>
-					<span class="inline-flex items-center gap-2">
-						<TerminalIcon size={16} strokeWidth={1.5} />
-						Run selected command
 					</span>
 				</Button>
 				<a
