@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { RawData, WebSocket, WebSocketServer } from 'ws';
 import type { ActivePayload, CustomerSample } from '../lib/types/lab';
 import { cgroupSummary, memorySummary, readFirst } from './evidence';
@@ -32,7 +33,7 @@ const payloadLabels: Record<string, string> = {
 };
 
 export class TerminalController {
-	private memoryHold: Buffer[] = [];
+	private memoryPayloadChild: ChildProcessWithoutNullStreams | null = null;
 	private terminalActionRunning = false;
 	private activePayload: ActivePayload | null = null;
 	private activePayloadTimer: ReturnType<typeof setTimeout> | null = null;
@@ -186,18 +187,83 @@ export class TerminalController {
 	private async runMemoryBomb(socket: WebSocket, rawMb: unknown): Promise<void> {
 		const mb = clamp(Number(rawMb || 128), 1, 1536);
 		line(socket, 'system', `$ dokuru-lab memory-bomb --mb ${mb}\n`);
+		if (this.memoryPayloadChild) {
+			line(socket, 'stderr', 'memory payload is already running; stop it before starting another memory blast\n');
+			return;
+		}
 
-		for (let index = 0; index < mb; index += 1) {
-			if (this.stopRequested) {
-				line(socket, 'stderr', 'memory blast stopped by user\n');
-				break;
-			}
+		const script = `
+process.title = 'dokuru_memory_hold';
+const fs = require('node:fs');
+const target = ${mb};
+const hold = [];
+let allocated = 0;
 
-			this.memoryHold.push(Buffer.alloc(1024 * 1024, 'a'));
-			if ((index + 1) % 16 === 0 || index + 1 === mb) {
-				line(socket, 'stdout', `allocated ${index + 1} MiB; held=${this.memoryHold.length} MiB; ${memorySummary()}\n`);
-				await delay(20);
-			}
+function readFirst(paths) {
+  for (const path of paths) {
+    try { return fs.readFileSync(path, 'utf8').trim(); } catch {}
+  }
+  return 'unavailable';
+}
+
+function memorySummary() {
+  return 'memory.current=' + readFirst(['/sys/fs/cgroup/memory.current', '/sys/fs/cgroup/memory/memory.usage_in_bytes']) + ' memory.max=' + readFirst(['/sys/fs/cgroup/memory.max', '/sys/fs/cgroup/memory/memory.limit_in_bytes']);
+}
+
+function allocateBatch() {
+  const next = Math.min(allocated + 16, target);
+  while (allocated < next) {
+    hold.push(Buffer.alloc(1024 * 1024, 'a'));
+    allocated += 1;
+  }
+  console.log('allocated ' + allocated + ' MiB; held=' + hold.length + ' MiB; ' + memorySummary());
+  if (allocated >= target) {
+    console.log('holding ' + hold.length + ' MiB until Stop payload, Cleanup, or OOM');
+    setInterval(() => {}, 1000);
+    return;
+  }
+  setTimeout(allocateBatch, 20);
+}
+
+process.on('SIGTERM', () => {
+  console.log('memory holder received SIGTERM; releasing ' + hold.length + ' MiB');
+  process.exit(0);
+});
+
+allocateBatch();
+`;
+
+		await new Promise<void>((resolve) => {
+			let resolved = false;
+			const finishStart = () => {
+				if (resolved) return;
+				resolved = true;
+				resolve();
+			};
+			const child = spawn(process.execPath, ['-e', script], { detached: true });
+			this.memoryPayloadChild = child;
+			line(socket, 'stdout', `memory holder pid=${child.pid}; use Stop payload to release it\n`);
+
+			child.stdout.on('data', (chunk: Buffer) => {
+				const text = chunk.toString();
+				line(socket, 'stdout', text);
+				if (text.includes('holding ')) finishStart();
+			});
+			child.stderr.on('data', (chunk: Buffer) => line(socket, 'stderr', chunk.toString()));
+			child.on('error', (error) => {
+				line(socket, 'stderr', `memory holder failed: ${error.message}\n`);
+				finishStart();
+			});
+			child.on('close', (code, signal) => {
+				if (this.memoryPayloadChild === child) this.memoryPayloadChild = null;
+				if (this.activePayload?.type === 'memory-bomb') this.clearActivePayload('memory-bomb');
+				line(socket, 'system', `memory holder exited code=${code ?? 'null'} signal=${signal ?? 'none'}; ${cgroupSummary()}`);
+				finishStart();
+			});
+		});
+
+		if (this.memoryPayloadChild) {
+			line(socket, 'stdout', `memory blast is now holding memory in a child process; ${memorySummary()}\n`);
 		}
 	}
 
@@ -285,28 +351,37 @@ export class TerminalController {
 	private async runCleanup(socket: WebSocket): Promise<void> {
 		this.stopRequested = true;
 		this.clearActivePayload();
-		line(socket, 'system', 'dropping held memory buffers in the server process\n');
-		this.memoryHold = [];
+		line(socket, 'system', 'stopping payload child processes\n');
+		this.stopMemoryPayload();
 		await runShell(
 			socket,
-			"pkill -f '[d]okuru_pid_slp|[d]okuru_pid_bomb_sleep|[d]okuru_cpu_burn' 2>&1 || true",
+			"pkill -f '[d]okuru_pid_slp|[d]okuru_pid_bomb_sleep|[d]okuru_cpu_burn|[d]okuru_memory_hold' 2>&1 || true",
 			5_000
 		);
-		line(socket, 'stdout', `held memory cleared; ${cgroupSummary()}`);
+		line(socket, 'stdout', `payload processes cleaned up; ${cgroupSummary()}`);
 	}
 
 	private async runStopPayloads(socket: WebSocket): Promise<void> {
 		this.stopRequested = true;
 		this.clearActivePayload();
 		line(socket, 'system', '$ dokuru-lab stop-payloads\n');
-		line(socket, 'system', 'dropping held memory buffers in the server process\n');
-		this.memoryHold = [];
+		line(socket, 'system', 'stopping payload child processes\n');
+		this.stopMemoryPayload();
 		await runShell(
 			socket,
-			"pkill -f '[d]okuru_pid_slp|[d]okuru_pid_bomb_sleep|[d]okuru_cpu_burn' 2>&1 || true; pkill -CONT -x caddy 2>&1 || true",
+			"pkill -f '[d]okuru_pid_slp|[d]okuru_pid_bomb_sleep|[d]okuru_cpu_burn|[d]okuru_memory_hold' 2>&1 || true; pkill -CONT -x caddy 2>&1 || true",
 			5_000
 		);
-		line(socket, 'stdout', `active payload stopped; held memory cleared; ${cgroupSummary()}`);
+		line(socket, 'stdout', `active payload stopped; payload processes terminated; ${cgroupSummary()}`);
+	}
+
+	private stopMemoryPayload(): void {
+		const child = this.memoryPayloadChild;
+		if (!child) return;
+		child.kill('SIGTERM');
+		setTimeout(() => {
+			if (this.memoryPayloadChild === child) child.kill('SIGKILL');
+		}, 1000);
 	}
 
 	private activatePayload(type: string, label: string, durationMs: number | null): void {

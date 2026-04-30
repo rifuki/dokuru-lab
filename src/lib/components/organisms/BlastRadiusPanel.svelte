@@ -82,7 +82,7 @@
 				</span>
 			</div>
 			<p class="m-0 mb-3 min-h-12 text-[13px] leading-relaxed text-body-gray">
-				Allocate 1280 MiB inside the attacker. After rule 5.11, only the attacker is OOM-killed &mdash; the host stays safe.
+				Start a child process that holds 1280 MiB. Use Stop payload to terminate it; with rule 5.11, only that process is OOM-killed.
 			</p>
 			<Button size="sm" onclick={onMemoryBlast} disabled={scenarioBlocked}>Trigger memory blast</Button>
 		</article>

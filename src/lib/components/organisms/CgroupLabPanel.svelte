@@ -59,7 +59,8 @@
 					<span class="text-[11px] font-mono uppercase tracking-[0.1em] text-body-gray">Allocation</span>
 				</div>
 				<Field id="memory-mb" label="Memory MB" type="number" min={1} max={1024} value={memoryMb} oninput={(value) => onMemoryChange(Number(value))} />
-				<Button onclick={onMemoryBomb} disabled={Boolean(running)}>Allocate</Button>
+				<p class="m-0 text-[12.5px] leading-relaxed text-body-gray">Starts a child process that holds memory until Cleanup or Stop payload.</p>
+				<Button onclick={onMemoryBomb} disabled={Boolean(running)}>Start memory pressure</Button>
 			</article>
 
 			<article class="grid gap-3 rounded-2xl border border-transparent bg-white p-4 shadow-[0_5px_9px_rgba(0,0,0,0.06)] ring-1 ring-black/5">
@@ -83,10 +84,9 @@
 					</span>
 					<span class="text-[13px] font-semibold tracking-wide text-ink">Cleanup</span>
 				</div>
-				<p class="m-0 text-[12.5px] leading-relaxed text-body-gray">Kill sleeper processes to reset the environment.</p>
+				<p class="m-0 text-[12.5px] leading-relaxed text-body-gray">Kill sleeper, CPU, and memory pressure processes to reset the environment.</p>
 			</div>
 			<Button variant="commerce" onclick={onCleanup} disabled={Boolean(running)}>Cleanup</Button>
 		</article>
 	</div>
 </Panel>
-
