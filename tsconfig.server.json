@@ -1,0 +1,16 @@
+{
+	"compilerOptions": {
+		"allowImportingTsExtensions": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"target": "esnext",
+		"types": ["node"]
+	},
+	"include": ["server.ts", "src/lib/types/lab.ts"]
+}

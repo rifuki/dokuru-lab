@@ -1,26 +1,46 @@
-// @ts-nocheck
 import { createServer } from 'node:http';
 import { execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, readFileSync, readlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { WebSocketServer } from 'ws';
-import { handler } from './build/handler.js';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { RawData, WebSocket } from 'ws';
+import type { CgroupEvidence, CustomerSample, ProcessEvidence, RuntimeEvidence } from './src/lib/types/lab';
+
+type SvelteKitHandler = (request: IncomingMessage, response: ServerResponse) => void;
+type TerminalPayload = {
+	type?: unknown;
+	command?: unknown;
+	count?: unknown;
+	mb?: unknown;
+	seconds?: unknown;
+	workers?: unknown;
+};
+type ActivePayload = {
+	type: string;
+	label: string;
+	startedAt: string;
+	expiresAt?: string;
+};
+
+const handlerModulePath = './build/handler.js';
+const { handler } = (await import(handlerModulePath)) as { handler: SvelteKitHandler };
 
 const host = process.env.HOST || '0.0.0.0';
 const port = Number(process.env.PORT || 8080);
 const dataDir = process.env.LAB_DATA_DIR || '/app/data';
 const victimCheckoutUrl = process.env.VICTIM_CHECKOUT_URL || 'http://victim-checkout:3000/checkout';
 const customerProbeIntervalMs = clamp(Number(process.env.CUSTOMER_PROBE_INTERVAL_MS || 750), 250, 5000);
-const monitorSockets = new Set();
-const customerSockets = new Set();
-let memoryHold = [];
+const monitorSockets = new Set<WebSocket>();
+const customerSockets = new Set<WebSocket>();
+let memoryHold: Buffer[] = [];
 let terminalActionRunning = false;
-let activePayload = null;
-let activePayloadTimer = null;
+let activePayload: ActivePayload | null = null;
+let activePayloadTimer: ReturnType<typeof setTimeout> | null = null;
 let stopRequested = false;
 
 const payloadActions = new Set(['pid-bomb', 'memory-bomb', 'cpu-burn', 'cpu-blast', 'sabotage-proxy']);
-const payloadLabels = {
+const payloadLabels: Record<string, string> = {
 	'pid-bomb': 'PID bomb',
 	'memory-bomb': 'Memory blast',
 	'cpu-burn': 'CPU burn',
@@ -106,10 +126,11 @@ server.listen(port, host, () => {
 	console.log(`Listening on http://${host}:${port}`);
 });
 
-async function handleTerminalMessage(socket, raw) {
-	let message;
+async function handleTerminalMessage(socket: WebSocket, raw: RawData): Promise<void> {
+	let message: TerminalPayload;
 	try {
-		message = JSON.parse(String(raw));
+		const parsed = JSON.parse(String(raw));
+		message = isRecord(parsed) ? parsed : {};
 	} catch {
 		line(socket, 'stderr', 'invalid terminal message: expected JSON\n');
 		return;
@@ -186,7 +207,7 @@ async function handleTerminalMessage(socket, raw) {
 	}
 }
 
-function runShell(socket, command, timeoutMs = 15_000) {
+function runShell(socket: WebSocket, command: string, timeoutMs = 15_000): Promise<void> {
 	return new Promise((resolve) => {
 		line(socket, 'system', `$ ${command}\n`);
 		const child = spawn('/bin/sh', ['-lc', command], {
@@ -200,8 +221,8 @@ function runShell(socket, command, timeoutMs = 15_000) {
 			child.kill('SIGKILL');
 		}, timeoutMs);
 
-		child.stdout.on('data', (chunk) => line(socket, 'stdout', chunk.toString()));
-		child.stderr.on('data', (chunk) => line(socket, 'stderr', chunk.toString()));
+		child.stdout.on('data', (chunk: Buffer) => line(socket, 'stdout', chunk.toString()));
+		child.stderr.on('data', (chunk: Buffer) => line(socket, 'stderr', chunk.toString()));
 		child.on('error', (error) => line(socket, 'stderr', `${error.message}\n`));
 		child.on('close', (code, signal) => {
 			clearTimeout(timeout);
@@ -211,7 +232,7 @@ function runShell(socket, command, timeoutMs = 15_000) {
 	});
 }
 
-async function runProbe(socket) {
+async function runProbe(socket: WebSocket): Promise<void> {
 	ensureDataDir();
 	const path = join(dataDir, 'recovery-probe.txt');
 	const payload = `probe=${new Date().toISOString()}\n`;
@@ -222,7 +243,7 @@ async function runProbe(socket) {
 	line(socket, 'stdout', `uid_map=${readFirst(['/proc/self/uid_map']).replaceAll('\n', ' | ')}\n`);
 }
 
-async function runPidBomb(socket, rawCount) {
+async function runPidBomb(socket: WebSocket, rawCount: unknown): Promise<void> {
 	const count = clamp(Number(rawCount || 120), 1, 500);
 	line(socket, 'system', `$ dokuru-lab pid-bomb --count ${count}\n`);
 	let spawned = 0;
@@ -256,7 +277,7 @@ async function runPidBomb(socket, rawCount) {
 	line(socket, 'stdout', cgroupSummary());
 }
 
-async function runMemoryBomb(socket, rawMb) {
+async function runMemoryBomb(socket: WebSocket, rawMb: unknown): Promise<void> {
 	const mb = clamp(Number(rawMb || 128), 1, 1536);
 	line(socket, 'system', `$ dokuru-lab memory-bomb --mb ${mb}\n`);
 
@@ -274,14 +295,14 @@ async function runMemoryBomb(socket, rawMb) {
 	}
 }
 
-async function runCpuBurn(socket, rawSeconds) {
+async function runCpuBurn(socket: WebSocket, rawSeconds: unknown): Promise<void> {
 	const seconds = clamp(Number(rawSeconds || 5), 1, 30);
 	line(socket, 'system', `$ dokuru-lab cpu-burn --seconds ${seconds}\n`);
 	const script = `process.title='dokuru_cpu_burn'; const crypto = require('node:crypto'); const end = Date.now() + ${seconds} * 1000; let ops = 0; let last = Date.now(); console.log('cpu burn started for ${seconds}s'); while (Date.now() < end) { for (let i = 0; i < 5000; i++) crypto.createHash('sha256').update(String(ops++)).digest('hex'); if (Date.now() - last >= 500) { console.log('ops=' + ops); last = Date.now(); } } console.log('cpu burn done ops=' + ops);`;
-	await new Promise((resolve) => {
+	await new Promise<void>((resolve) => {
 		const child = spawn(process.execPath, ['-e', script], { stdio: ['ignore', 'pipe', 'pipe'] });
-		child.stdout.on('data', (chunk) => line(socket, 'stdout', chunk.toString()));
-		child.stderr.on('data', (chunk) => line(socket, 'stderr', chunk.toString()));
+		child.stdout.on('data', (chunk: Buffer) => line(socket, 'stdout', chunk.toString()));
+		child.stderr.on('data', (chunk: Buffer) => line(socket, 'stderr', chunk.toString()));
 		child.on('close', (code, signal) => {
 			line(socket, 'system', `cpu burner exited code=${code ?? 'null'} signal=${signal ?? 'none'}\n`);
 			resolve();
@@ -289,7 +310,7 @@ async function runCpuBurn(socket, rawSeconds) {
 	});
 }
 
-async function runCpuBlast(socket, rawSeconds, rawWorkers) {
+async function runCpuBlast(socket: WebSocket, rawSeconds: unknown, rawWorkers: unknown): Promise<void> {
 	const seconds = clamp(Number(rawSeconds || 25), 1, 60);
 	const workers = clamp(Number(rawWorkers || 4), 1, 8);
 	line(socket, 'system', `$ dokuru-lab cryptominer --workers ${workers} --seconds ${seconds}\n`);
@@ -313,7 +334,7 @@ async function runCpuBlast(socket, rawSeconds, rawWorkers) {
 	line(socket, 'stdout', cgroupSummary());
 }
 
-async function runCustomerProbe(socket) {
+async function runCustomerProbe(socket: WebSocket): Promise<void> {
 	line(socket, 'system', `$ curl -sS -m 2 ${victimCheckoutUrl}\n`);
 	const sample = await directCustomerProbe();
 	if (sample.ok) {
@@ -323,7 +344,7 @@ async function runCustomerProbe(socket) {
 	}
 }
 
-async function runStealSecrets(socket) {
+async function runStealSecrets(socket: WebSocket): Promise<void> {
 	const command = [
 		'set -eu',
 		"echo '[1] visible postgres processes from inside attacker container'",
@@ -339,7 +360,7 @@ async function runStealSecrets(socket) {
 	await runShell(socket, command, 8_000);
 }
 
-async function runSabotageProxy(socket, rawSeconds) {
+async function runSabotageProxy(socket: WebSocket, rawSeconds: unknown): Promise<void> {
 	const seconds = clamp(Number(rawSeconds || 6), 3, 15);
 	const command = [
 		'set -u',
@@ -355,7 +376,7 @@ async function runSabotageProxy(socket, rawSeconds) {
 	await runShell(socket, command, 4_000);
 }
 
-async function runCleanup(socket) {
+async function runCleanup(socket: WebSocket): Promise<void> {
 	stopRequested = true;
 	clearActivePayload();
 	line(socket, 'system', 'dropping held memory buffers in the server process\n');
@@ -368,7 +389,7 @@ async function runCleanup(socket) {
 	line(socket, 'stdout', `held memory cleared; ${cgroupSummary()}`);
 }
 
-async function runStopPayloads(socket) {
+async function runStopPayloads(socket: WebSocket): Promise<void> {
 	stopRequested = true;
 	clearActivePayload();
 	line(socket, 'system', '$ dokuru-lab stop-payloads\n');
@@ -382,7 +403,7 @@ async function runStopPayloads(socket) {
 	line(socket, 'stdout', `active payload stopped; held memory cleared; ${cgroupSummary()}`);
 }
 
-function activatePayload(type, label, durationMs) {
+function activatePayload(type: string, label: string, durationMs: number | null): void {
 	const startedAt = new Date();
 	activePayload = {
 		type,
@@ -395,7 +416,7 @@ function activatePayload(type, label, durationMs) {
 		activePayloadTimer = null;
 	}
 
-	if (Number.isFinite(durationMs) && durationMs > 0) {
+	if (durationMs !== null && Number.isFinite(durationMs) && durationMs > 0) {
 		activePayload.expiresAt = new Date(startedAt.getTime() + durationMs).toISOString();
 		activePayloadTimer = setTimeout(() => clearActivePayload(type), durationMs + 500);
 	}
@@ -403,7 +424,7 @@ function activatePayload(type, label, durationMs) {
 	broadcastActivePayload();
 }
 
-function clearActivePayload(expectedType = null) {
+function clearActivePayload(expectedType: string | null = null): void {
 	if (expectedType && activePayload?.type !== expectedType) return;
 
 	if (activePayloadTimer) {
@@ -416,7 +437,7 @@ function clearActivePayload(expectedType = null) {
 	broadcastActivePayload();
 }
 
-function payloadDurationMs(type, message) {
+function payloadDurationMs(type: string, message: TerminalPayload): number | null {
 	if (type === 'cpu-blast') return clamp(Number(message.seconds || 25), 1, 60) * 1000;
 	if (type === 'cpu-burn') return clamp(Number(message.seconds || 5), 1, 30) * 1000;
 	if (type === 'pid-bomb') return 60_000;
@@ -424,17 +445,17 @@ function payloadDurationMs(type, message) {
 	return null;
 }
 
-function sendActivePayload(socket) {
+function sendActivePayload(socket: WebSocket): void {
 	send(socket, 'terminal.payload', { payload: activePayload });
 }
 
-function broadcastActivePayload() {
+function broadcastActivePayload(): void {
 	for (const socket of terminalServer.clients) {
 		sendActivePayload(socket);
 	}
 }
 
-async function broadcastCustomerSample() {
+async function broadcastCustomerSample(): Promise<void> {
 	if (customerSockets.size === 0) return;
 	const sample = await customerProbe();
 	for (const socket of customerSockets) {
@@ -442,18 +463,18 @@ async function broadcastCustomerSample() {
 	}
 }
 
-async function sendCustomerSample(socket) {
+async function sendCustomerSample(socket: WebSocket): Promise<void> {
 	const sample = await customerProbe();
 	send(socket, 'customer.sample', { sample });
 }
 
-async function customerProbe() {
+async function customerProbe(): Promise<CustomerSample> {
 	const trafficSample = customerTrafficSample();
 	if (trafficSample) return trafficSample;
 	return directCustomerProbe();
 }
 
-async function directCustomerProbe() {
+async function directCustomerProbe(): Promise<CustomerSample> {
 	const started = Date.now();
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), 1800);
@@ -481,7 +502,7 @@ async function directCustomerProbe() {
 	}
 }
 
-function customerTrafficSample() {
+function customerTrafficSample(): CustomerSample | null {
 	const path = join(dataDir, 'customer-traffic.log');
 
 	try {
@@ -528,7 +549,7 @@ function customerTrafficSample() {
 	}
 }
 
-function runtimeEvidence() {
+function runtimeEvidence(): RuntimeEvidence {
 	return {
 		id: commandSync('id'),
 		uid_map: readFirst(['/proc/self/uid_map']),
@@ -541,7 +562,7 @@ function runtimeEvidence() {
 	};
 }
 
-function cgroupEvidence() {
+function cgroupEvidence(): CgroupEvidence {
 	return {
 		pids_current: readFirst(['/sys/fs/cgroup/pids.current', '/sys/fs/cgroup/pids/pids.current']),
 		pids_max: readFirst(['/sys/fs/cgroup/pids.max', '/sys/fs/cgroup/pids/pids.max']),
@@ -553,7 +574,7 @@ function cgroupEvidence() {
 	};
 }
 
-function processEvidence() {
+function processEvidence(): ProcessEvidence {
 	return {
 		process_count: commandSync("ps -eo pid= | wc -l | tr -d ' '"),
 		pid_bomb_sleepers: commandSync("pgrep -fc '[d]okuru_pid_slp|[d]okuru_pid_bomb_sleep' 2>/dev/null || true"),
@@ -562,17 +583,17 @@ function processEvidence() {
 	};
 }
 
-function cgroupSummary() {
+function cgroupSummary(): string {
 	const cgroup = cgroupEvidence();
 	return `pids.current=${cgroup.pids_current} pids.max=${cgroup.pids_max} memory.current=${cgroup.memory_current} memory.max=${cgroup.memory_max} cpu.weight=${cgroup.cpu_weight}\n`;
 }
 
-function memorySummary() {
+function memorySummary(): string {
 	const cgroup = cgroupEvidence();
 	return `memory.current=${cgroup.memory_current} memory.max=${cgroup.memory_max}`;
 }
 
-function readFirst(paths) {
+function readFirst(paths: string[]): string {
 	for (const path of paths) {
 		try {
 			return readFileSync(path, 'utf8').trim();
@@ -581,11 +602,11 @@ function readFirst(paths) {
 	return 'unavailable';
 }
 
-function commandSync(command) {
+function commandSync(command: string): string {
 	return spawnSyncText('/bin/sh', ['-lc', command]);
 }
 
-function spawnSyncText(command, args) {
+function spawnSyncText(command: string, args: string[]): string {
 	try {
 		return execFileSync(command, args, { encoding: 'utf8', timeout: 3000 }).trim();
 	} catch (error) {
@@ -593,7 +614,7 @@ function spawnSyncText(command, args) {
 	}
 }
 
-function namespaceLink(path) {
+function namespaceLink(path: string): string {
 	try {
 		return readlinkSync(path);
 	} catch {
@@ -601,24 +622,28 @@ function namespaceLink(path) {
 	}
 }
 
-function ensureDataDir() {
+function ensureDataDir(): void {
 	mkdirSync(dataDir, { recursive: true });
 }
 
-function send(socket, type, payload = {}) {
+function send(socket: WebSocket, type: string, payload: Record<string, unknown> = {}): void {
 	if (socket.readyState !== 1) return;
 	socket.send(JSON.stringify({ type, ...payload, at: new Date().toISOString() }));
 }
 
-function line(socket, stream, text) {
+function line(socket: WebSocket, stream: string, text: string): void {
 	send(socket, 'terminal.line', { stream, text });
 }
 
-function delay(ms) {
+function delay(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function clamp(value, min, max) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null;
+}
+
+function clamp(value: number, min: number, max: number): number {
 	if (!Number.isFinite(value)) return min;
 	return Math.min(Math.max(Math.trunc(value), min), max);
 }
