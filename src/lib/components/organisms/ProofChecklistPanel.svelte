@@ -3,24 +3,67 @@
 	import Panel from '$lib/components/molecules/Panel.svelte';
 
 	const rows = [
-		{ label: 'UID map', icon: UserCog, body: 'Before: <code>0 0</code>. After: remapped host UID range.' },
-		{ label: 'PID view', icon: Layers, body: 'Before: host process list. After: only container processes.' },
-		{ label: 'PIDs', icon: Hash, body: 'Before: many sleepers spawn. After: <code>pids.max</code> caps the bomb.' },
-		{ label: 'Memory', icon: MemoryStick, body: 'Before: unlimited or host-sized. After: explicit memory limit.' },
-		{ label: 'CPU', icon: Cpu, body: 'Before: default shares. After: explicit CPU shares/weight.' }
+		{
+			label: 'UID map',
+			icon: UserCog,
+			before: '0 → 0 (root = root)',
+			after: '0 → 4294967295 (remapped)'
+		},
+		{
+			label: 'PID view',
+			icon: Layers,
+			before: 'host process list visible',
+			after: 'only container processes'
+		},
+		{
+			label: 'PIDs',
+			icon: Hash,
+			before: 'unlimited — bomb spawns freely',
+			after: 'pids.max caps the bomb'
+		},
+		{
+			label: 'Memory',
+			icon: MemoryStick,
+			before: 'unlimited / host-sized',
+			after: 'explicit memory limit set'
+		},
+		{
+			label: 'CPU',
+			icon: Cpu,
+			before: 'default shares (unthrottled)',
+			after: 'explicit cpu.weight set'
+		}
 	] as const;
 </script>
 
 <Panel title="Before / after proof" subtitle="Isolation comparison" class="@4xl/main:col-span-7">
-	<p class="m-0 mb-4 text-sm leading-relaxed text-body-gray">
+	<p class="m-0 mb-5 text-sm leading-relaxed text-body-gray">
 		Observable differences before and after Dokuru applies container hardening rules. The application workload remains unchanged; only the isolation boundary shifts.
 	</p>
+
+	<!-- Column headers -->
+	<div class="mb-2 grid grid-cols-[24px_80px_minmax(0,1fr)_minmax(0,1fr)] gap-3 px-0">
+		<span></span>
+		<span></span>
+		<span class="flex items-center gap-1.5 rounded-md bg-red-50 px-2 py-1 font-mono text-[10.5px] font-bold uppercase tracking-wider text-red-500">
+			<span class="inline-block h-1.5 w-1.5 rounded-full bg-red-400"></span>
+			Before
+		</span>
+		<span class="flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-1 font-mono text-[10.5px] font-bold uppercase tracking-wider text-emerald-600">
+			<span class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+			After
+		</span>
+	</div>
+
 	<dl class="grid gap-0">
-		{#each rows as { label, icon: Icon, body } (label)}
-			<div class="grid grid-cols-[24px_96px_minmax(0,1fr)] items-start gap-3 border-b border-divider py-2.5 last:border-b-0">
-				<Icon size={16} strokeWidth={1.5} class="mt-0.5 text-body-gray" />
-				<dt class="text-[13px] font-medium text-ink">{label}</dt>
-				<dd class="m-0 text-[13px] leading-relaxed text-body-gray">{@html body}</dd>
+		{#each rows as { label, icon: Icon, before, after } (label)}
+			<div class="grid grid-cols-[24px_80px_minmax(0,1fr)_minmax(0,1fr)] items-start gap-3 border-b border-divider py-3 last:border-b-0">
+				<Icon size={15} strokeWidth={1.5} class="mt-0.5 text-body-gray" />
+				<dt class="text-[13px] font-semibold text-ink">{label}</dt>
+				<!-- Before: red tint -->
+				<dd class="m-0 rounded-md bg-red-50/70 px-2 py-1 font-mono text-[11.5px] leading-snug text-red-700">{before}</dd>
+				<!-- After: green tint -->
+				<dd class="m-0 rounded-md bg-emerald-50/70 px-2 py-1 font-mono text-[11.5px] leading-snug text-emerald-700">{after}</dd>
 			</div>
 		{/each}
 	</dl>
@@ -35,3 +78,4 @@
 		</div>
 	</div>
 </Panel>
+

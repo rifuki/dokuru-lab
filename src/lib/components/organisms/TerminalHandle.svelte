@@ -161,7 +161,11 @@
 		<!-- Line count badge (only if any) -->
 		{#if lineCount > 0}
 			<span
-				class="mt-0.5 min-w-[18px] rounded-full bg-white/15 px-1.5 py-px text-center font-mono text-[9.5px] text-white/85 group-hover:bg-white/25"
+				class={`mt-0.5 min-w-[20px] rounded-full px-1.5 py-0.5 text-center font-mono text-[9.5px] font-bold tabular-nums transition-all duration-300 ${
+					!open
+						? 'animate-pulse bg-playstation-blue text-white shadow-[0_0_8px_rgba(0,112,204,0.7)]'
+						: 'bg-white/15 text-white/85 group-hover:bg-white/25'
+				}`}
 			>
 				{lineCount > 99 ? '99+' : lineCount}
 			</span>

@@ -18,9 +18,15 @@
 	}
 
 	function isUnlimited(value?: string): boolean {
+		// Do not show unlimited warnings if data is missing or loading
+		if (!value || value === 'unavailable') return false;
 		const parsed = asNumber(value);
-		return !value || value === 'max' || value === 'unavailable' || (parsed !== null && parsed > 1_000_000_000_000_000);
+		return value === 'max' || (parsed !== null && parsed > 1_000_000_000_000_000);
 	}
+
+	const memUnlimited = $derived(!!runtime?.cgroup.memory_max && isUnlimited(runtime.cgroup.memory_max));
+	const pidsUnlimited = $derived(!!runtime?.cgroup.pids_max && isUnlimited(runtime.cgroup.pids_max));
+	const cpuUnthrottled = $derived(!!runtime?.cgroup.cpu_max && (runtime.cgroup.cpu_max === 'max 100000' || isUnlimited(runtime.cgroup.cpu_max)));
 
 	function percent(current?: string, max?: string): number {
 		const currentValue = asNumber(current) ?? 0;
@@ -48,10 +54,18 @@
 	subtitle={connected ? `WebSocket live ${lastUpdated}` : 'WebSocket reconnecting'}
 >
 	<div class="grid gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-		<article class="relative overflow-hidden rounded-[19px] border border-black/5 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-black/10">
+
+		<!-- Card 1: Process Limits -->
+		<article class={`relative overflow-hidden rounded-[19px] border p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${
+			pidsUnlimited
+				? 'border-amber-400/50 bg-amber-50/30'
+				: 'border-black/5 bg-white hover:border-black/10'
+		}`}>
 			<div class="mb-5 flex items-start justify-between gap-3">
 				<div class="flex items-center gap-3">
-					<span class="grid h-10 w-10 place-items-center rounded-xl bg-playstation-blue/10 text-playstation-blue transition-colors group-hover:bg-playstation-blue/15" aria-hidden="true">
+					<span class={`grid h-10 w-10 place-items-center rounded-xl transition-colors ${
+						pidsUnlimited ? 'bg-amber-400/20 text-amber-600' : 'bg-playstation-blue/10 text-playstation-blue group-hover:bg-playstation-blue/15'
+					}`} aria-hidden="true">
 						<Hash size={18} strokeWidth={2} />
 					</span>
 					<div>
@@ -59,20 +73,36 @@
 						<span class="font-mono text-[11px] font-medium text-black/60">Rule 5.29: Restrict PIDs</span>
 					</div>
 				</div>
-				<strong class="font-mono text-[15px] font-bold text-black tabular-nums">{runtime?.cgroup.pids_current || '...'} / {runtime?.cgroup.pids_max || '...'}</strong>
+				<div class="flex flex-col items-end gap-1.5">
+					<strong class="font-mono text-[15px] font-bold text-black tabular-nums">{runtime?.cgroup.pids_current || '...'} / {runtime?.cgroup.pids_max || '...'}</strong>
+					{#if pidsUnlimited}
+						<span class="rounded-[6px] bg-amber-100 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-amber-700">no limit ⚠</span>
+					{/if}
+				</div>
 			</div>
 			<div class="h-2 overflow-hidden rounded-full bg-black/5">
-				<div class="h-full rounded-full bg-playstation-blue transition-all duration-500" style={`width: ${percent(runtime?.cgroup.pids_current, runtime?.cgroup.pids_max)}%`}></div>
+				{#if pidsUnlimited}
+					<div class="h-full w-full rounded-full bg-amber-400/80"></div>
+				{:else}
+					<div class="h-full rounded-full bg-playstation-blue transition-all duration-500" style={`width: ${percent(runtime?.cgroup.pids_current, runtime?.cgroup.pids_max)}%`}></div>
+				{/if}
 			</div>
 			<p class="mt-4 m-0 text-[13.5px] leading-relaxed text-black/70">
 				PID sleepers: <strong class="font-mono font-bold text-black">{runtime?.processes.pid_bomb_sleepers || '0'}</strong>. Run PID bomb and watch this climb.
 			</p>
 		</article>
 
-		<article class="relative overflow-hidden rounded-[19px] border border-black/5 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-black/10">
+		<!-- Card 2: Memory Sandbox — RED when unlimited (CIS 5.11 violation) -->
+		<article class={`relative overflow-hidden rounded-[19px] border p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${
+			memUnlimited
+				? 'border-red-400/50 bg-red-50/30'
+				: 'border-black/5 bg-white hover:border-black/10'
+		}`}>
 			<div class="mb-5 flex items-start justify-between gap-3">
 				<div class="flex items-center gap-3">
-					<span class="grid h-10 w-10 place-items-center rounded-xl bg-playstation-cyan/15 text-[#0e7fa8] transition-colors" aria-hidden="true">
+					<span class={`grid h-10 w-10 place-items-center rounded-xl transition-colors ${
+						memUnlimited ? 'bg-red-400/20 text-red-600' : 'bg-playstation-cyan/15 text-[#0e7fa8]'
+					}`} aria-hidden="true">
 						<MemoryStick size={18} strokeWidth={2} />
 					</span>
 					<div>
@@ -80,33 +110,63 @@
 						<span class="font-mono text-[11px] font-medium text-black/60">Rule 5.11: Memory Quota</span>
 					</div>
 				</div>
-				<strong class="text-right font-mono text-[15px] font-bold text-black tabular-nums">{formatBytes(runtime?.cgroup.memory_current)}</strong>
+				<div class="flex flex-col items-end gap-1.5">
+					<strong class="text-right font-mono text-[15px] font-bold text-black tabular-nums">
+						{formatBytes(runtime?.cgroup.memory_current)}
+					</strong>
+					{#if memUnlimited}
+						<span class="rounded-[6px] bg-red-100 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-red-600">no limit ⚠</span>
+					{/if}
+				</div>
 			</div>
 			<div class="h-2 overflow-hidden rounded-full bg-black/5">
-				<div class="h-full rounded-full bg-playstation-cyan transition-all duration-500" style={`width: ${percent(runtime?.cgroup.memory_current, runtime?.cgroup.memory_max)}%`}></div>
+				{#if memUnlimited}
+					<div class="h-full w-full rounded-full bg-red-400/80"></div>
+				{:else}
+					<div class="h-full rounded-full bg-playstation-cyan transition-all duration-500" style={`width: ${percent(runtime?.cgroup.memory_current, runtime?.cgroup.memory_max)}%`}></div>
+				{/if}
 			</div>
 			<p class="mt-4 m-0 text-[13.5px] leading-relaxed text-black/70">
-				Limit: <strong class="font-mono font-bold text-black">{formatBytes(runtime?.cgroup.memory_max)}</strong>
+				Limit: <strong class={`font-mono font-bold ${memUnlimited ? 'text-red-600' : 'text-black'}`}>{formatBytes(runtime?.cgroup.memory_max)}</strong>
 			</p>
 		</article>
 
-		<article class="relative overflow-hidden rounded-[19px] border border-black/5 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-black/10">
-			<div class="mb-5 flex items-center gap-3">
-				<span class="grid h-10 w-10 place-items-center rounded-xl bg-commerce/10 text-commerce transition-colors" aria-hidden="true">
-					<Cpu size={18} strokeWidth={2} />
-				</span>
-				<div>
-					<span class="block text-[15px] font-bold tracking-tight text-black">CPU Throttling</span>
-					<span class="font-mono text-[11px] font-medium text-black/60">Rule 5.12: Core Isolation</span>
+		<!-- Card 3: CPU Throttling -->
+		<article class={`relative overflow-hidden rounded-[19px] border p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${
+			cpuUnthrottled
+				? 'border-amber-400/50 bg-amber-50/30'
+				: 'border-black/5 bg-white hover:border-black/10'
+		}`}>
+			<div class="mb-5 flex items-start justify-between gap-3">
+				<div class="flex items-center gap-3">
+					<span class={`grid h-10 w-10 place-items-center rounded-xl transition-colors ${
+						cpuUnthrottled ? 'bg-amber-400/20 text-amber-600' : 'bg-commerce/10 text-commerce'
+					}`} aria-hidden="true">
+						<Cpu size={18} strokeWidth={2} />
+					</span>
+					<div>
+						<span class="block text-[15px] font-bold tracking-tight text-black">CPU Throttling</span>
+						<span class="font-mono text-[11px] font-medium text-black/60">Rule 5.12: Core Isolation</span>
+					</div>
 				</div>
+				{#if cpuUnthrottled}
+					<span class="mt-1 rounded-[6px] bg-amber-100 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-amber-700">uncapped ⚠</span>
+				{/if}
 			</div>
 			<dl class="mt-4 grid gap-3 text-[13.5px]">
 				<div class="flex justify-between gap-3 border-b border-black/5 pb-2"><dt class="font-medium text-black/70">cpu.weight</dt><dd class="m-0 font-mono font-bold text-black tabular-nums">{runtime?.cgroup.cpu_weight || '...'}</dd></div>
-				<div class="flex justify-between gap-3 border-b border-black/5 pb-2"><dt class="font-medium text-black/70">cpu.max</dt><dd class="m-0 font-mono font-bold text-black tabular-nums">{runtime?.cgroup.cpu_max || '...'}</dd></div>
-				<div class="flex justify-between gap-3"><dt class="font-medium text-black/70">Active burners</dt><dd class="m-0 font-mono font-bold text-black tabular-nums">{runtime?.processes.cpu_burners || '0'}</dd></div>
+				<div class="flex justify-between gap-3 border-b border-black/5 pb-2">
+					<dt class="font-medium text-black/70">cpu.max</dt>
+					<dd class="m-0 font-mono font-bold text-black tabular-nums">{runtime?.cgroup.cpu_max || '...'}</dd>
+				</div>
+				<div class="flex justify-between gap-3">
+					<dt class="font-medium text-black/70">Active burners</dt>
+					<dd class={`m-0 font-mono font-bold tabular-nums ${(runtime?.processes.cpu_burners ?? '0') !== '0' ? 'text-red-500' : 'text-black'}`}>{runtime?.processes.cpu_burners || '0'}</dd>
+				</div>
 			</dl>
 		</article>
 
+		<!-- Card 4: Namespace Reality -->
 		<article class="relative overflow-hidden rounded-[19px] border border-black/5 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-black/10">
 			<div class="mb-5 flex items-center gap-3">
 				<span class="grid h-10 w-10 place-items-center rounded-xl bg-[#9ad7ff]/30 text-[#0e7fa8] transition-colors" aria-hidden="true">
