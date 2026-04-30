@@ -66,7 +66,7 @@
 				</span>
 			</div>
 			<p class="m-0 mb-3 min-h-12 text-[13px] leading-relaxed text-body-gray">
-				Spawn 4 short-lived CPU miners. Without rule 5.12, scheduler contention can leak into customer latency.
+				Saturate available CPU cores with short-lived miners. Watch Active burners and customer latency when no CPU quota is configured.
 			</p>
 			<Button size="sm" onclick={onCpuBlast} disabled={scenarioBlocked}>Deploy cryptominer</Button>
 		</article>

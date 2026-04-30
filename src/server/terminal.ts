@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { cpus } from 'node:os';
 import { join } from 'node:path';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { RawData, WebSocket, WebSocketServer } from 'ws';
@@ -31,6 +32,8 @@ const payloadLabels: Record<string, string> = {
 	'cpu-blast': 'Cryptominer',
 	'sabotage-proxy': 'Reverse-proxy sabotage'
 };
+const CPU_BLAST_SECONDS = 35;
+const MAX_CPU_BLAST_WORKERS = 24;
 
 export class TerminalController {
 	private memoryPayloadChild: ChildProcessWithoutNullStreams | null = null;
@@ -283,8 +286,8 @@ allocateBatch();
 	}
 
 	private async runCpuBlast(socket: WebSocket, rawSeconds: unknown, rawWorkers: unknown): Promise<void> {
-		const seconds = clamp(Number(rawSeconds || 25), 1, 60);
-		const workers = clamp(Number(rawWorkers || 4), 1, 8);
+		const seconds = cpuBlastSeconds(rawSeconds);
+		const workers = cpuBlastWorkers(rawWorkers);
 		line(socket, 'system', `$ dokuru-lab cryptominer --workers ${workers} --seconds ${seconds}\n`);
 
 		const script = `process.title='dokuru_cpu_burn'; const crypto = require('node:crypto'); const end = Date.now() + ${seconds} * 1000; let ops = 0; while (Date.now() < end) { for (let i = 0; i < 5000; i++) crypto.createHash('sha256').update(String(ops++)).digest('hex'); }`;
@@ -302,7 +305,7 @@ allocateBatch();
 		}
 
 		await delay(250);
-		line(socket, 'stdout', `spawned ${spawned}/${workers} CPU miners for ${seconds}s; watch Customer Live View for latency spikes\n`);
+		line(socket, 'stdout', `spawned ${spawned}/${workers} CPU miners for ${seconds}s; watch Active burners and customer latency\n`);
 		line(socket, 'stdout', cgroupSummary());
 	}
 
@@ -430,11 +433,28 @@ allocateBatch();
 }
 
 function payloadDurationMs(type: string, message: TerminalPayload): number | null {
-	if (type === 'cpu-blast') return clamp(Number(message.seconds || 25), 1, 60) * 1000;
+	if (type === 'cpu-blast') return cpuBlastSeconds(message.seconds) * 1000;
 	if (type === 'cpu-burn') return clamp(Number(message.seconds || 5), 1, 30) * 1000;
 	if (type === 'pid-bomb') return 60_000;
 	if (type === 'sabotage-proxy') return clamp(Number(message.seconds || 6), 3, 15) * 1000;
 	return null;
+}
+
+function cpuBlastSeconds(rawSeconds: unknown): number {
+	const requested = Number(rawSeconds);
+	const seconds = Number.isFinite(requested) ? requested : CPU_BLAST_SECONDS;
+	return clamp(Math.max(seconds, CPU_BLAST_SECONDS), 5, 90);
+}
+
+function cpuBlastWorkers(rawWorkers: unknown): number {
+	const recommended = recommendedCpuBlastWorkers();
+	const requested = Number(rawWorkers);
+	const workers = Number.isFinite(requested) ? requested : recommended;
+	return clamp(Math.max(workers, recommended), 1, MAX_CPU_BLAST_WORKERS);
+}
+
+function recommendedCpuBlastWorkers(): number {
+	return clamp(Math.max(cpus().length * 2, 8), 4, MAX_CPU_BLAST_WORKERS);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

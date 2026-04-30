@@ -355,7 +355,7 @@
 	}
 
 	function runCpuBlast() {
-		sendTerminal({ type: 'cpu-blast', workers: 4, seconds: 25 });
+		sendTerminal({ type: 'cpu-blast' });
 	}
 
 	function runMemoryBlast() {
