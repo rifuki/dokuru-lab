@@ -12,5 +12,5 @@
 		"target": "esnext",
 		"types": ["node"]
 	},
-	"include": ["server.ts", "src/lib/types/lab.ts"]
+	"include": ["server.ts", "src/server/**/*.ts", "src/lib/types/lab.ts"]
 }

@@ -27,6 +27,8 @@ COPY --from=build /app/build ./build
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/server.ts ./server.ts
+COPY --from=build /app/src/server ./src/server
+COPY --from=build /app/src/lib/types ./src/lib/types
 
 RUN mkdir -p /app/data && chmod -R 777 /app/data
 
