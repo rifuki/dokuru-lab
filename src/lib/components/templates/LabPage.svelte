@@ -25,7 +25,13 @@
 		Trash2,
 		X
 	} from '@lucide/svelte';
-	import type { CommandPreset, CustomerSample, LabResponse, RuntimeEvidence } from '$lib/types/lab';
+	import type {
+		ActivePayload,
+		CommandPreset,
+		CustomerSample,
+		LabResponse,
+		RuntimeEvidence
+	} from '$lib/types/lab';
 
 	let command = $state('id; cat /proc/self/uid_map; cat /proc/self/gid_map');
 	let pidCount = $state(120);
@@ -37,6 +43,7 @@
 	let lastUpdated = $state('');
 	let terminalLines = $state<TerminalLine[]>([]);
 	let customerSamples = $state<CustomerSample[]>([]);
+	let activePayload = $state<ActivePayload | null>(null);
 	let terminalConnected = $state(false);
 	let monitorConnected = $state(false);
 	let customerConnected = $state(false);
@@ -176,6 +183,8 @@
 
 	const runtime = $derived(evidenceData?.runtime as RuntimeEvidence | undefined);
 	const terminalBusy = $derived(Boolean(running));
+	const payloadActions = new Set(['pid-bomb', 'memory-bomb', 'cpu-burn', 'cpu-blast', 'sabotage-proxy']);
+	const stopActions = new Set(['cleanup', 'stop-payloads']);
 
 	onMount(() => {
 		mounted = true;
@@ -262,6 +271,11 @@
 			const message = parseSocketMessage(event.data);
 			if (!message) return;
 
+			if (message.type === 'terminal.payload') {
+				activePayload = normalizeActivePayload(message.payload);
+				return;
+			}
+
 			if (message.type === 'terminal.line') {
 				pushTerminalLine({
 					stream: message.stream as TerminalLine['stream'],
@@ -281,6 +295,7 @@
 		};
 		terminalSocket.onclose = () => {
 			terminalConnected = false;
+			running = '';
 			if (mounted) window.setTimeout(connectTerminal, 900);
 		};
 	}
@@ -355,6 +370,10 @@
 		sendTerminal({ type: 'sabotage-proxy', seconds: 6 });
 	}
 
+	function stopActivePayload() {
+		sendTerminal({ type: 'stop-payloads' });
+	}
+
 	function cleanupPidBomb() {
 		sendTerminal({ type: 'cleanup' });
 	}
@@ -371,6 +390,26 @@
 	}
 
 	function sendTerminal(payload: Record<string, unknown>) {
+		const action = String(payload.type || 'terminal');
+
+		if (!stopActions.has(action) && running) {
+			pushTerminalLine({
+				stream: 'stderr',
+				text: `terminal is busy running ${running}\n`,
+				at: timeLabel()
+			});
+			return;
+		}
+
+		if (!stopActions.has(action) && activePayload && payloadActions.has(action)) {
+			pushTerminalLine({
+				stream: 'stderr',
+				text: `${activePayload.label} is still active; stop it before starting another payload\n`,
+				at: timeLabel()
+			});
+			return;
+		}
+
 		if (!terminalSocket || terminalSocket.readyState !== WebSocket.OPEN) {
 			pushTerminalLine({
 				stream: 'stderr',
@@ -380,6 +419,7 @@
 			return;
 		}
 
+		running = action;
 		terminalSocket.send(JSON.stringify(payload));
 	}
 
@@ -397,6 +437,22 @@
 		} catch {
 			return null;
 		}
+	}
+
+	function normalizeActivePayload(value: unknown): ActivePayload | null {
+		if (!value || typeof value !== 'object') return null;
+		const payload = value as Record<string, unknown>;
+		const type = String(payload.type || '');
+		if (!type) return null;
+
+		const normalized: ActivePayload = {
+			type,
+			label: String(payload.label || type),
+			startedAt: String(payload.startedAt || new Date().toISOString())
+		};
+
+		if (payload.expiresAt) normalized.expiresAt = String(payload.expiresAt);
+		return normalized;
 	}
 
 	function wsUrl(path: string): string {
@@ -450,11 +506,13 @@
 						<CustomerLiveView samples={customerSamples} connected={customerConnected} />
 						<BlastRadiusPanel
 							{running}
+							{activePayload}
 							onCustomerProbe={runCustomerProbe}
 							onCpuBlast={runCpuBlast}
 							onMemoryBlast={runMemoryBlast}
 							onStealSecrets={runStealSecrets}
 							onSabotageProxy={runSabotageProxy}
+							onStopPayloads={stopActivePayload}
 						/>
 					</div>
 				</div>

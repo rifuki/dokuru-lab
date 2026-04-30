@@ -34,6 +34,13 @@ export type LabResponse = {
 	[key: string]: unknown;
 };
 
+export type ActivePayload = {
+	type: string;
+	label: string;
+	startedAt: string;
+	expiresAt?: string;
+};
+
 export type CustomerSample = {
 	ok: boolean;
 	status: number | string;

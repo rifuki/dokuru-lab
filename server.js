@@ -14,6 +14,19 @@ const customerProbeIntervalMs = clamp(Number(process.env.CUSTOMER_PROBE_INTERVAL
 const monitorSockets = new Set();
 const customerSockets = new Set();
 let memoryHold = [];
+let terminalActionRunning = false;
+let activePayload = null;
+let activePayloadTimer = null;
+let stopRequested = false;
+
+const payloadActions = new Set(['pid-bomb', 'memory-bomb', 'cpu-burn', 'cpu-blast', 'sabotage-proxy']);
+const payloadLabels = {
+	'pid-bomb': 'PID bomb',
+	'memory-bomb': 'Memory blast',
+	'cpu-burn': 'CPU burn',
+	'cpu-blast': 'Cryptominer',
+	'sabotage-proxy': 'Reverse-proxy sabotage'
+};
 
 const server = createServer((request, response) => {
 	handler(request, response);
@@ -53,6 +66,7 @@ server.on('upgrade', (request, socket, head) => {
 terminalServer.on('connection', (socket) => {
 	line(socket, 'system', 'connected to dokuru-lab terminal websocket\n');
 	line(socket, 'system', 'commands run inside the vulnerable container runtime\n');
+	sendActivePayload(socket);
 
 	socket.on('message', (raw) => {
 		void handleTerminalMessage(socket, raw);
@@ -102,7 +116,39 @@ async function handleTerminalMessage(socket, raw) {
 	}
 
 	const type = String(message.type || '');
+
+	if (type === 'stop-payloads') {
+		send(socket, 'terminal.start', { action: type });
+		try {
+			await runStopPayloads(socket);
+			send(socket, 'terminal.exit', { action: type, code: 0 });
+		} catch (error) {
+			line(socket, 'stderr', `${error instanceof Error ? error.message : String(error)}\n`);
+			send(socket, 'terminal.exit', { action: type, code: 1 });
+		}
+		return;
+	}
+
+	if (terminalActionRunning) {
+		line(socket, 'stderr', `terminal is busy running another action; wait or stop the active payload\n`);
+		send(socket, 'terminal.exit', { action: type, code: 1 });
+		return;
+	}
+
+	if (payloadActions.has(type) && activePayload) {
+		line(socket, 'stderr', `${activePayload.label} is still active; stop it before starting another payload\n`);
+		sendActivePayload(socket);
+		send(socket, 'terminal.exit', { action: type, code: 1 });
+		return;
+	}
+
+	terminalActionRunning = true;
+	stopRequested = false;
 	send(socket, 'terminal.start', { action: type });
+
+	if (payloadActions.has(type)) {
+		activatePayload(type, payloadLabels[type] || type, payloadDurationMs(type, message));
+	}
 
 	try {
 		if (type === 'exec') {
@@ -135,6 +181,8 @@ async function handleTerminalMessage(socket, raw) {
 	} catch (error) {
 		line(socket, 'stderr', `${error instanceof Error ? error.message : String(error)}\n`);
 		send(socket, 'terminal.exit', { action: type, code: 1 });
+	} finally {
+		terminalActionRunning = false;
 	}
 }
 
@@ -180,6 +228,11 @@ async function runPidBomb(socket, rawCount) {
 	let spawned = 0;
 
 	for (let index = 0; index < count; index += 1) {
+		if (stopRequested) {
+			line(socket, 'stderr', 'pid bomb stopped by user\n');
+			break;
+		}
+
 		try {
 			const child = spawn(
 				process.execPath,
@@ -208,6 +261,11 @@ async function runMemoryBomb(socket, rawMb) {
 	line(socket, 'system', `$ dokuru-lab memory-bomb --mb ${mb}\n`);
 
 	for (let index = 0; index < mb; index += 1) {
+		if (stopRequested) {
+			line(socket, 'stderr', 'memory blast stopped by user\n');
+			break;
+		}
+
 		memoryHold.push(Buffer.alloc(1024 * 1024, 'a'));
 		if ((index + 1) % 16 === 0 || index + 1 === mb) {
 			line(socket, 'stdout', `allocated ${index + 1} MiB; held=${memoryHold.length} MiB; ${memorySummary()}\n`);
@@ -298,6 +356,8 @@ async function runSabotageProxy(socket, rawSeconds) {
 }
 
 async function runCleanup(socket) {
+	stopRequested = true;
+	clearActivePayload();
 	line(socket, 'system', 'dropping held memory buffers in the server process\n');
 	memoryHold = [];
 	await runShell(
@@ -306,6 +366,72 @@ async function runCleanup(socket) {
 		5_000
 	);
 	line(socket, 'stdout', `held memory cleared; ${cgroupSummary()}`);
+}
+
+async function runStopPayloads(socket) {
+	stopRequested = true;
+	clearActivePayload();
+	line(socket, 'system', '$ dokuru-lab stop-payloads\n');
+	line(socket, 'system', 'dropping held memory buffers in the server process\n');
+	memoryHold = [];
+	await runShell(
+		socket,
+		"pkill -f '[d]okuru_pid_slp|[d]okuru_pid_bomb_sleep|[d]okuru_cpu_burn' 2>&1 || true; pkill -CONT -x caddy 2>&1 || true",
+		5_000
+	);
+	line(socket, 'stdout', `active payload stopped; held memory cleared; ${cgroupSummary()}`);
+}
+
+function activatePayload(type, label, durationMs) {
+	const startedAt = new Date();
+	activePayload = {
+		type,
+		label,
+		startedAt: startedAt.toISOString()
+	};
+
+	if (activePayloadTimer) {
+		clearTimeout(activePayloadTimer);
+		activePayloadTimer = null;
+	}
+
+	if (Number.isFinite(durationMs) && durationMs > 0) {
+		activePayload.expiresAt = new Date(startedAt.getTime() + durationMs).toISOString();
+		activePayloadTimer = setTimeout(() => clearActivePayload(type), durationMs + 500);
+	}
+
+	broadcastActivePayload();
+}
+
+function clearActivePayload(expectedType = null) {
+	if (expectedType && activePayload?.type !== expectedType) return;
+
+	if (activePayloadTimer) {
+		clearTimeout(activePayloadTimer);
+		activePayloadTimer = null;
+	}
+
+	if (!activePayload) return;
+	activePayload = null;
+	broadcastActivePayload();
+}
+
+function payloadDurationMs(type, message) {
+	if (type === 'cpu-blast') return clamp(Number(message.seconds || 25), 1, 60) * 1000;
+	if (type === 'cpu-burn') return clamp(Number(message.seconds || 5), 1, 30) * 1000;
+	if (type === 'pid-bomb') return 60_000;
+	if (type === 'sabotage-proxy') return clamp(Number(message.seconds || 6), 3, 15) * 1000;
+	return null;
+}
+
+function sendActivePayload(socket) {
+	send(socket, 'terminal.payload', { payload: activePayload });
+}
+
+function broadcastActivePayload() {
+	for (const socket of terminalServer.clients) {
+		sendActivePayload(socket);
+	}
 }
 
 async function broadcastCustomerSample() {

@@ -44,6 +44,16 @@
 		return `${mib.toFixed(mib >= 100 ? 0 : 1)} MiB`;
 	}
 
+	function formatMemoryLimit(value?: string): string {
+		if (!value || value === 'unavailable') return 'unavailable';
+		return isUnlimited(value) ? 'Not configured' : formatBytes(value);
+	}
+
+	function formatPidLimit(value?: string): string {
+		if (!value || value === 'unavailable') return '...';
+		return isUnlimited(value) ? 'unlimited' : value;
+	}
+
 	function firstLine(value?: string): string {
 		return value?.split('\n')[0]?.trim() || 'loading';
 	}
@@ -74,10 +84,7 @@
 					</div>
 				</div>
 				<div class="flex flex-col items-end gap-1.5">
-					<strong class="font-mono text-[15px] font-bold text-black tabular-nums">{runtime?.cgroup.pids_current || '...'} / {runtime?.cgroup.pids_max || '...'}</strong>
-					{#if pidsUnlimited}
-						<span class="rounded-[6px] bg-amber-100 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-amber-700">no limit ⚠</span>
-					{/if}
+					<strong class="font-mono text-[15px] font-bold text-black tabular-nums">{runtime?.cgroup.pids_current || '...'} / {formatPidLimit(runtime?.cgroup.pids_max)}</strong>
 				</div>
 			</div>
 			<div class="h-2 overflow-hidden rounded-full bg-black/5">
@@ -87,6 +94,12 @@
 					<div class="h-full rounded-full bg-playstation-blue transition-all duration-500" style={`width: ${percent(runtime?.cgroup.pids_current, runtime?.cgroup.pids_max)}%`}></div>
 				{/if}
 			</div>
+			{#if pidsUnlimited}
+				<div class="mt-4 rounded-xl border border-amber-200/70 bg-amber-50 px-3 py-2">
+					<span class="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-700">Limit status</span>
+					<p class="m-0 mt-1 text-[13px] font-medium text-black/75">PID limit is not configured</p>
+				</div>
+			{/if}
 			<p class="mt-4 m-0 text-[13.5px] leading-relaxed text-black/70">
 				PID sleepers: <strong class="font-mono font-bold text-black">{runtime?.processes.pid_bomb_sleepers || '0'}</strong>. Run PID bomb and watch this climb.
 			</p>
@@ -114,9 +127,6 @@
 					<strong class="text-right font-mono text-[15px] font-bold text-black tabular-nums">
 						{formatBytes(runtime?.cgroup.memory_current)}
 					</strong>
-					{#if memUnlimited}
-						<span class="rounded-[6px] bg-red-100 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-red-600">no limit ⚠</span>
-					{/if}
 				</div>
 			</div>
 			<div class="h-2 overflow-hidden rounded-full bg-black/5">
@@ -126,9 +136,12 @@
 					<div class="h-full rounded-full bg-playstation-cyan transition-all duration-500" style={`width: ${percent(runtime?.cgroup.memory_current, runtime?.cgroup.memory_max)}%`}></div>
 				{/if}
 			</div>
-			<p class="mt-4 m-0 text-[13.5px] leading-relaxed text-black/70">
-				Limit: <strong class={`font-mono font-bold ${memUnlimited ? 'text-red-600' : 'text-black'}`}>{formatBytes(runtime?.cgroup.memory_max)}</strong>
-			</p>
+			<div class={`mt-4 flex items-center justify-between gap-3 rounded-xl px-3 py-2 ${
+				memUnlimited ? 'border border-red-200/80 bg-red-50' : 'border border-black/5 bg-white/70'
+			}`}>
+				<span class="text-[13px] font-medium text-black/65">Memory limit</span>
+				<strong class={`text-right font-mono text-[13px] font-bold ${memUnlimited ? 'text-red-600' : 'text-black'}`}>{formatMemoryLimit(runtime?.cgroup.memory_max)}</strong>
+			</div>
 		</article>
 
 		<!-- Card 3: CPU Throttling -->
@@ -149,11 +162,16 @@
 						<span class="font-mono text-[11px] font-medium text-black/60">Rule 5.12: Core Isolation</span>
 					</div>
 				</div>
-				{#if cpuUnthrottled}
-					<span class="mt-1 rounded-[6px] bg-amber-100 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-amber-700">uncapped ⚠</span>
-				{/if}
 			</div>
 			<dl class="mt-4 grid gap-3 text-[13.5px]">
+				<div class="flex items-center justify-between gap-3 border-b border-black/5 pb-2">
+					<dt class="font-medium text-black/70">Quota status</dt>
+					<dd class="m-0">
+						<span class={`rounded-full px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] ${
+							cpuUnthrottled ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+						}`}>{cpuUnthrottled ? 'No CPU quota' : 'Configured'}</span>
+					</dd>
+				</div>
 				<div class="flex justify-between gap-3 border-b border-black/5 pb-2"><dt class="font-medium text-black/70">cpu.weight</dt><dd class="m-0 font-mono font-bold text-black tabular-nums">{runtime?.cgroup.cpu_weight || '...'}</dd></div>
 				<div class="flex justify-between gap-3 border-b border-black/5 pb-2">
 					<dt class="font-medium text-black/70">cpu.max</dt>

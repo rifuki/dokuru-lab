@@ -2,29 +2,45 @@
 	import { Activity, Cpu, KeyRound, MemoryStick, Network, ShieldOff } from '@lucide/svelte';
 	import Button from '$lib/components/atoms/Button.svelte';
 	import Panel from '$lib/components/molecules/Panel.svelte';
+	import type { ActivePayload } from '$lib/types/lab';
 
 	type Props = {
 		running: string;
+		activePayload: ActivePayload | null;
 		onCustomerProbe: () => void | Promise<void>;
 		onCpuBlast: () => void | Promise<void>;
 		onMemoryBlast: () => void | Promise<void>;
 		onStealSecrets: () => void | Promise<void>;
 		onSabotageProxy: () => void | Promise<void>;
+		onStopPayloads: () => void | Promise<void>;
 	};
 
 	let {
 		running,
+		activePayload,
 		onCustomerProbe,
 		onCpuBlast,
 		onMemoryBlast,
 		onStealSecrets,
-		onSabotageProxy
+		onSabotageProxy,
+		onStopPayloads
 	}: Props = $props();
 
 	const busy = $derived(Boolean(running));
+	const scenarioBlocked = $derived(busy || Boolean(activePayload));
 </script>
 
 <Panel title="Blast-radius scenarios" subtitle="Lab v2" class="@4xl/main:col-span-7">
+	{#if activePayload}
+		<div class="mb-4 flex flex-col gap-3 rounded-xl border border-commerce/20 bg-commerce/5 p-3 @md/main:flex-row @md/main:items-center @md/main:justify-between">
+			<div>
+				<p class="m-0 font-mono text-[11px] uppercase tracking-[0.12em] text-commerce">Active payload</p>
+				<p class="m-0 mt-1 text-[13px] font-medium text-ink">{activePayload.label}</p>
+			</div>
+			<Button size="sm" variant="commerce" onclick={onStopPayloads} disabled={running === 'stop-payloads'}>Stop payload</Button>
+		</div>
+	{/if}
+
 	<div class="grid gap-3 @xl/main:grid-cols-2">
 		<article class="group rounded-[12px] border border-divider p-4 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-black/12 hover:shadow-[0_5px_9px_rgba(0,0,0,0.06)]">
 			<div class="mb-3 flex items-center gap-2.5">
@@ -52,7 +68,7 @@
 			<p class="m-0 mb-3 min-h-12 text-[13px] leading-relaxed text-body-gray">
 				Spawn 4 short-lived CPU miners. Without rule 5.12, scheduler contention can leak into customer latency.
 			</p>
-			<Button size="sm" onclick={onCpuBlast} disabled={busy}>Deploy cryptominer</Button>
+			<Button size="sm" onclick={onCpuBlast} disabled={scenarioBlocked}>Deploy cryptominer</Button>
 		</article>
 
 		<article class="group rounded-[12px] border border-divider p-4 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-black/12 hover:shadow-[0_5px_9px_rgba(0,0,0,0.06)]">
@@ -68,7 +84,7 @@
 			<p class="m-0 mb-3 min-h-12 text-[13px] leading-relaxed text-body-gray">
 				Allocate 1280 MiB inside the attacker. After rule 5.11, only the attacker is OOM-killed &mdash; the host stays safe.
 			</p>
-			<Button size="sm" onclick={onMemoryBlast} disabled={busy}>Trigger memory blast</Button>
+			<Button size="sm" onclick={onMemoryBlast} disabled={scenarioBlocked}>Trigger memory blast</Button>
 		</article>
 
 		<article class="group rounded-[12px] border border-divider p-4 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-black/12 hover:shadow-[0_5px_9px_rgba(0,0,0,0.06)]">
@@ -104,7 +120,7 @@
 			<p class="m-0 mb-3 min-h-12 text-[13px] leading-relaxed text-body-gray">
 				Send <code>SIGSTOP</code> to the host caddy process &mdash; the lab UI disconnects briefly until an automatic <code>SIGCONT</code> resumes it. Use as a fallback only.
 			</p>
-			<Button size="sm" variant="commerce" onclick={onSabotageProxy} disabled={busy}>Stop caddy briefly</Button>
+			<Button size="sm" variant="commerce" onclick={onSabotageProxy} disabled={scenarioBlocked}>Stop caddy briefly</Button>
 		</article>
 	</div>
 </Panel>
