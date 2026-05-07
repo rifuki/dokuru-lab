@@ -49,7 +49,7 @@ export class TerminalController {
 
 	attach(): void {
 		this.server.on('connection', (socket) => {
-			line(socket, 'system', 'connected to dokuru-lab terminal websocket\n');
+			line(socket, 'system', 'connected to dokuru-lab-baseline terminal websocket\n');
 			line(socket, 'system', 'commands run inside the vulnerable container runtime\n');
 			this.sendActivePayload(socket);
 
@@ -155,7 +155,7 @@ export class TerminalController {
 
 	private async runPidBomb(socket: WebSocket, rawCount: unknown): Promise<void> {
 		const count = clamp(Number(rawCount || 120), 1, 500);
-		line(socket, 'system', `$ dokuru-lab pid-bomb --count ${count}\n`);
+		line(socket, 'system', `$ dokuru-lab-baseline pid-bomb --count ${count}\n`);
 		let spawned = 0;
 
 		for (let index = 0; index < count; index += 1) {
@@ -189,7 +189,7 @@ export class TerminalController {
 
 	private async runMemoryBomb(socket: WebSocket, rawMb: unknown): Promise<void> {
 		const mb = clamp(Number(rawMb || 128), 1, 1536);
-		line(socket, 'system', `$ dokuru-lab memory-bomb --mb ${mb}\n`);
+		line(socket, 'system', `$ dokuru-lab-baseline memory-bomb --mb ${mb}\n`);
 		if (this.memoryPayloadChild) {
 			line(socket, 'stderr', 'memory payload is already running; stop it before starting another memory blast\n');
 			return;
@@ -272,7 +272,7 @@ allocateBatch();
 
 	private async runCpuBurn(socket: WebSocket, rawSeconds: unknown): Promise<void> {
 		const seconds = clamp(Number(rawSeconds || 5), 1, 30);
-		line(socket, 'system', `$ dokuru-lab cpu-burn --seconds ${seconds}\n`);
+		line(socket, 'system', `$ dokuru-lab-baseline cpu-burn --seconds ${seconds}\n`);
 		const script = `process.title='dokuru_cpu_burn'; const crypto = require('node:crypto'); const end = Date.now() + ${seconds} * 1000; let ops = 0; let last = Date.now(); console.log('cpu burn started for ${seconds}s'); while (Date.now() < end) { for (let i = 0; i < 5000; i++) crypto.createHash('sha256').update(String(ops++)).digest('hex'); if (Date.now() - last >= 500) { console.log('ops=' + ops); last = Date.now(); } } console.log('cpu burn done ops=' + ops);`;
 		await new Promise<void>((resolve) => {
 			const child = spawn(process.execPath, ['-e', script], { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -288,7 +288,7 @@ allocateBatch();
 	private async runCpuBlast(socket: WebSocket, rawSeconds: unknown, rawWorkers: unknown): Promise<void> {
 		const seconds = cpuBlastSeconds(rawSeconds);
 		const workers = cpuBlastWorkers(rawWorkers);
-		line(socket, 'system', `$ dokuru-lab cryptominer --workers ${workers} --seconds ${seconds}\n`);
+		line(socket, 'system', `$ dokuru-lab-baseline cryptominer --workers ${workers} --seconds ${seconds}\n`);
 
 		const script = `process.title='dokuru_cpu_burn'; const crypto = require('node:crypto'); const end = Date.now() + ${seconds} * 1000; let ops = 0; while (Date.now() < end) { for (let i = 0; i < 5000; i++) crypto.createHash('sha256').update(String(ops++)).digest('hex'); }`;
 		let spawned = 0;
@@ -367,7 +367,7 @@ allocateBatch();
 	private async runStopPayloads(socket: WebSocket): Promise<void> {
 		this.stopRequested = true;
 		this.clearActivePayload();
-		line(socket, 'system', '$ dokuru-lab stop-payloads\n');
+		line(socket, 'system', '$ dokuru-lab-baseline stop-payloads\n');
 		line(socket, 'system', 'stopping payload child processes\n');
 		this.stopMemoryPayload();
 		await runShell(

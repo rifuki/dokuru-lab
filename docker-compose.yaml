@@ -1,7 +1,7 @@
 services:
   caddy:
     image: caddy:2-alpine
-    container_name: dokuru-lab-caddy
+    container_name: dokuru-lab-baseline-caddy
     restart: unless-stopped
     ports:
       - "80:80"
@@ -14,23 +14,17 @@ services:
     cpu_shares: 512
     pids_limit: 100
     depends_on:
-      dokuru-lab:
+      dokuru-lab-baseline:
         condition: service_healthy
     networks:
-      - dokuru-lab
+      - dokuru-lab-baseline
 
-  dokuru-lab:
-    image: ghcr.io/rifuki/dokuru-lab:${VERSION:-latest}
+  dokuru-lab-baseline:
+    image: ghcr.io/rifuki/dokuru-lab-baseline:${VERSION:-latest}
     build: .
-    container_name: dokuru-lab
+    container_name: dokuru-lab-baseline
     restart: unless-stopped
     user: root
-    pid: host
-    ipc: host
-    uts: host
-    userns_mode: host
-    cap_add:
-      - SYS_PTRACE
     environment:
       NODE_ENV: production
       HOST: ${HOST:-0.0.0.0}
@@ -39,6 +33,9 @@ services:
       VICTIM_CHECKOUT_URL: ${VICTIM_CHECKOUT_URL:-http://victim-checkout:3000/checkout}
     volumes:
       - ./data:/app/data
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./config:/app/config:ro
     expose:
       - "8080"
     depends_on:
@@ -53,11 +50,11 @@ services:
       retries: 3
       start_period: 15s
     networks:
-      - dokuru-lab
+      - dokuru-lab-baseline
 
   victim-checkout:
     image: node:20-alpine
-    container_name: dokuru-lab-victim-checkout
+    container_name: dokuru-lab-baseline-victim-checkout
     restart: unless-stopped
     command:
       - sh
@@ -98,11 +95,11 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - dokuru-lab
+      - dokuru-lab-baseline
 
   victim-secrets:
     image: postgres:16-alpine
-    container_name: dokuru-lab-victim-secrets
+    container_name: dokuru-lab-baseline-victim-secrets
     restart: unless-stopped
     environment:
       POSTGRES_USER: prod_user
@@ -112,11 +109,11 @@ services:
     cpu_shares: 512
     pids_limit: 100
     networks:
-      - dokuru-lab
+      - dokuru-lab-baseline
 
   customer-traffic:
     image: curlimages/curl:8.16.0
-    container_name: dokuru-lab-customer-traffic
+    container_name: dokuru-lab-baseline-customer-traffic
     restart: unless-stopped
     user: root
     command:
@@ -136,13 +133,13 @@ services:
     cpu_shares: 256
     pids_limit: 50
     networks:
-      - dokuru-lab
+      - dokuru-lab-baseline
 
 volumes:
   caddy-data:
   caddy-config:
 
 networks:
-  dokuru-lab:
-    name: dokuru-lab
+  dokuru-lab-baseline:
+    name: dokuru-lab-baseline
     driver: bridge

@@ -169,8 +169,8 @@
 
 	const TERMINAL_MIN_WIDTH = 320;
 	const TERMINAL_MAX_WIDTH = 720;
-	const TERMINAL_WIDTH_KEY = 'dokuru-lab.terminal.width';
-	const TERMINAL_OPEN_KEY = 'dokuru-lab.terminal.open';
+	const TERMINAL_WIDTH_KEY = 'dokuru-lab-baseline.terminal.width';
+	const TERMINAL_OPEN_KEY = 'dokuru-lab-baseline.terminal.open';
 
 	const presets: CommandPreset[] = [
 		{ label: 'UID map', command: 'id; cat /proc/self/uid_map; cat /proc/self/gid_map' },
@@ -498,7 +498,7 @@
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Trigger a payload, watch the neighbor</h2>
 						</div>
 						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
-							Each scenario runs from inside <code>dokuru-lab</code>. Open the terminal sidebar to follow stdout/stderr while the customer signal updates live.
+							Each scenario runs from inside <code>dokuru-lab-baseline</code>. Open the terminal sidebar to follow stdout/stderr while the customer signal updates live.
 						</p>
 					</header>
 
@@ -531,7 +531,7 @@
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Real-time namespace and cgroup signals</h2>
 						</div>
 						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
-							Streamed over <code>/ws/monitor</code> straight from <code>dokuru-lab</code>. See the exact limits and isolation status below.
+							Streamed over <code>/ws/monitor</code> straight from <code>dokuru-lab-baseline</code>. See the exact limits and isolation status below.
 						</p>
 					</header>
 

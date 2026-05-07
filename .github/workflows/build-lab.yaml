@@ -1,4 +1,4 @@
-name: Build Dokuru Lab
+name: Build Dokuru Lab Baseline
 
 on:
   push:
@@ -35,7 +35,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/dokuru-lab
+  IMAGE_NAME: ${{ github.repository_owner }}/dokuru-lab-baseline
   PLATFORMS: linux/amd64
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
@@ -106,11 +106,11 @@ jobs:
     if: >-
       github.event_name != 'pull_request' &&
       github.ref == 'refs/heads/main' &&
-      (vars.DOKURU_LAB_DEPLOY_HOST != '' || vars.DOKURU_DEPLOY_HOST != '') &&
-      (vars.DOKURU_LAB_DEPLOY_USER != '' || vars.DOKURU_DEPLOY_USER != '') &&
-      (vars.DOKURU_LAB_DEPLOY_PATH != '' || vars.DOKURU_DEPLOY_PATH != '')
+      vars.DOKURU_LAB_BASELINE_DEPLOY_HOST != '' &&
+      vars.DOKURU_LAB_BASELINE_DEPLOY_USER != '' &&
+      vars.DOKURU_LAB_BASELINE_DEPLOY_PATH != ''
     uses: ./.github/workflows/deploy-compose-service.yaml
     with:
-      service: dokuru-lab
+      service: dokuru-lab-baseline
       image-tag: ${{ needs.docker.outputs.image-tag }}
     secrets: inherit

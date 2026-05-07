@@ -6,5 +6,8 @@ build
 .env.*
 !.env.example
 data
+uploads
+logs
+config
 .DS_Store
 *.log

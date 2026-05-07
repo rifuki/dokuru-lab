@@ -11,11 +11,11 @@
 
 <nav class="sticky top-0 z-30 h-[54px] border-b border-white/5 bg-black text-white" aria-label="Primary">
 	<div class="mx-auto flex h-full max-w-[1540px] items-center justify-between gap-6 px-4 sm:px-6 md:px-8">
-		<a class="inline-flex items-center gap-2.5 text-[15px] font-semibold text-white no-underline" href="/" aria-label="Dokuru Lab home">
+		<a class="inline-flex items-center gap-2.5 text-[15px] font-semibold text-white no-underline" href="/" aria-label="Dokuru Lab Baseline home">
 			<span class="grid h-7 w-7 place-items-center rounded-full bg-white text-playstation-blue" aria-hidden="true">
 				<FlaskConical size={14} strokeWidth={2.2} />
 			</span>
-			<span>Dokuru Lab</span>
+			<span>Dokuru Lab Baseline</span>
 			<span class="hidden rounded-full border border-white/12 px-2 py-[2px] font-mono text-[10px] tracking-[0.04em] text-white/55 @md/page:inline">v2 &middot; namespace + cgroup</span>
 		</a>
 

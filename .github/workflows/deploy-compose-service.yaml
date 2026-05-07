@@ -12,36 +12,24 @@ on:
         required: true
         type: string
     secrets:
-      DOKURU_LAB_DEPLOY_HOST:
+      DOKURU_LAB_BASELINE_DEPLOY_HOST:
         required: false
-      DOKURU_LAB_DEPLOY_USER:
+      DOKURU_LAB_BASELINE_DEPLOY_USER:
         required: false
-      DOKURU_LAB_DEPLOY_PORT:
+      DOKURU_LAB_BASELINE_DEPLOY_PORT:
         required: false
-      DOKURU_LAB_DEPLOY_PATH:
+      DOKURU_LAB_BASELINE_DEPLOY_PATH:
         required: false
-      DOKURU_LAB_DEPLOY_SSH_KEY:
+      DOKURU_LAB_BASELINE_DEPLOY_SSH_KEY:
         required: false
-      DOKURU_LAB_GHCR_TOKEN:
-        required: false
-      DOKURU_DEPLOY_HOST:
-        required: false
-      DOKURU_DEPLOY_USER:
-        required: false
-      DOKURU_DEPLOY_PORT:
-        required: false
-      DOKURU_DEPLOY_PATH:
-        required: false
-      DOKURU_DEPLOY_SSH_KEY:
-        required: false
-      DOKURU_GHCR_TOKEN:
+      DOKURU_LAB_BASELINE_GHCR_TOKEN:
         required: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: production-deploy
+  group: baseline-production-deploy
   cancel-in-progress: false
 
 jobs:
@@ -50,12 +38,12 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     env:
-      DEPLOY_HOST: ${{ vars.DOKURU_LAB_DEPLOY_HOST || secrets.DOKURU_LAB_DEPLOY_HOST || vars.DOKURU_DEPLOY_HOST || secrets.DOKURU_DEPLOY_HOST }}
-      DEPLOY_USER: ${{ vars.DOKURU_LAB_DEPLOY_USER || secrets.DOKURU_LAB_DEPLOY_USER || vars.DOKURU_DEPLOY_USER || secrets.DOKURU_DEPLOY_USER }}
-      DEPLOY_PORT: ${{ vars.DOKURU_LAB_DEPLOY_PORT || secrets.DOKURU_LAB_DEPLOY_PORT || vars.DOKURU_DEPLOY_PORT || secrets.DOKURU_DEPLOY_PORT || '22' }}
-      DEPLOY_PATH: ${{ vars.DOKURU_LAB_DEPLOY_PATH || secrets.DOKURU_LAB_DEPLOY_PATH || vars.DOKURU_DEPLOY_PATH || secrets.DOKURU_DEPLOY_PATH }}
-      DEPLOY_SSH_KEY: ${{ secrets.DOKURU_LAB_DEPLOY_SSH_KEY || secrets.DOKURU_DEPLOY_SSH_KEY }}
-      GHCR_TOKEN: ${{ secrets.DOKURU_LAB_GHCR_TOKEN || secrets.DOKURU_GHCR_TOKEN }}
+      DEPLOY_HOST: ${{ vars.DOKURU_LAB_BASELINE_DEPLOY_HOST || secrets.DOKURU_LAB_BASELINE_DEPLOY_HOST }}
+      DEPLOY_USER: ${{ vars.DOKURU_LAB_BASELINE_DEPLOY_USER || secrets.DOKURU_LAB_BASELINE_DEPLOY_USER }}
+      DEPLOY_PORT: ${{ vars.DOKURU_LAB_BASELINE_DEPLOY_PORT || secrets.DOKURU_LAB_BASELINE_DEPLOY_PORT || '22' }}
+      DEPLOY_PATH: ${{ vars.DOKURU_LAB_BASELINE_DEPLOY_PATH || secrets.DOKURU_LAB_BASELINE_DEPLOY_PATH }}
+      DEPLOY_SSH_KEY: ${{ secrets.DOKURU_LAB_BASELINE_DEPLOY_SSH_KEY }}
+      GHCR_TOKEN: ${{ secrets.DOKURU_LAB_BASELINE_GHCR_TOKEN }}
       GHCR_USER: ${{ github.actor }}
       IMAGE_TAG: ${{ inputs.image-tag }}
       COMPOSE_FILE: docker-compose.yaml
@@ -63,10 +51,10 @@ jobs:
       - name: Validate deployment configuration
         run: |
           missing=()
-          [ -n "${DEPLOY_HOST}" ] || missing+=("DOKURU_LAB_DEPLOY_HOST")
-          [ -n "${DEPLOY_USER}" ] || missing+=("DOKURU_LAB_DEPLOY_USER")
-          [ -n "${DEPLOY_PATH}" ] || missing+=("DOKURU_LAB_DEPLOY_PATH")
-          [ -n "${DEPLOY_SSH_KEY}" ] || missing+=("DOKURU_LAB_DEPLOY_SSH_KEY")
+          [ -n "${DEPLOY_HOST}" ] || missing+=("DOKURU_LAB_BASELINE_DEPLOY_HOST")
+          [ -n "${DEPLOY_USER}" ] || missing+=("DOKURU_LAB_BASELINE_DEPLOY_USER")
+          [ -n "${DEPLOY_PATH}" ] || missing+=("DOKURU_LAB_BASELINE_DEPLOY_PATH")
+          [ -n "${DEPLOY_SSH_KEY}" ] || missing+=("DOKURU_LAB_BASELINE_DEPLOY_SSH_KEY")
 
           if [ "${#missing[@]}" -ne 0 ]; then
             printf '::error::Missing deployment configuration: %s\n' "${missing[*]}"
@@ -90,7 +78,7 @@ jobs:
       - name: Deploy via Docker Compose
         run: |
           remote_env=$(
-            printf 'DOKURU_LAB_DEPLOY_PATH=%q DOKURU_LAB_COMPOSE_FILE=%q DOKURU_LAB_VERSION=%q' \
+            printf 'DOKURU_LAB_BASELINE_DEPLOY_PATH=%q DOKURU_LAB_BASELINE_COMPOSE_FILE=%q DOKURU_LAB_BASELINE_VERSION=%q' \
               "${DEPLOY_PATH}" "${COMPOSE_FILE}" "${IMAGE_TAG}"
           )
 
@@ -98,7 +86,7 @@ jobs:
             "${remote_env} bash -s" <<'REMOTE'
           set -Eeuo pipefail
 
-          cd "${DOKURU_LAB_DEPLOY_PATH}"
+          cd "${DOKURU_LAB_BASELINE_DEPLOY_PATH}"
 
           if [ -d .git ]; then
             git fetch origin main
@@ -106,12 +94,12 @@ jobs:
             git pull --ff-only origin main
           fi
 
-          test -f "${DOKURU_LAB_COMPOSE_FILE}"
+          test -f "${DOKURU_LAB_BASELINE_COMPOSE_FILE}"
 
-          export VERSION="${DOKURU_LAB_VERSION}"
+          export VERSION="${DOKURU_LAB_BASELINE_VERSION}"
 
-          docker compose -f "${DOKURU_LAB_COMPOSE_FILE}" config --quiet
-          docker compose -f "${DOKURU_LAB_COMPOSE_FILE}" pull
-          docker compose -f "${DOKURU_LAB_COMPOSE_FILE}" up -d --no-build
-          docker compose -f "${DOKURU_LAB_COMPOSE_FILE}" ps
+          docker compose -f "${DOKURU_LAB_BASELINE_COMPOSE_FILE}" config --quiet
+          docker compose -f "${DOKURU_LAB_BASELINE_COMPOSE_FILE}" pull
+          docker compose -f "${DOKURU_LAB_BASELINE_COMPOSE_FILE}" up -d --no-build
+          docker compose -f "${DOKURU_LAB_BASELINE_COMPOSE_FILE}" ps
           REMOTE

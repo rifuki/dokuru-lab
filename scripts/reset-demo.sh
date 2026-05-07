@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REMOTE_HOST="${DOKURU_LAB_HOST:-google-dokuru-lab}"
-REMOTE_PATH="${DOKURU_LAB_PATH:-/home/rifuki/dokuru-lab}"
-BASELINE_FILE="${DOKURU_LAB_BASELINE:-docker-compose.yaml.pre-516-test}"
+REMOTE_HOST="${DOKURU_LAB_BASELINE_HOST:-google-dokuru-lab-baseline}"
+REMOTE_PATH="${DOKURU_LAB_BASELINE_PATH:-/home/rifuki/dokuru-lab-baseline}"
+BASELINE_FILE="${DOKURU_LAB_BASELINE_FILE:-docker-compose.yaml.pre-hardening}"
 
-printf 'Resetting Dokuru Lab demo on %s:%s\n' "$REMOTE_HOST" "$REMOTE_PATH"
+printf 'Resetting Dokuru Lab Baseline demo on %s:%s\n' "$REMOTE_HOST" "$REMOTE_PATH"
 
 ssh "$REMOTE_HOST" \
   "REMOTE_PATH='$REMOTE_PATH' BASELINE_FILE='$BASELINE_FILE' bash -s" <<'REMOTE'
@@ -22,11 +22,11 @@ printf 'Restoring compose baseline from %s\n' "$BASELINE_FILE"
 cp "$BASELINE_FILE" docker-compose.yaml
 
 printf 'Recreating lab stack...\n'
-docker compose up -d victim-checkout victim-secrets customer-traffic dokuru-lab caddy >/dev/null
+docker compose up -d victim-checkout victim-secrets customer-traffic dokuru-lab-baseline caddy >/dev/null
 
-printf 'Waiting for dokuru-lab health...\n'
+printf 'Waiting for dokuru-lab-baseline health...\n'
 for _ in $(seq 1 30); do
-  health=$(docker inspect dokuru-lab --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' 2>/dev/null || true)
+  health=$(docker inspect dokuru-lab-baseline --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' 2>/dev/null || true)
   if [ "$health" = "healthy" ] || [ "$health" = "running" ]; then
     break
   fi
@@ -37,10 +37,10 @@ printf '\n=== containers ===\n'
 docker ps --format 'table {{.Names}}\t{{.Status}}'
 
 printf '\n=== attacker runtime ===\n'
-docker inspect dokuru-lab --format 'PidMode={{.HostConfig.PidMode}} UsernsMode={{.HostConfig.UsernsMode}} CapAdd={{json .HostConfig.CapAdd}} Memory={{.HostConfig.Memory}} PidsLimit={{.HostConfig.PidsLimit}} RestartCount={{.RestartCount}}'
+docker inspect dokuru-lab-baseline --format 'PidMode={{.HostConfig.PidMode}} UsernsMode={{.HostConfig.UsernsMode}} CapAdd={{json .HostConfig.CapAdd}} Memory={{.HostConfig.Memory}} PidsLimit={{.HostConfig.PidsLimit}} RestartCount={{.RestartCount}}'
 
 printf '\n=== B3 readiness ===\n'
-docker exec dokuru-lab sh -lc '
+docker exec dokuru-lab-baseline sh -lc '
 pid=$(pgrep -x postgres | head -1 || true)
 echo "postgres_process=${pid:-no}"
 if [ -z "$pid" ]; then

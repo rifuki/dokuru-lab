@@ -35,7 +35,7 @@
 		{
 			no: '01',
 			role: 'Attacker',
-			id: 'dokuru-lab',
+			id: 'dokuru-lab-baseline',
 			body: 'The vulnerable web app. You trigger every payload from inside this container — cryptominer, memory blast, secret theft, proxy sabotage.',
 			Icon: Bomb,
 			tint: 'commerce'
@@ -113,7 +113,7 @@
 				Show the exploit, <span class="text-white/55">then show the boundary.</span>
 			</h1>
 			<p class="mb-5 max-w-3xl text-[16px] leading-relaxed text-[#dcdcdc]">
-				A three-container playground that stays intentionally vulnerable. You trigger payloads from <code class="font-mono text-[14px] text-white">dokuru-lab</code>, and Dokuru changes what that container can see and how much it can consume — without rewriting the app.
+				A three-container playground that stays intentionally vulnerable. You trigger payloads from <code class="font-mono text-[14px] text-white">dokuru-lab-baseline</code>, and Dokuru changes what that container can see and how much it can consume — without rewriting the app.
 			</p>
 			<div class="flex flex-wrap items-center gap-4">
 				<Button onclick={onProbe} disabled={Boolean(running)}>

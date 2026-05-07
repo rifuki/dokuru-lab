@@ -1,6 +1,6 @@
-# Dokuru Lab
+# Dokuru Lab Baseline
 
-Dokuru Lab is a deliberately vulnerable SvelteKit application for validating Docker namespace isolation and cgroup controls before and after Dokuru hardening.
+Dokuru Lab Baseline is a deliberately vulnerable SvelteKit application for validating Docker namespace isolation and cgroup controls before and after Dokuru hardening.
 
 The application is intentionally unsafe. Run it only on disposable lab infrastructure.
 
@@ -32,31 +32,28 @@ bun run build
 LAB_DATA_DIR=./data bun run start
 ```
 
-## Hosted Lab Deployment
+## Hosted Baseline Deployment
 
-The Compose file runs Caddy and the intentionally vulnerable lab app for the hosted lab.
+The Compose file runs Caddy and the intentionally vulnerable baseline app on a dedicated VPS.
 
-Caddy terminates HTTPS for `lab.dokuru.rifuki.dev` and proxies to `dokuru-lab:8080`. The lab app intentionally starts with unsafe runtime settings:
+Caddy terminates HTTPS for `base.lab.dokuru.rifuki.dev` and proxies to `dokuru-lab-baseline:8080`.
+The app intentionally uses Docker's default isolation posture:
 
-- `pid: host`
-- `ipc: host`
-- `uts: host`
-- `userns_mode: host`
-- no memory limit
-- no CPU shares
-- no PIDs limit
+- no `pid: host`, `ipc: host`, `uts: host`, or `userns_mode: host`
+- no extra Linux capabilities
+- no `security_opt`
+- no memory, CPU, or PIDs limits on the vulnerable app
+- bind mounts for `./uploads`, `./logs`, and read-only `./config`
 
-These settings make Dokuru namespace and cgroup audit findings visible before hardening. Caddy uses normal isolation and resource limits so the audit noise stays focused on `dokuru-lab`.
+This setup demonstrates two default Docker gaps: container root writes bind-mounted files as host root when user namespace remap is disabled, and an unconstrained container can still consume host resources without cgroup limits. Caddy and victim services keep normal resource limits so the audit noise stays focused on `dokuru-lab-baseline`.
 
 Lab v2 adds victim services in the same Compose stack so the demo can show cross-container blast radius, not only introspection:
 
 - `victim-checkout`: healthy customer-facing API used by Customer Live View.
-- `victim-secrets`: PostgreSQL neighbor with a visible demo password for `/proc/<pid>/environ` theft when `SYS_PTRACE` and `pid: host` are present.
+- `victim-secrets`: PostgreSQL neighbor with demo customer records for post-compromise host-side proof.
 - `customer-traffic`: background curl loop that writes real customer latency to `./data/customer-traffic.log` for the UI.
 
-The attacker lab intentionally includes `cap_add: [SYS_PTRACE]` to model the common debug-capability mistake and make rule 5.3/5.16 impact visible. After Dokuru fixes PID namespace sharing, the same secret-theft command should stop finding the postgres PID.
-
-Point DNS for `lab.dokuru.rifuki.dev` to the VPS, then deploy:
+Point DNS for `base.lab.dokuru.rifuki.dev` to the VPS, then deploy:
 
 On the VPS, create `.env` from `.env.example` only if you want to override the app runtime values:
 
@@ -70,6 +67,8 @@ Example `.env` values:
 HOST=0.0.0.0
 PORT=8080
 LAB_DATA_DIR=/app/data
+LAB_UPLOAD_DIR=/app/uploads
+LAB_LOG_DIR=/app/logs
 ```
 
 Deploy:
@@ -83,39 +82,50 @@ docker compose up --build -d
 The repository includes GitHub Actions workflows modeled after the Dokuru and rifuki.dev stacks:
 
 - `Quality Gate`: runs Bun install, SvelteKit checks, production build, Compose config validation, and a Docker smoke build.
-- `Build Dokuru Lab`: builds and publishes `ghcr.io/rifuki/dokuru-lab:latest`, `ghcr.io/rifuki/dokuru-lab:v<version>`, and `ghcr.io/rifuki/dokuru-lab:sha-<short-commit>` on `main`.
+- `Build Dokuru Lab Baseline`: builds and publishes `ghcr.io/rifuki/dokuru-lab-baseline:latest`, `ghcr.io/rifuki/dokuru-lab-baseline:v<version>`, and `ghcr.io/rifuki/dokuru-lab-baseline:sha-<short-commit>` on `main`.
 - `Deploy Compose Service`: reusable SSH deploy workflow that pulls the published image on the VPS and runs `docker compose -f docker-compose.yaml up -d --no-build`.
 
 The browser lab uses:
 
-- `wss://lab.dokuru.rifuki.dev/ws/monitor` for live namespace and cgroup metrics.
-- `wss://lab.dokuru.rifuki.dev/ws/terminal` for real stdout/stderr from commands and pressure tests.
-- `wss://lab.dokuru.rifuki.dev/ws/customer` for real checkout latency samples against `victim-checkout`.
+- `wss://base.lab.dokuru.rifuki.dev/ws/monitor` for live namespace and cgroup metrics.
+- `wss://base.lab.dokuru.rifuki.dev/ws/terminal` for real stdout/stderr from commands and pressure tests.
+- `wss://base.lab.dokuru.rifuki.dev/ws/customer` for real checkout latency samples against `victim-checkout`.
 
 Set these repository variables for automatic deployment from `main`:
 
 ```text
-DOKURU_LAB_DEPLOY_HOST
-DOKURU_LAB_DEPLOY_USER
-DOKURU_LAB_DEPLOY_PATH
+DOKURU_LAB_BASELINE_DEPLOY_HOST
+DOKURU_LAB_BASELINE_DEPLOY_USER
+DOKURU_LAB_BASELINE_DEPLOY_PATH
 ```
 
 Set this repository secret:
 
 ```text
-DOKURU_LAB_DEPLOY_SSH_KEY
+DOKURU_LAB_BASELINE_DEPLOY_SSH_KEY
 ```
 
 Optional values:
 
 ```text
-DOKURU_LAB_DEPLOY_PORT
-DOKURU_LAB_GHCR_TOKEN
+DOKURU_LAB_BASELINE_DEPLOY_PORT
+DOKURU_LAB_BASELINE_GHCR_TOKEN
 ```
 
-The deploy workflow also accepts the Dokuru-compatible fallback names `DOKURU_DEPLOY_*` and `DOKURU_GHCR_TOKEN`.
-
 ## API Payloads
+
+File upload userns gap:
+
+```bash
+curl -X POST http://localhost:8080/api/upload \
+  -F 'file=@./payloads/vacation_photo.jpg.sh'
+```
+
+Command injection:
+
+```bash
+curl 'http://localhost:8080/api/ping?host=127.0.0.1;id'
+```
 
 User namespace evidence:
 
@@ -158,12 +168,27 @@ curl -X POST http://localhost:8080/api/cpu-burn \
   -d '{"seconds":5}'
 ```
 
+Unified cgroup stress endpoint:
+
+```bash
+curl -X POST 'http://localhost:8080/api/stress?type=fork&duration=15'
+curl -X POST 'http://localhost:8080/api/stress?type=memory&duration=15'
+curl -X POST 'http://localhost:8080/api/stress?type=cpu&duration=15'
+```
+
+Controlled ransomware/reset demo:
+
+```bash
+curl -X POST http://localhost:8080/api/exploit/ransomware
+curl -X POST http://localhost:8080/api/exploit/reset
+```
+
 Blast-radius terminal actions are available from the browser UI over `/ws/terminal`:
 
 - `cpu-blast`: spawn 4 short-lived CPU miners and watch Customer Live View latency.
 - `memory-bomb` with `mb=1280`: push host memory pressure before rule 5.11 is fixed.
-- `steal-secrets`: find postgres neighbor PID and read `/proc/<pid>/environ`.
-- `sabotage-proxy`: briefly `SIGSTOP` caddy, with automatic `SIGCONT` recovery.
+- `steal-secrets`: legacy misconfiguration reference; baseline post-pwn proof should run through the host cron payload.
+- `sabotage-proxy`: legacy misconfiguration reference; baseline post-pwn proof should run through the host cron payload.
 
 ## Dokuru Validation Flow
 

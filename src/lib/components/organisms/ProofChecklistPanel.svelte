@@ -74,7 +74,7 @@
 		</span>
 		<div class="min-w-0">
 			<span class="block text-[12px] text-body-gray">Inspect baseline</span>
-			<code class="break-words font-mono text-[12.5px] text-ink">docker inspect dokuru-lab</code>
+			<code class="break-words font-mono text-[12.5px] text-ink">docker inspect dokuru-lab-baseline</code>
 		</div>
 	</div>
 </Panel>

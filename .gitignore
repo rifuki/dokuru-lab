@@ -22,6 +22,12 @@ Thumbs.db
 # Runtime data
 data/*
 !data/.gitkeep
+uploads/*
+!uploads/.gitkeep
+logs/*
+!logs/.gitkeep
+config/*
+!config/.gitkeep
 
 # Logs
 *.log

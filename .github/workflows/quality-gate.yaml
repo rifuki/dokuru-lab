@@ -70,8 +70,8 @@ jobs:
           context: .
           platforms: linux/amd64
           push: false
-          tags: dokuru-lab:smoke
+          tags: dokuru-lab-baseline:smoke
           provenance: false
           sbom: false
-          cache-from: type=gha,scope=smoke-dokuru-lab
-          cache-to: type=gha,mode=max,scope=smoke-dokuru-lab
+          cache-from: type=gha,scope=smoke-dokuru-lab-baseline
+          cache-to: type=gha,mode=max,scope=smoke-dokuru-lab-baseline
