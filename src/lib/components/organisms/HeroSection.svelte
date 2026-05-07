@@ -36,7 +36,7 @@
 			no: '01',
 			role: 'Attacker',
 			id: 'dokuru-lab-baseline',
-			body: 'The vulnerable web app. You trigger every payload from inside this container — cryptominer, memory blast, secret theft, proxy sabotage.',
+			body: 'A vulnerable default-root web app with bind mounts. Upload and command-injection bugs become host-root evidence when userns-remap is off.',
 			Icon: Bomb,
 			tint: 'commerce'
 		},
@@ -44,7 +44,7 @@
 			no: '02',
 			role: 'Neighbor',
 			id: 'victim-checkout',
-			body: 'A second container Dokuru must protect. Holds POSTGRES_PASSWORD and serves a checkout API that should keep responding through every blast.',
+			body: 'A customer-facing API that should stay responsive while the baseline app tries to consume unconstrained CPU, memory, and PIDs.',
 			Icon: ShoppingCart,
 			tint: 'blue'
 		},
@@ -52,7 +52,7 @@
 			no: '03',
 			role: 'Signal',
 			id: 'customer-traffic',
-			body: 'An out-of-band probe that hits the neighbor on a loop. Its latency feed becomes the customer truth in Customer Live View.',
+			body: 'An out-of-band probe that hits checkout on a loop. Its latency feed is the visible blast-radius signal for the cgroup demo.',
 			Icon: Radio,
 			tint: 'cyan'
 		}
@@ -105,15 +105,20 @@
 
 		<!-- Headline + CTAs -->
 		<div class="animate-rise-in max-w-4xl">
+			<div class="mb-4 inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-commerce/35 bg-commerce/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-[#ff9a6f]">
+				<span class="inline-block h-1.5 w-1.5 rounded-full bg-commerce" aria-hidden="true"></span>
+				<span>Default Docker Configuration</span>
+				<span class="text-white/35">no userns-remap · no cgroup limits</span>
+			</div>
 			<p class="mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-[#1883fd]">
 				<span class="inline-block h-1 w-1 rounded-full bg-[#1883fd]" aria-hidden="true"></span>
-				Container isolation lab
+				Baseline isolation lab
 			</p>
 			<h1 class="mb-3 text-[clamp(32px,4.4vw,56px)] leading-[1.04] font-light tracking-[-0.4px]">
-				Show the exploit, <span class="text-white/55">then show the boundary.</span>
+				Default Docker, <span class="text-white/55">one upload from host root.</span>
 			</h1>
 			<p class="mb-5 max-w-3xl text-[16px] leading-relaxed text-[#dcdcdc]">
-				A three-container playground that stays intentionally vulnerable. You trigger payloads from <code class="font-mono text-[14px] text-white">dokuru-lab-baseline</code>, and Dokuru changes what that container can see and how much it can consume — without rewriting the app.
+				A production-looking Compose stack with no explicit namespace sharing and no resource limits on the vulnerable app. Trigger payloads from <code class="font-mono text-[14px] text-white">dokuru-lab-baseline</code>, then let Dokuru prove where user namespace remap and cgroup limits break the chain.
 			</p>
 			<div class="flex flex-wrap items-center gap-4">
 				<Button onclick={onProbe} disabled={Boolean(running)}>

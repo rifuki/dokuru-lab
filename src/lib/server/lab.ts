@@ -10,6 +10,7 @@ import {
 	unlinkSync,
 	writeFileSync
 } from 'node:fs';
+import { cpus } from 'node:os';
 import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import type { CgroupEvidence, LabResponse, ProcessEvidence, RuntimeEvidence } from '$lib/types/lab';
@@ -140,7 +141,7 @@ export function spawnPidBomb(count: unknown): LabResponse {
 }
 
 export function allocateMemory(mb: unknown): LabResponse {
-	const requested = clamp(Number(mb || 128), 1, 1536);
+	const requested = clamp(Number(mb || 3072), 1, 3500);
 
 	for (let index = 0; index < requested; index += 1) {
 		memoryHold.push(Buffer.alloc(1024 * 1024, 'a'));
@@ -157,21 +158,29 @@ export function allocateMemory(mb: unknown): LabResponse {
 
 export function burnCpu(seconds: unknown): LabResponse {
 	const requested = clamp(Number(seconds || 5), 1, 30);
-	const child = spawn(
-		process.execPath,
-		[
-			'-e',
-			`process.title='dokuru_cpu_burn'; const crypto = require('node:crypto'); const end = Date.now() + ${requested} * 1000; let ops = 0; while (Date.now() < end) { crypto.createHash('sha256').update(String(ops++)).digest('hex'); }`
-		],
-		{ detached: true, stdio: 'ignore' }
-	);
-	child.unref();
+	const workerCount = clamp(Math.max(cpus().length * 2, 4), 1, 24);
+	const pids: number[] = [];
+
+	for (let index = 0; index < workerCount; index += 1) {
+		const child = spawn(
+			process.execPath,
+			[
+				'-e',
+				`process.title='dokuru_cpu_burn'; const crypto = require('node:crypto'); const end = Date.now() + ${requested} * 1000; let ops = 0; while (Date.now() < end) { crypto.createHash('sha256').update(String(ops++)).digest('hex'); }`
+			],
+			{ detached: true, stdio: 'ignore' }
+		);
+		child.unref();
+		if (child.pid) pids.push(child.pid);
+	}
 
 	return {
 		ok: true,
 		scenario: 'CPU cgroup pressure',
 		seconds: requested,
-		pid: child.pid,
+		cpu_count: cpus().length,
+		worker_count: workerCount,
+		burner_pids: pids,
 		cgroup: cgroupEvidence()
 	};
 }
@@ -208,7 +217,7 @@ export function stress(type: unknown, duration: unknown): LabResponse {
 	}
 
 	if (kind === 'memory') {
-		return allocateMemory(200);
+		return allocateMemory(3072);
 	}
 
 	return burnCpu(seconds);

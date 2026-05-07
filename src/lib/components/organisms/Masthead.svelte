@@ -16,7 +16,7 @@
 				<FlaskConical size={14} strokeWidth={2.2} />
 			</span>
 			<span>Dokuru Lab Baseline</span>
-			<span class="hidden rounded-full border border-white/12 px-2 py-[2px] font-mono text-[10px] tracking-[0.04em] text-white/55 @md/page:inline">v2 &middot; namespace + cgroup</span>
+			<span class="hidden rounded-full border border-white/12 px-2 py-[2px] font-mono text-[10px] tracking-[0.04em] text-white/55 @md/page:inline">baseline &middot; default docker</span>
 		</a>
 
 		<div class="flex items-center gap-5 text-[13px] font-medium">

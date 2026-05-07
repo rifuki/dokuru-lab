@@ -58,7 +58,7 @@
 					</span>
 					<span class="text-[11px] font-mono uppercase tracking-[0.1em] text-body-gray">Allocation</span>
 				</div>
-				<Field id="memory-mb" label="Memory MB" type="number" min={1} max={1024} value={memoryMb} oninput={(value) => onMemoryChange(Number(value))} />
+				<Field id="memory-mb" label="Memory MB" type="number" min={1} max={3500} value={memoryMb} oninput={(value) => onMemoryChange(Number(value))} />
 				<p class="m-0 text-[12.5px] leading-relaxed text-body-gray">Starts a child process that holds memory until Cleanup or Stop payload.</p>
 				<Button onclick={onMemoryBomb} disabled={Boolean(running)}>Start memory pressure</Button>
 			</article>

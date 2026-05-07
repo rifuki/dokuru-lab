@@ -47,7 +47,7 @@ The app intentionally uses Docker's default isolation posture:
 
 This setup demonstrates two default Docker gaps: container root writes bind-mounted files as host root when user namespace remap is disabled, and an unconstrained container can still consume host resources without cgroup limits. Caddy and victim services keep normal resource limits so the audit noise stays focused on `dokuru-lab-baseline`.
 
-Lab v2 adds victim services in the same Compose stack so the demo can show cross-container blast radius, not only introspection:
+The baseline lab adds victim services in the same Compose stack so the demo can show cross-container blast radius, not only introspection:
 
 - `victim-checkout`: healthy customer-facing API used by Customer Live View.
 - `victim-secrets`: PostgreSQL neighbor with demo customer records for post-compromise host-side proof.
@@ -186,9 +186,9 @@ curl -X POST http://localhost:8080/api/exploit/reset
 Blast-radius terminal actions are available from the browser UI over `/ws/terminal`:
 
 - `cpu-blast`: spawn 4 short-lived CPU miners and watch Customer Live View latency.
-- `memory-bomb` with `mb=1280`: push host memory pressure before rule 5.11 is fixed.
+- `memory-bomb` with `mb=3072`: push host memory pressure before rule 5.11 is fixed.
 - `steal-secrets`: legacy misconfiguration reference; baseline post-pwn proof should run through the host cron payload.
-- `sabotage-proxy`: legacy misconfiguration reference; baseline post-pwn proof should run through the host cron payload.
+- `sabotage-proxy`: legacy misconfiguration reference; baseline MVP skips it because PID namespace isolation works by default.
 
 ## Dokuru Validation Flow
 

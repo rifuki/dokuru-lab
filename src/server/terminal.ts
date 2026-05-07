@@ -188,7 +188,7 @@ export class TerminalController {
 	}
 
 	private async runMemoryBomb(socket: WebSocket, rawMb: unknown): Promise<void> {
-		const mb = clamp(Number(rawMb || 128), 1, 1536);
+		const mb = clamp(Number(rawMb || 3072), 1, 3500);
 		line(socket, 'system', `$ dokuru-lab-baseline memory-bomb --mb ${mb}\n`);
 		if (this.memoryPayloadChild) {
 			line(socket, 'stderr', 'memory payload is already running; stop it before starting another memory blast\n');

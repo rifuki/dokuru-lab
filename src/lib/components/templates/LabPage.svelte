@@ -35,7 +35,7 @@
 
 	let command = $state('id; cat /proc/self/uid_map; cat /proc/self/gid_map');
 	let pidCount = $state(120);
-	let memoryMb = $state(128);
+	let memoryMb = $state(3072);
 	let cpuSeconds = $state(5);
 	let running = $state('');
 	let evidenceData = $state<LabResponse | null>(null);
@@ -359,15 +359,7 @@
 	}
 
 	function runMemoryBlast() {
-		sendTerminal({ type: 'memory-bomb', mb: 1280 });
-	}
-
-	function runStealSecrets() {
-		sendTerminal({ type: 'steal-secrets' });
-	}
-
-	function runSabotageProxy() {
-		sendTerminal({ type: 'sabotage-proxy', seconds: 6 });
+		sendTerminal({ type: 'memory-bomb', mb: 3072 });
 	}
 
 	function stopActivePayload() {
@@ -510,8 +502,6 @@
 							onCustomerProbe={runCustomerProbe}
 							onCpuBlast={runCpuBlast}
 							onMemoryBlast={runMemoryBlast}
-							onStealSecrets={runStealSecrets}
-							onSabotageProxy={runSabotageProxy}
 							onStopPayloads={stopActivePayload}
 						/>
 					</div>
