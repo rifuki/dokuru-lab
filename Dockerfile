@@ -14,6 +14,7 @@ RUN apt-get update \
     curl \
     iproute2 \
     iputils-ping \
+    postgresql-client \
     procps \
   && rm -rf /var/lib/apt/lists/*
 

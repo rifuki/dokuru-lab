@@ -1,4 +1,4 @@
-import { exec as execCallback, execFileSync, spawn } from 'node:child_process';
+import { exec as execCallback, execFile as execFileCallback, execFileSync, spawn } from 'node:child_process';
 import {
 	existsSync,
 	mkdirSync,
@@ -16,15 +16,28 @@ import { promisify } from 'node:util';
 import type { CgroupEvidence, LabResponse, ProcessEvidence, RuntimeEvidence } from '$lib/types/lab';
 
 const exec = promisify(execCallback);
+const execFile = promisify(execFileCallback);
 const dataDir = process.env.LAB_DATA_DIR || '/app/data';
 const uploadDir = process.env.LAB_UPLOAD_DIR || '/app/uploads';
 const logDir = process.env.LAB_LOG_DIR || '/app/logs';
 const ransomwareKeyPath = process.env.LAB_RANSOMWARE_KEY_PATH || '/tmp/dokuru-lab-baseline-ransomware-key.txt';
+const postgresHost = process.env.VICTIM_POSTGRES_HOST || 'victim-secrets';
+const postgresUser = process.env.VICTIM_POSTGRES_USER || 'prod_user';
+const postgresPassword = process.env.VICTIM_POSTGRES_PASSWORD || 'SuperSecretP@ssw0rd123';
+const postgresDb = process.env.VICTIM_POSTGRES_DB || 'customer_data';
+const customerCount = clamp(Number(process.env.LAB_CUSTOMER_COUNT || 1_200_000), 1, 2_000_000);
 let memoryHold: Buffer[] = [];
 
 type ExecError = Error & {
 	stdout?: string;
 	stderr?: string;
+};
+
+type PostgresResult = {
+	ok: boolean;
+	output?: string;
+	error?: string;
+	skipped?: boolean;
 };
 
 export function readFirst(paths: string[]): string {
@@ -239,13 +252,84 @@ export function triggerCron(): LabResponse {
 	};
 }
 
+export async function seedDemoState(): Promise<LabResponse> {
+	const files = seedDemoFiles(true);
+	const postgres = await seedPostgres();
+
+	return {
+		ok: postgres.ok || Boolean(postgres.skipped),
+		scenario: 'demo seed',
+		message: 'Mock customer files, invoices, and Postgres rows are ready for a repeatable demo.',
+		files,
+		postgres,
+		ownership: {
+			uploads: commandSync(`stat -c '%u:%g %A %n' ${shellQuote(uploadDir)} 2>/dev/null || true`),
+			customer_sample: commandSync(
+				`ls -lan ${shellQuote(join(uploadDir, 'customer-data'))} 2>/dev/null | head -5`
+			)
+		},
+		runtime: runtimeEvidence()
+	};
+}
+
+export async function resetDemoState(): Promise<LabResponse> {
+	const reset = resetExploitState();
+	const payloadCleanup = await cleanup();
+	const seed = await seedDemoState();
+
+	return {
+		ok: Boolean(reset.ok && payloadCleanup.ok && seed.ok),
+		scenario: 'full demo reset',
+		reset,
+		payload_cleanup: payloadCleanup,
+		seed
+	};
+}
+
+export async function dumpAppData(): Promise<LabResponse> {
+	seedDemoFiles(false);
+	const customerDir = join(uploadDir, 'customer-data');
+	const invoiceDir = join(uploadDir, 'invoices');
+	const customers = listFiles(customerDir, (name) => /^customer-\d+\.json$/.test(name)).slice(0, 3);
+	const invoices = listFiles(invoiceDir, (name) => /^invoice-\d+\.txt$/.test(name)).slice(0, 3);
+	const postgres = await queryPostgres(`
+SELECT 'customer_count=' || count(*) FROM customers;
+SELECT id || '|' || name || '|' || email || '|' || balance FROM customers ORDER BY id LIMIT 5;
+`);
+
+	return {
+		ok: true,
+		scenario: 'app data dump',
+		message: 'Command injection as container root can read app data, configs, and reachable service data without host shell.',
+		readable_paths: {
+			uploads: uploadDir,
+			customer_data: customerDir,
+			invoices: invoiceDir,
+			config: '/app/config',
+			logs: logDir
+		},
+		customer_files: customers.map((path) => ({
+			path,
+			owner: commandSync(`stat -c '%u:%g %A' ${shellQuote(path)} 2>/dev/null || true`),
+			preview: readFileSync(path, 'utf8').slice(0, 500)
+		})),
+		invoice_files: invoices.map((path) => ({
+			path,
+			owner: commandSync(`stat -c '%u:%g %A' ${shellQuote(path)} 2>/dev/null || true`),
+			preview: readFileSync(path, 'utf8').slice(0, 300)
+		})),
+		postgres,
+		runtime: runtimeEvidence()
+	};
+}
+
 export function ransomwareStrike(): LabResponse {
 	const targetDir = join(uploadDir, 'customer-data');
-	seedCustomerFiles(targetDir);
+	seedDemoFiles(false);
 	const key = `dokuru-demo-key-${Date.now()}`;
 	const encrypted: string[] = [];
 
-	for (const path of walkFiles(targetDir)) {
+	for (const path of listFiles(targetDir, (name) => /^customer-\d+\.json$/.test(name))) {
 		if (path.endsWith('.locked') || path.endsWith('RANSOM_NOTE.txt')) continue;
 		const content = readFileSync(path);
 		const payload = Buffer.from(content.toString('base64').split('').reverse().join(''));
@@ -302,7 +386,7 @@ export function resetExploitState(): LabResponse {
 		ok: true,
 		scenario: 'demo reset',
 		restored_files: restored,
-		remaining_customer_files: listFiles(targetDir).length,
+		remaining_customer_files: listFiles(targetDir, (name) => /^customer-\d+\.json$/.test(name)).length,
 		runtime: runtimeEvidence()
 	};
 }
@@ -389,16 +473,30 @@ function clamp(value: number, min: number, max: number): number {
 	return Math.min(Math.max(Math.trunc(value), min), max);
 }
 
-function seedCustomerFiles(targetDir: string): void {
-	mkdirSync(targetDir, { recursive: true });
-	if (listFiles(targetDir, (name) => name.endsWith('.txt') || name.endsWith('.json')).length > 0) {
-		return;
+function seedDemoFiles(force: boolean): Record<string, unknown> {
+	const customerDir = join(uploadDir, 'customer-data');
+	const invoiceDir = join(uploadDir, 'invoices');
+
+	mkdirSync(customerDir, { recursive: true });
+	mkdirSync(invoiceDir, { recursive: true });
+
+	if (force) {
+		for (const path of walkFiles(customerDir)) {
+			if (/customer-\d+\.json(\.bak|\.locked)?$/.test(path) || path.endsWith('RANSOM_NOTE.txt')) {
+				unlinkSync(path);
+			}
+		}
+		for (const path of walkFiles(invoiceDir)) {
+			if (/invoice-\d+\.txt$/.test(path)) unlinkSync(path);
+		}
 	}
 
 	for (let index = 1; index <= 200; index += 1) {
 		const id = String(index).padStart(4, '0');
+		const path = join(customerDir, `customer-${id}.json`);
+		if (!force && existsSync(path)) continue;
 		writeFileSync(
-			join(targetDir, `customer-${id}.json`),
+			path,
 			JSON.stringify(
 				{
 					id,
@@ -415,7 +513,104 @@ function seedCustomerFiles(targetDir: string): void {
 
 	for (let index = 1; index <= 30; index += 1) {
 		const id = String(index).padStart(3, '0');
-		writeFileSync(join(targetDir, `invoice-${id}.txt`), `Invoice ${id}\nAmount: ${index * 91_000}\n`);
+		const path = join(invoiceDir, `invoice-${id}.txt`);
+		if (!force && existsSync(path)) continue;
+		writeFileSync(path, `Invoice ${id}\nAmount: ${index * 91_000}\nStatus: unpaid\n`);
+	}
+
+	return {
+		customer_dir: customerDir,
+		invoice_dir: invoiceDir,
+		customer_files: listFiles(customerDir, (name) => /^customer-\d+\.json$/.test(name)).length,
+		locked_files: listFiles(customerDir, (name) => name.endsWith('.locked')).length,
+		invoice_files: listFiles(invoiceDir, (name) => /^invoice-\d+\.txt$/.test(name)).length
+	};
+}
+
+async function seedPostgres(): Promise<PostgresResult> {
+	const sqlPath = '/tmp/dokuru-lab-baseline-seed.sql';
+	writeFileSync(
+		sqlPath,
+		[
+			'CREATE TABLE IF NOT EXISTS customers (',
+			'  id BIGSERIAL PRIMARY KEY,',
+			'  name TEXT NOT NULL,',
+			'  email TEXT NOT NULL,',
+			'  balance BIGINT NOT NULL',
+			');',
+			'TRUNCATE customers;',
+			'INSERT INTO customers (name, email, balance)',
+			'SELECT',
+			"  'Customer ' || gs,",
+			"  'customer' || gs || '@example.test',",
+			'  gs * 17',
+			`FROM generate_series(1, ${customerCount}) AS gs;`,
+			"SELECT 'customer_count=' || count(*) FROM customers;"
+		].join('\n')
+	);
+
+	return queryPostgresFile(sqlPath, 90_000);
+}
+
+async function queryPostgres(sql: string): Promise<PostgresResult> {
+	const sqlPath = `/tmp/dokuru-lab-baseline-query-${Date.now()}.sql`;
+	writeFileSync(sqlPath, sql.trim() + '\n');
+	try {
+		return await queryPostgresFile(sqlPath, 20_000);
+	} finally {
+		try {
+			unlinkSync(sqlPath);
+		} catch {
+			// Best-effort temp cleanup.
+		}
+	}
+}
+
+async function queryPostgresFile(sqlPath: string, timeout: number): Promise<PostgresResult> {
+	const psqlPath = commandSync('command -v psql || true');
+	if (!psqlPath) {
+		return {
+			ok: false,
+			skipped: true,
+			error: 'psql not installed in this image; Postgres seed skipped'
+		};
+	}
+
+	try {
+		const { stdout, stderr } = await execFile(
+			psqlPath,
+			[
+				'-h',
+				postgresHost,
+				'-U',
+				postgresUser,
+				'-d',
+				postgresDb,
+				'-v',
+				'ON_ERROR_STOP=1',
+				'-q',
+				'-tA',
+				'-f',
+				sqlPath
+			],
+			{
+				env: { ...process.env, PGPASSWORD: postgresPassword },
+				timeout,
+				maxBuffer: 1024 * 1024
+			}
+		);
+
+		return {
+			ok: true,
+			output: `${stdout}${stderr}`.trim()
+		};
+	} catch (error) {
+		const typedError = error as ExecError;
+		return {
+			ok: false,
+			output: `${typedError.stdout || ''}${typedError.stderr || ''}`.trim(),
+			error: typedError.message
+		};
 	}
 }
 
