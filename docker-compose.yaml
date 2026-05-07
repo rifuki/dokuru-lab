@@ -10,9 +10,6 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
-    mem_limit: 128m
-    cpu_shares: 512
-    pids_limit: 100
     depends_on:
       dokuru-lab-baseline:
         condition: service_healthy
@@ -24,7 +21,6 @@ services:
     build: .
     container_name: dokuru-lab-baseline
     restart: unless-stopped
-    user: root
     environment:
       NODE_ENV: production
       HOST: ${HOST:-0.0.0.0}
@@ -85,9 +81,6 @@ services:
         server.listen(3000, '0.0.0.0', () => console.log('victim-checkout listening on :3000'));
         EOF
         node /tmp/victim-checkout.js
-    mem_limit: 256m
-    cpu_shares: 1024
-    pids_limit: 100
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
       interval: 10s
@@ -105,20 +98,15 @@ services:
       POSTGRES_USER: prod_user
       POSTGRES_PASSWORD: SuperSecretP@ssw0rd123
       POSTGRES_DB: customer_data
-    mem_limit: 256m
-    cpu_shares: 512
-    pids_limit: 100
     networks:
       - dokuru-lab-baseline
 
   customer-traffic:
-    image: curlimages/curl:8.16.0
+    image: alpine/curl:latest
     container_name: dokuru-lab-baseline-customer-traffic
     restart: unless-stopped
-    user: root
+    entrypoint: ["sh", "-c"]
     command:
-      - sh
-      - -c
       - |
         while true; do
           { date -u +%Y-%m-%dT%H:%M:%SZ | tr '\n' ' '; curl -sS -m 2 -o /dev/null -w 'status=%{http_code} latency_s=%{time_total}\n' http://victim-checkout:3000/checkout 2>/dev/null || true; } | tee -a /data/customer-traffic.log
@@ -129,9 +117,6 @@ services:
         condition: service_healthy
     volumes:
       - ./data:/data
-    mem_limit: 64m
-    cpu_shares: 256
-    pids_limit: 50
     networks:
       - dokuru-lab-baseline
 
