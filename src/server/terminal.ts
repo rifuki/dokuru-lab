@@ -165,6 +165,7 @@ export class TerminalController {
 
 	private async runExec(socket: WebSocket, rawCommand: unknown): Promise<void> {
 		const command = String(rawCommand || 'id').trim().slice(0, 1000) || 'id';
+		const isInteractive = ['sh', 'bash', 'zsh'].includes(command.trim());
 
 		await new Promise<void>((resolve) => {
 			line(socket, 'system', `$ ${command}\n`);
@@ -174,6 +175,10 @@ export class TerminalController {
 				stdio: ['pipe', 'pipe', 'pipe']
 			});
 			this.stdinChild = child;
+			
+			if (isInteractive) {
+				child.stdin.write('PS1="\\$ "\n');
+			}
 
 			const timeout = setTimeout(() => {
 				line(socket, 'stderr', `command timed out after 120000ms; killing pid ${child.pid}\n`);
