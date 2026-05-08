@@ -102,9 +102,6 @@
 					? 'wait for active action to finish'
 					: 'run command in container'
 	);
-	const inputHint = $derived(
-		stdinActive ? 'enter sends stdin · shift+enter keeps text' : 'enter runs command · use sh/bash for interactive stdin'
-	);
 	const filteredCount = $derived(visibleLines.length);
 	const totalCount = $derived(lines.length);
 
@@ -254,46 +251,45 @@
 	{/if}
 </div>
 
-<footer class="border-t border-white/5 px-4 py-2">
-	<div class="mb-2 flex items-center gap-2">
-		<span class="font-mono text-[10px] tracking-[0.04em] text-white/35">{inputLabel}</span>
+<footer class="border-t border-white/5 px-4 py-3">
+	<div class="grid grid-cols-[42px_minmax(0,1fr)_40px] items-center gap-2">
+		<span class="text-right font-mono text-[10px] tracking-[0.08em] text-white/35 uppercase">{inputLabel}</span>
 		<input
 			value={stdinText}
 			oninput={(event) => (stdinText = event.currentTarget.value)}
 			onkeydown={onStdinKeydown}
 			disabled={inputDisabled}
 			placeholder={inputPlaceholder}
-			class="min-w-0 flex-1 rounded-[4px] border border-white/10 bg-white/[0.04] px-2 py-1.5 font-mono text-[11px] text-white/85 outline-none transition placeholder:text-white/25 focus:border-playstation-blue/60 focus:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-45"
+			class="h-10 min-w-0 rounded-[6px] border border-white/10 bg-white/[0.04] px-3 font-mono text-[12px] text-white/85 outline-none transition placeholder:text-white/25 focus:border-playstation-blue/60 focus:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-45"
 			aria-label="Terminal input"
 		/>
 		<button
 			type="button"
 			onclick={submitInput}
 			disabled={inputDisabled || !stdinText.trim()}
-			class="grid h-7 w-7 cursor-pointer place-items-center rounded-[4px] bg-playstation-blue text-white transition hover:bg-link-hover disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/25"
+			class="grid h-10 w-10 cursor-pointer place-items-center rounded-[6px] bg-playstation-blue text-white transition hover:bg-link-hover disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/25"
 			aria-label={inputActionLabel}
 			title={inputActionLabel}
 		>
-			<Send size={12} strokeWidth={2} />
+			<Send size={15} strokeWidth={2} />
 		</button>
 	</div>
-	<div class="flex items-center justify-between">
+	<div class="mt-2 flex items-center gap-2 pl-[50px]">
 		<div class="flex items-center gap-2">
-		<span class="font-mono text-[10px] tracking-[0.04em] {stickToBottom ? 'text-white/40' : 'text-white/20'}">auto-scroll</span>
-		<button
-			type="button"
-			onclick={() => {
-				stickToBottom = !stickToBottom;
-				if (stickToBottom) jumpToLatest();
-			}}
-			class="relative inline-flex h-[14px] w-[26px] cursor-pointer items-center rounded-full transition-colors duration-200 {stickToBottom ? 'bg-emerald-500' : 'bg-white/15'}"
-			title={stickToBottom ? 'Auto-scroll ON — click to pause' : 'Auto-scroll OFF — click to resume'}
-			aria-pressed={stickToBottom}
-			aria-label="Toggle auto-scroll"
-		>
-			<span class="absolute inline-block h-[10px] w-[10px] rounded-full bg-white shadow-sm transition-transform duration-200 {stickToBottom ? 'translate-x-[14px]' : 'translate-x-[2px]'}"></span>
-		</button>
-	</div>
-		<span class="font-mono text-[10px] tracking-[0.04em] text-white/25">{inputHint}</span>
+			<span class="font-mono text-[10px] tracking-[0.04em] {stickToBottom ? 'text-white/40' : 'text-white/20'}">auto-scroll</span>
+			<button
+				type="button"
+				onclick={() => {
+					stickToBottom = !stickToBottom;
+					if (stickToBottom) jumpToLatest();
+				}}
+				class="relative inline-flex h-[14px] w-[26px] cursor-pointer items-center rounded-full transition-colors duration-200 {stickToBottom ? 'bg-emerald-500' : 'bg-white/15'}"
+				title={stickToBottom ? 'Auto-scroll ON — click to pause' : 'Auto-scroll OFF — click to resume'}
+				aria-pressed={stickToBottom}
+				aria-label="Toggle auto-scroll"
+			>
+				<span class="absolute inline-block h-[10px] w-[10px] rounded-full bg-white shadow-sm transition-transform duration-200 {stickToBottom ? 'translate-x-[14px]' : 'translate-x-[2px]'}"></span>
+			</button>
+		</div>
 	</div>
 </footer>
