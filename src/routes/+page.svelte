@@ -10,4 +10,4 @@
 	/>
 </svelte:head>
 
-<LabPage />
+<LabPage page="home" />

@@ -30,7 +30,7 @@ const payloadLabels: Record<string, string> = {
 	'pid-bomb': 'PID bomb',
 	'memory-bomb': 'Memory blast',
 	'cpu-burn': 'CPU burn',
-	'cpu-blast': 'Cryptominer',
+	'cpu-blast': 'CPU pressure',
 	'sabotage-proxy': 'Reverse-proxy sabotage'
 };
 const CPU_BLAST_SECONDS = 35;

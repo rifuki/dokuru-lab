@@ -186,7 +186,7 @@
 			</div>
 		</article>
 
-		<!-- Card 3: CPU Throttling -->
+		<!-- Card 3: CPU Pressure -->
 		<article class={`relative overflow-hidden rounded-[19px] border p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${
 			cpuUnthrottled
 				? 'border-amber-400/50 bg-amber-50/30'
@@ -200,7 +200,7 @@
 						<Cpu size={18} strokeWidth={2} />
 					</span>
 					<div>
-						<span class="block text-[15px] font-bold tracking-tight text-black">CPU Throttling</span>
+						<span class="block text-[15px] font-bold tracking-tight text-black">CPU Pressure / Limit</span>
 						<span class="font-mono text-[11px] font-medium text-black/60">Rule 5.12: Core Isolation</span>
 					</div>
 				</div>

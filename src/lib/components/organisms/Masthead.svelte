@@ -21,11 +21,11 @@
 
 		<div class="flex items-center gap-5 text-[13px] font-medium">
 			<div class="hidden items-center gap-5 @4xl/page:flex">
-				<a class="text-white/85 no-underline transition hover:text-[#1883fd]" href="#monitor">Monitor</a>
-				<a class="text-white/85 no-underline transition hover:text-[#1883fd]" href="#scenarios">Scenarios</a>
-				<a class="text-white/85 no-underline transition hover:text-[#1883fd]" href="#namespace">Namespace</a>
-				<a class="text-white/85 no-underline transition hover:text-[#1883fd]" href="#cgroup">Cgroup</a>
-				<a class="text-white/85 no-underline transition hover:text-[#1883fd]" href="#evidence">Evidence</a>
+				<a class="text-white/85 no-underline transition hover:text-[#1883fd]" href="/monitor">Monitor</a>
+				<a class="text-white/85 no-underline transition hover:text-[#1883fd]" href="/namespace">Namespace</a>
+				<a class="text-white/85 no-underline transition hover:text-[#1883fd]" href="/exploit">Exploit</a>
+				<a class="text-white/85 no-underline transition hover:text-[#1883fd]" href="/cgroup">Cgroup</a>
+				<a class="text-white/85 no-underline transition hover:text-[#1883fd]" href="/evidence">Evidence</a>
 			</div>
 		</div>
 	</div>

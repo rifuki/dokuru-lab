@@ -68,9 +68,9 @@
 					<span class="grid h-8 w-8 place-items-center rounded-lg bg-commerce/10 text-commerce" aria-hidden="true">
 						<Cpu size={15} strokeWidth={1.5} />
 					</span>
-					<span class="text-[11px] font-mono uppercase tracking-[0.1em] text-body-gray">Scheduler</span>
+					<span class="text-[11px] font-mono uppercase tracking-[0.1em] text-body-gray">CPU pressure</span>
 				</div>
-				<Field id="cpu-seconds" label="CPU seconds" type="number" min={1} max={30} value={cpuSeconds} oninput={(value) => onCpuChange(Number(value))} />
+				<Field id="cpu-seconds" label="CPU burn seconds" type="number" min={1} max={30} value={cpuSeconds} oninput={(value) => onCpuChange(Number(value))} />
 				<Button onclick={onCpuBurn} disabled={Boolean(running)}>Burn CPU</Button>
 			</article>
 		</div>

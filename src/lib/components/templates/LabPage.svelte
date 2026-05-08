@@ -33,6 +33,13 @@
 		RuntimeEvidence
 	} from '$lib/types/lab';
 
+	type LabRoute = 'home' | 'monitor' | 'namespace' | 'exploit' | 'cgroup' | 'evidence';
+	type Props = {
+		page?: LabRoute;
+	};
+
+	let { page = 'home' }: Props = $props();
+
 	let command = $state('id; cat /proc/self/uid_map; cat /proc/self/gid_map');
 	let pidCount = $state(120);
 	let memoryMb = $state(3072);
@@ -186,6 +193,13 @@
 	const terminalBusy = $derived(Boolean(running));
 	const payloadActions = new Set(['pid-bomb', 'memory-bomb', 'cpu-burn', 'cpu-blast', 'sabotage-proxy']);
 	const stopActions = new Set(['cleanup', 'stop-payloads']);
+	const routeCards = [
+		{ href: '/monitor', no: '01', title: 'Monitor', body: 'Host and container resource baseline.', Icon: Activity },
+		{ href: '/namespace', no: '02', title: 'Namespace', body: 'UID map, PID view, and namespace links.', Icon: Layers },
+		{ href: '/exploit', no: '03', title: 'Exploit', body: 'Command injection and app-data impact.', Icon: Bomb },
+		{ href: '/cgroup', no: '04', title: 'Cgroup', body: 'PID, memory, and CPU pressure last.', Icon: SlidersHorizontal },
+		{ href: '/evidence', no: '05', title: 'Evidence', body: 'Report-ready before/after proof.', Icon: FileSearch }
+	] as const;
 
 	onMount(() => {
 		mounted = true;
@@ -363,14 +377,6 @@
 		sendTerminal({ type: 'customer-probe' });
 	}
 
-	function runCpuBlast() {
-		sendTerminal({ type: 'cpu-blast' });
-	}
-
-	function runMemoryBlast() {
-		sendTerminal({ type: 'memory-bomb', mb: 3072 });
-	}
-
 	function stopActivePayload() {
 		sendTerminal({ type: 'stop-payloads' });
 	}
@@ -491,15 +497,40 @@
 		<Masthead {monitorConnected} monitorLastUpdated={lastUpdated} />
 
 		<main class="@container/main flex flex-1 flex-col">
-			<HeroSection
-				{monitorConnected}
-				{terminalConnected}
-				{customerConnected}
-				onProbe={runProbe}
-				{running}
-			/>
+			{#if page === 'home'}
+				<HeroSection
+					{monitorConnected}
+					{terminalConnected}
+					{customerConnected}
+					onProbe={runProbe}
+					{running}
+				/>
+				<section class="px-4 py-12 sm:px-6 md:px-8 lg:py-16">
+					<div class="mx-auto max-w-[1480px]">
+						<header class="mb-6">
+							<h2 class="m-0 text-[clamp(28px,3.6vw,44px)] leading-tight font-light text-black">Demo route</h2>
+						</header>
+						<div class="grid gap-4 @xl/main:grid-cols-2 @4xl/main:grid-cols-5">
+							{#each routeCards as card (card.href)}
+								{@const CardIcon = card.Icon}
+								<a href={card.href} class="group rounded-2xl bg-white p-5 text-ink no-underline shadow-[0_5px_9px_rgba(0,0,0,0.06)] ring-1 ring-black/5 transition hover:-translate-y-1 hover:ring-playstation-blue/25">
+									<div class="mb-5 flex items-start justify-between gap-3">
+										<span class="grid h-10 w-10 place-items-center rounded-xl bg-playstation-blue/10 text-playstation-blue" aria-hidden="true">
+											<CardIcon size={18} strokeWidth={1.6} />
+										</span>
+										<span class="font-mono text-[11px] tracking-[0.12em] text-body-gray">{card.no}</span>
+									</div>
+									<h3 class="m-0 mb-2 text-[18px] font-semibold tracking-tight text-black">{card.title}</h3>
+									<p class="m-0 text-[13px] leading-relaxed text-body-gray">{card.body}</p>
+								</a>
+							{/each}
+						</div>
+					</div>
+				</section>
+			{/if}
 
 			<!-- Section 01 · Blast-radius scenarios -->
+			{#if page === 'exploit'}
 			<section id="scenarios" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
@@ -519,8 +550,6 @@
 							{running}
 							{activePayload}
 							onCustomerProbe={runCustomerProbe}
-							onCpuBlast={runCpuBlast}
-							onMemoryBlast={runMemoryBlast}
 							onStopPayloads={stopActivePayload}
 							onTerminalLine={(stream, text) =>
 								pushTerminalLine({
@@ -532,8 +561,10 @@
 					</div>
 				</div>
 			</section>
+			{/if}
 
 			<!-- Section 02 · Live monitor -->
+			{#if page === 'monitor'}
 			<section id="monitor" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
@@ -550,8 +581,10 @@
 					<LiveMonitorPanel {runtime} {lastUpdated} connected={monitorConnected} />
 				</div>
 			</section>
+			{/if}
 
 			<!-- Section 03 · Namespace isolation -->
+			{#if page === 'namespace'}
 			<section id="namespace" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
@@ -574,8 +607,10 @@
 					/>
 				</div>
 			</section>
+			{/if}
 
 			<!-- Section 04 · Cgroup controls -->
+			{#if page === 'cgroup'}
 			<section id="cgroup" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
@@ -605,8 +640,10 @@
 					/>
 				</div>
 			</section>
+			{/if}
 
 			<!-- Section 05 · Evidence -->
+			{#if page === 'evidence'}
 			<section id="evidence" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
 				<div class="mx-auto max-w-[1480px]">
 					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
@@ -632,6 +669,7 @@
 					</div>
 				</div>
 			</section>
+			{/if}
 		</main>
 
 		<footer class="bg-playstation-blue px-4 py-7 text-sm text-white sm:px-6 md:px-8">

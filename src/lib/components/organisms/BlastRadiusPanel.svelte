@@ -1,11 +1,9 @@
 <script lang="ts">
 	import {
 		Activity,
-		Cpu,
 		Database,
 		FileSearch,
 		LockKeyhole,
-		MemoryStick,
 		RotateCcw,
 		ShieldCheck,
 		Terminal,
@@ -20,8 +18,6 @@
 		running: string;
 		activePayload: ActivePayload | null;
 		onCustomerProbe: () => void | Promise<void>;
-		onCpuBlast: () => void | Promise<void>;
-		onMemoryBlast: () => void | Promise<void>;
 		onStopPayloads: () => void | Promise<void>;
 		onTerminalLine?: (stream: 'system' | 'stdin' | 'stdout' | 'stderr', text: string) => void;
 	};
@@ -30,8 +26,6 @@
 		running,
 		activePayload,
 		onCustomerProbe,
-		onCpuBlast,
-		onMemoryBlast,
 		onStopPayloads,
 		onTerminalLine
 	}: Props = $props();
@@ -46,7 +40,6 @@
 
 	const busy = $derived(Boolean(running));
 	const localBusy = $derived(Boolean(localRunning));
-	const scenarioBlocked = $derived(busy || Boolean(activePayload));
 
 	async function seedMockData() {
 		await runLocal('seed', async () => {
@@ -274,36 +267,5 @@
 			<Button size="sm" variant="ghost" onclick={onCustomerProbe} disabled={busy}>Probe checkout</Button>
 		</article>
 
-		<article class="group rounded-[8px] border border-divider p-4 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-black/12 hover:shadow-[0_5px_9px_rgba(0,0,0,0.06)]">
-			<div class="mb-3 flex items-center gap-2.5">
-				<span class="grid h-7 w-7 place-items-center rounded-md bg-commerce/10 text-commerce" aria-hidden="true">
-					<Cpu size={14} strokeWidth={2.2} />
-				</span>
-				<span class="text-[13.5px] font-medium text-ink">
-					<span class="font-mono text-[11.5px] text-body-gray">B4</span>
-					<span class="ml-1.5">Cryptominer</span>
-				</span>
-			</div>
-			<p class="m-0 mb-3 min-h-12 text-[13px] leading-relaxed text-body-gray">
-				Oversubscribe every vCPU with short-lived miners. Watch customer latency when no CPU quota is configured.
-			</p>
-			<Button size="sm" onclick={onCpuBlast} disabled={scenarioBlocked}>Deploy cryptominer</Button>
-		</article>
-
-		<article class="group rounded-[8px] border border-divider p-4 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-black/12 hover:shadow-[0_5px_9px_rgba(0,0,0,0.06)]">
-			<div class="mb-3 flex items-center gap-2.5">
-				<span class="grid h-7 w-7 place-items-center rounded-md bg-commerce/10 text-commerce" aria-hidden="true">
-					<MemoryStick size={14} strokeWidth={2.2} />
-				</span>
-				<span class="text-[13.5px] font-medium text-ink">
-					<span class="font-mono text-[11.5px] text-body-gray">B5</span>
-					<span class="ml-1.5">Memory Blast</span>
-				</span>
-			</div>
-			<p class="m-0 mb-3 min-h-12 text-[13px] leading-relaxed text-body-gray">
-				Hold 3072 MiB from the compromised service. With rule 5.11 applied, only this container should be constrained.
-			</p>
-			<Button size="sm" onclick={onMemoryBlast} disabled={scenarioBlocked}>Trigger memory blast</Button>
-		</article>
 	</div>
 </Panel>

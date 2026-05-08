@@ -119,10 +119,10 @@
 					</span>
 				</Button>
 				<a
-					href="#scenarios"
+					href="/exploit"
 					class="group inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[14px] tracking-wide font-medium text-white/60 transition-all hover:text-white"
 				>
-					or jump to scenarios
+					open exploit demo
 					<ArrowRight size={14} strokeWidth={1.5} class="transition-transform duration-300 ease-out group-hover:translate-x-1" />
 				</a>
 			</div>
