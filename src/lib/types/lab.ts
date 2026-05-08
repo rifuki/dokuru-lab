@@ -6,6 +6,7 @@ export type CgroupEvidence = {
 	cpu_weight: string;
 	cpu_max: string;
 	cpu_shares_v1: string;
+	active_cpu_burners: number;
 };
 
 export type ProcessEvidence = {

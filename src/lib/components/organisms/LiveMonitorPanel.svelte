@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { Boxes, Cpu, Hash, MemoryStick } from '@lucide/svelte';
 	import Panel from '$lib/components/molecules/Panel.svelte';
 	import type { RuntimeEvidence } from '$lib/types/lab';
@@ -10,6 +11,26 @@
 	};
 
 	let { runtime, lastUpdated, connected }: Props = $props();
+
+	// Host resource info
+	let hostInfo = $state({ cpu_cores: 0, cpu_usage_percent: 0, memory_total_gb: 0, memory_available_gb: 0 });
+	
+	async function fetchHostInfo() {
+		try {
+			const res = await fetch('/api/monitor/host');
+			if (res.ok) {
+				hostInfo = await res.json();
+			}
+		} catch (e) {
+			console.error('Failed to fetch host info:', e);
+		}
+	}
+	
+	onMount(() => {
+		fetchHostInfo();
+		const interval = setInterval(fetchHostInfo, 3000); // Update every 3s
+		return () => clearInterval(interval);
+	});
 
 	function asNumber(value?: string): number | null {
 		if (!value || value === 'max' || value === 'unavailable') return null;
@@ -119,7 +140,7 @@
 						<MemoryStick size={18} strokeWidth={2} />
 					</span>
 					<div>
-						<span class="block text-[15px] font-bold tracking-tight text-black">Memory Sandbox</span>
+						<span class="block text-[15px] font-bold tracking-tight text-black">Memory Limit</span>
 						<span class="font-mono text-[11px] font-medium text-black/60">Rule 5.11: Memory Quota</span>
 					</div>
 				</div>
@@ -136,11 +157,32 @@
 					<div class="h-full rounded-full bg-playstation-cyan transition-all duration-500" style={`width: ${percent(runtime?.cgroup.memory_current, runtime?.cgroup.memory_max)}%`}></div>
 				{/if}
 			</div>
-			<div class={`mt-4 flex items-center justify-between gap-3 rounded-xl px-3 py-2 ${
-				memUnlimited ? 'border border-red-200/80 bg-red-50' : 'border border-black/5 bg-white/70'
-			}`}>
-				<span class="text-[13px] font-medium text-black/65">Memory limit</span>
-				<strong class={`text-right font-mono text-[13px] font-bold ${memUnlimited ? 'text-red-600' : 'text-black'}`}>{formatMemoryLimit(runtime?.cgroup.memory_max)}</strong>
+			<div class="mt-4 grid gap-3 text-[13.5px]">
+				<div class="rounded-lg bg-black/5 p-3">
+					<dt class="mb-2 font-semibold text-black/80">Host Memory</dt>
+					<div class="grid gap-2 text-[12.5px]">
+						<div class="flex justify-between gap-3">
+							<span class="text-black/70">Total</span>
+							<span class="font-mono font-bold text-black">{hostInfo.memory_total_gb} GB</span>
+						</div>
+						<div class="flex justify-between gap-3">
+							<span class="text-black/70">Available</span>
+							<span class="font-mono font-bold text-black">{hostInfo.memory_available_gb} GB</span>
+						</div>
+					</div>
+				</div>
+				<div class={`flex items-center justify-between gap-3 rounded-xl px-3 py-2 ${
+					memUnlimited ? 'border border-red-200/80 bg-red-50' : 'border border-black/5 bg-white/70'
+				}`}>
+					<span class="text-[13px] font-medium text-black/65">Container limit</span>
+					<strong class={`text-right font-mono text-[13px] font-bold ${memUnlimited ? 'text-red-600' : 'text-black'}`}>{formatMemoryLimit(runtime?.cgroup.memory_max)}</strong>
+				</div>
+				{#if !memUnlimited}
+				<div class="flex items-center justify-between gap-3 px-3 py-2">
+					<span class="text-[13px] font-medium text-black/65">Usage</span>
+					<strong class="text-right font-mono text-[13px] font-bold text-black">{percent(runtime?.cgroup.memory_current, runtime?.cgroup.memory_max)}%</strong>
+				</div>
+				{/if}
 			</div>
 		</article>
 
@@ -164,12 +206,25 @@
 				</div>
 			</div>
 			<dl class="mt-4 grid gap-3 text-[13.5px]">
+				<div class="rounded-lg bg-black/5 p-3">
+					<dt class="mb-2 font-semibold text-black/80">Host Resources</dt>
+					<div class="grid gap-2 text-[12.5px]">
+						<div class="flex justify-between gap-3">
+							<span class="text-black/70">Total cores</span>
+							<span class="font-mono font-bold text-black">{hostInfo.cpu_cores}</span>
+						</div>
+						<div class="flex justify-between gap-3">
+							<span class="text-black/70">Current usage</span>
+							<span class={`font-mono font-bold ${hostInfo.cpu_usage_percent > 80 ? 'text-red-500' : 'text-black'}`}>{hostInfo.cpu_usage_percent}%</span>
+						</div>
+					</div>
+				</div>
 				<div class="flex items-center justify-between gap-3 border-b border-black/5 pb-2">
-					<dt class="font-medium text-black/70">Quota status</dt>
+					<dt class="font-medium text-black/70">Limit status</dt>
 					<dd class="m-0">
 						<span class={`rounded-full px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] ${
 							cpuUnthrottled ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
-						}`}>{cpuUnthrottled ? 'No CPU quota' : 'Configured'}</span>
+						}`}>{cpuUnthrottled ? 'UNLIMITED' : 'LIMITED'}</span>
 					</dd>
 				</div>
 				<div class="flex justify-between gap-3 border-b border-black/5 pb-2"><dt class="font-medium text-black/70">cpu.weight</dt><dd class="m-0 font-mono font-bold text-black tabular-nums">{runtime?.cgroup.cpu_weight || '...'}</dd></div>
@@ -179,7 +234,7 @@
 				</div>
 				<div class="flex justify-between gap-3">
 					<dt class="font-medium text-black/70">Active burners</dt>
-					<dd class={`m-0 font-mono font-bold tabular-nums ${(runtime?.processes.cpu_burners ?? '0') !== '0' ? 'text-red-500' : 'text-black'}`}>{runtime?.processes.cpu_burners || '0'}</dd>
+					<dd class={`m-0 font-mono font-bold tabular-nums ${(runtime?.cgroup.active_cpu_burners ?? 0) > 0 ? 'text-red-500' : 'text-black'}`}>{runtime?.cgroup.active_cpu_burners ?? 0}</dd>
 				</div>
 			</dl>
 		</article>

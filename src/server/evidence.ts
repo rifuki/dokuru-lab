@@ -16,6 +16,15 @@ export function runtimeEvidence(): RuntimeEvidence {
 }
 
 export function cgroupEvidence(): CgroupEvidence {
+	// Count active CPU burners
+	let activeBurners = 0;
+	try {
+		const count = commandSync("ps aux | grep '[d]okuru_cpu_burn' | wc -l");
+		activeBurners = parseInt(count) || 0;
+	} catch {
+		activeBurners = 0;
+	}
+	
 	return {
 		pids_current: readFirst(['/sys/fs/cgroup/pids.current', '/sys/fs/cgroup/pids/pids.current']),
 		pids_max: readFirst(['/sys/fs/cgroup/pids.max', '/sys/fs/cgroup/pids/pids.max']),
@@ -23,7 +32,8 @@ export function cgroupEvidence(): CgroupEvidence {
 		memory_max: readFirst(['/sys/fs/cgroup/memory.max', '/sys/fs/cgroup/memory/memory.limit_in_bytes']),
 		cpu_weight: readFirst(['/sys/fs/cgroup/cpu.weight']),
 		cpu_max: readFirst(['/sys/fs/cgroup/cpu.max']),
-		cpu_shares_v1: readFirst(['/sys/fs/cgroup/cpu/cpu.shares'])
+		cpu_shares_v1: readFirst(['/sys/fs/cgroup/cpu/cpu.shares']),
+		active_cpu_burners: activeBurners
 	};
 }
 

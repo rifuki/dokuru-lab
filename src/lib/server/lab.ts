@@ -52,7 +52,55 @@ export function readFirst(paths: string[]): string {
 	return 'unavailable';
 }
 
+export function getHostResourceInfo() {
+	const cpuCores = cpus().length;
+	
+	// Get CPU usage percentage
+	let cpuUsage = 0;
+	try {
+		const topOutput = execFileSync('sh', ['-c', "top -bn1 | grep 'Cpu(s)' | awk '{print $2}' | cut -d'%' -f1"], { timeout: 2000 })
+			.toString()
+			.trim();
+		cpuUsage = parseFloat(topOutput) || 0;
+	} catch {
+		cpuUsage = 0;
+	}
+	
+	// Get memory info (in GB)
+	let memoryTotalGb = 0;
+	let memoryAvailableGb = 0;
+	try {
+		const memOutput = execFileSync('sh', ['-c', "free -g | grep Mem | awk '{print $2,$7}'"], { timeout: 2000 })
+			.toString()
+			.trim()
+			.split(' ');
+		memoryTotalGb = parseInt(memOutput[0]) || 0;
+		memoryAvailableGb = parseInt(memOutput[1]) || 0;
+	} catch {
+		memoryTotalGb = 0;
+		memoryAvailableGb = 0;
+	}
+	
+	return {
+		cpu_cores: cpuCores,
+		cpu_usage_percent: Math.round(cpuUsage * 10) / 10,
+		memory_total_gb: memoryTotalGb,
+		memory_available_gb: memoryAvailableGb
+	};
+}
+
 export function cgroupEvidence(): CgroupEvidence {
+	// Count active CPU burners
+	let activeBurners = 0;
+	try {
+		const count = execFileSync('sh', ['-c', "ps aux | grep '[d]okuru_cpu_burn' | wc -l"], { timeout: 2000 })
+			.toString()
+			.trim();
+		activeBurners = parseInt(count) || 0;
+	} catch {
+		activeBurners = 0;
+	}
+	
 	return {
 		pids_current: readFirst(['/sys/fs/cgroup/pids.current', '/sys/fs/cgroup/pids/pids.current']),
 		pids_max: readFirst(['/sys/fs/cgroup/pids.max', '/sys/fs/cgroup/pids/pids.max']),
@@ -66,7 +114,8 @@ export function cgroupEvidence(): CgroupEvidence {
 		]),
 		cpu_weight: readFirst(['/sys/fs/cgroup/cpu.weight']),
 		cpu_max: readFirst(['/sys/fs/cgroup/cpu.max']),
-		cpu_shares_v1: readFirst(['/sys/fs/cgroup/cpu/cpu.shares'])
+		cpu_shares_v1: readFirst(['/sys/fs/cgroup/cpu/cpu.shares']),
+		active_cpu_burners: activeBurners
 	};
 }
 
