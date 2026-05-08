@@ -250,45 +250,45 @@
 	{/if}
 </div>
 
-<footer class="border-t border-white/5 px-4 py-3">
-	<div class="grid grid-cols-[minmax(0,1fr)_40px] items-center gap-2">
+<footer class="border-t border-white/5 px-4 py-2">
+	<div class="grid grid-cols-[minmax(0,1fr)_32px] items-center gap-2">
 		<input
 			value={stdinText}
 			oninput={(event) => (stdinText = event.currentTarget.value)}
 			onkeydown={onStdinKeydown}
 			disabled={inputDisabled}
 			placeholder={inputPlaceholder}
-			class="h-10 min-w-0 rounded-[6px] border border-white/10 bg-white/[0.04] px-3 font-mono text-[12px] text-white/85 outline-none transition placeholder:text-white/25 focus:border-playstation-blue/60 focus:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-45"
+			class="h-8 min-w-0 rounded-[5px] border border-white/10 bg-white/[0.04] px-2.5 font-mono text-[11px] text-white/85 outline-none transition placeholder:text-white/25 focus:border-playstation-blue/60 focus:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-45"
 			aria-label="Terminal input"
 		/>
 		<button
 			type="button"
 			onclick={submitInput}
 			disabled={inputDisabled || !stdinText.trim()}
-			class="grid h-10 w-10 cursor-pointer place-items-center rounded-[6px] bg-playstation-blue text-white transition hover:bg-link-hover disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/25"
+			class="grid h-8 w-8 cursor-pointer place-items-center rounded-[5px] bg-playstation-blue text-white transition hover:bg-link-hover disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/25"
 			aria-label={inputActionLabel}
 			title={inputActionLabel}
 		>
-			<Send size={15} strokeWidth={2} />
+			<Send size={13} strokeWidth={2} />
 		</button>
 	</div>
-	<div class="mt-2 flex items-center justify-between gap-3">
+	<div class="mt-1.5 flex items-center justify-between gap-3">
 		<div class="flex min-w-0 items-center gap-2">
-			<span class="font-mono text-[10px] tracking-[0.04em] {stickToBottom ? 'text-white/40' : 'text-white/20'}">auto-scroll</span>
+			<span class="font-mono text-[9.5px] tracking-[0.04em] {stickToBottom ? 'text-white/35' : 'text-white/18'}">auto-scroll</span>
 			<button
 				type="button"
 				onclick={() => {
 					stickToBottom = !stickToBottom;
 					if (stickToBottom) jumpToLatest();
 				}}
-				class="relative inline-flex h-[14px] w-[26px] cursor-pointer items-center rounded-full transition-colors duration-200 {stickToBottom ? 'bg-emerald-500' : 'bg-white/15'}"
+				class="relative inline-flex h-3 w-6 cursor-pointer items-center rounded-full transition-colors duration-200 {stickToBottom ? 'bg-emerald-500' : 'bg-white/15'}"
 				title={stickToBottom ? 'Auto-scroll ON — click to pause' : 'Auto-scroll OFF — click to resume'}
 				aria-pressed={stickToBottom}
 				aria-label="Toggle auto-scroll"
 			>
-				<span class="absolute inline-block h-[10px] w-[10px] rounded-full bg-white shadow-sm transition-transform duration-200 {stickToBottom ? 'translate-x-[14px]' : 'translate-x-[2px]'}"></span>
+				<span class="absolute inline-block h-2 w-2 rounded-full bg-white shadow-sm transition-transform duration-200 {stickToBottom ? 'translate-x-[14px]' : 'translate-x-[2px]'}"></span>
 			</button>
 		</div>
-		<span class="shrink-0 font-mono text-[10px] tracking-[0.16em] text-white/20">drag edge to resize</span>
+		<span class="shrink-0 font-mono text-[9.5px] tracking-[0.14em] text-white/18">drag edge to resize</span>
 	</div>
 </footer>
