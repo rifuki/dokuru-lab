@@ -88,7 +88,7 @@ The repository includes GitHub Actions workflows modeled after the Dokuru and ri
 The browser lab uses:
 
 - `wss://base.lab.dokuru.rifuki.dev/ws/monitor` for live namespace and cgroup metrics.
-- `wss://base.lab.dokuru.rifuki.dev/ws/terminal` for real stdout/stderr from commands and pressure tests.
+- `wss://base.lab.dokuru.rifuki.dev/ws/terminal` for real stdout/stderr from commands and pressure tests. The terminal also forwards stdin to the active interactive `exec` command, so a browser operator can answer prompts without leaving the lab page.
 - `wss://base.lab.dokuru.rifuki.dev/ws/customer` for real checkout latency samples against `victim-checkout`.
 
 Set these repository variables for automatic deployment from `main`:
@@ -185,6 +185,8 @@ Blast-radius terminal actions are available from the browser UI over `/ws/termin
 
 - `cpu-blast`: spawn 4 short-lived CPU miners and watch Customer Live View latency.
 - `memory-bomb` with `mb=3072`: push host memory pressure before rule 5.11 is fixed.
+
+Browser helper buttons write their structured JSON result into the card that triggered the action and also append the request/result to the global terminal timeline. The global terminal is the source of truth for stdout/stderr/stdin during a demo; card output is kept as a compact per-scenario summary.
 
 The main browser flow intentionally avoids host-shell claims. The command injection endpoint represents a CVE-backed vulnerability class; the Docker baseline evidence is the UID map, host-root bind-mounted file ownership, app data compromise, and unconstrained cgroup pressure.
 
