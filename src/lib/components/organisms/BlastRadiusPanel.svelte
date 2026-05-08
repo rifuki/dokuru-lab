@@ -23,6 +23,7 @@
 		onCpuBlast: () => void | Promise<void>;
 		onMemoryBlast: () => void | Promise<void>;
 		onStopPayloads: () => void | Promise<void>;
+		onTerminalLine?: (stream: 'system' | 'stdin' | 'stdout' | 'stderr', text: string) => void;
 	};
 
 	let {
@@ -31,7 +32,8 @@
 		onCustomerProbe,
 		onCpuBlast,
 		onMemoryBlast,
-		onStopPayloads
+		onStopPayloads,
+		onTerminalLine
 	}: Props = $props();
 
 	let setupResult = $state<LabResponse | null>(null);
@@ -121,13 +123,17 @@
 	}
 
 	async function requestJson(path: string, options: RequestInit = {}): Promise<LabResponse> {
+		onTerminalLine?.('system', `$ fetch ${options.method || 'GET'} ${path}\n`);
 		try {
 			const response = await fetch(path, options);
 			const text = await response.text();
 			const parsed = JSON.parse(text) as LabResponse;
+			onTerminalLine?.('stdout', `${JSON.stringify({ http_status: response.status, ...parsed }, null, 2).slice(0, 4000)}\n`);
 			return { http_status: response.status, ...parsed };
 		} catch (error) {
-			return { ok: false, error: error instanceof Error ? error.message : String(error) };
+			const message = error instanceof Error ? error.message : String(error);
+			onTerminalLine?.('stderr', `${message}\n`);
+			return { ok: false, error: message };
 		}
 	}
 

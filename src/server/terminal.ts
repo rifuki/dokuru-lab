@@ -12,6 +12,7 @@ import { line, send } from './socket';
 type TerminalPayload = {
 	type?: unknown;
 	command?: unknown;
+	data?: unknown;
 	count?: unknown;
 	mb?: unknown;
 	seconds?: unknown;
@@ -40,6 +41,7 @@ export class TerminalController {
 	private terminalActionRunning = false;
 	private activePayload: ActivePayload | null = null;
 	private activePayloadTimer: ReturnType<typeof setTimeout> | null = null;
+	private stdinChild: ChildProcessWithoutNullStreams | null = null;
 	private stopRequested = false;
 
 	constructor(
@@ -70,6 +72,11 @@ export class TerminalController {
 		}
 
 		const type = String(message.type || '');
+
+		if (type === 'stdin') {
+			this.writeStdin(socket, message.data);
+			return;
+		}
 
 		if (type === 'stop-payloads') {
 			send(socket, 'terminal.start', { action: type });
@@ -117,7 +124,7 @@ export class TerminalController {
 
 	private async dispatchAction(socket: WebSocket, type: string, message: TerminalPayload): Promise<void> {
 		if (type === 'exec') {
-			await runShell(socket, String(message.command || 'id').trim().slice(0, 1000) || 'id');
+			await this.runExec(socket, message.command);
 		} else if (type === 'probe') {
 			await this.runProbe(socket);
 		} else if (type === 'pid-bomb') {
@@ -140,6 +147,49 @@ export class TerminalController {
 			line(socket, 'stderr', `unknown action: ${type}\n`);
 			throw new Error(`unknown action: ${type}`);
 		}
+	}
+
+	private writeStdin(socket: WebSocket, rawData: unknown): void {
+		const text = String(rawData ?? '');
+		if (!text) return;
+
+		const child = this.stdinChild;
+		if (!child || child.stdin.destroyed || child.killed) {
+			line(socket, 'stderr', 'no active stdin target; run an exec command first\n');
+			return;
+		}
+
+		child.stdin.write(text);
+		line(socket, 'stdin', text);
+	}
+
+	private async runExec(socket: WebSocket, rawCommand: unknown): Promise<void> {
+		const command = String(rawCommand || 'id').trim().slice(0, 1000) || 'id';
+
+		await new Promise<void>((resolve) => {
+			line(socket, 'system', `$ ${command}\n`);
+			const child = spawn('/bin/sh', ['-lc', command], {
+				env: process.env,
+				cwd: process.cwd(),
+				stdio: ['pipe', 'pipe', 'pipe']
+			});
+			this.stdinChild = child;
+
+			const timeout = setTimeout(() => {
+				line(socket, 'stderr', `command timed out after 120000ms; killing pid ${child.pid}\n`);
+				child.kill('SIGKILL');
+			}, 120_000);
+
+			child.stdout.on('data', (chunk: Buffer) => line(socket, 'stdout', chunk.toString()));
+			child.stderr.on('data', (chunk: Buffer) => line(socket, 'stderr', chunk.toString()));
+			child.on('error', (error) => line(socket, 'stderr', `${error.message}\n`));
+			child.on('close', (code, signal) => {
+				clearTimeout(timeout);
+				if (this.stdinChild === child) this.stdinChild = null;
+				line(socket, 'system', `process exited code=${code ?? 'null'} signal=${signal ?? 'none'}\n`);
+				resolve();
+			});
+		});
 	}
 
 	private async runProbe(socket: WebSocket): Promise<void> {

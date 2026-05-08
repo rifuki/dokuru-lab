@@ -415,6 +415,19 @@
 		terminalSocket.send(JSON.stringify(payload));
 	}
 
+	function sendTerminalStdin(text: string) {
+		if (!terminalSocket || terminalSocket.readyState !== WebSocket.OPEN) {
+			pushTerminalLine({
+				stream: 'stderr',
+				text: 'terminal websocket is not connected\n',
+				at: timeLabel()
+			});
+			return;
+		}
+
+		terminalSocket.send(JSON.stringify({ type: 'stdin', data: text }));
+	}
+
 	function clearTerminal() {
 		terminalLines = [];
 	}
@@ -503,6 +516,12 @@
 							onCpuBlast={runCpuBlast}
 							onMemoryBlast={runMemoryBlast}
 							onStopPayloads={stopActivePayload}
+							onTerminalLine={(stream, text) =>
+								pushTerminalLine({
+									stream,
+									text,
+									at: timeLabel()
+								})}
 						/>
 					</div>
 				</div>
@@ -719,6 +738,7 @@
 								busy={terminalBusy}
 								onClear={clearTerminal}
 								onClose={() => removePanel('terminal')}
+								onSendStdin={sendTerminalStdin}
 								hideHeader
 							/>
 						{:else}
@@ -745,6 +765,7 @@
 									busy={terminalBusy}
 									onClear={clearTerminal}
 									onClose={() => removePanel('terminal')}
+									onSendStdin={sendTerminalStdin}
 									hideHeader
 								/>
 							{:else}
@@ -779,6 +800,7 @@
 									busy={terminalBusy}
 									onClear={clearTerminal}
 									onClose={() => removePanel('terminal')}
+									onSendStdin={sendTerminalStdin}
 									hideHeader
 								/>
 							{:else}
@@ -845,6 +867,7 @@
 				busy={terminalBusy}
 				onClear={clearTerminal}
 				onClose={closeTerminal}
+				onSendStdin={sendTerminalStdin}
 			/>
 		</div>
 	</div>

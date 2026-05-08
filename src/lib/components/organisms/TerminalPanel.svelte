@@ -4,7 +4,7 @@
 	import Panel from '$lib/components/molecules/Panel.svelte';
 
 	export type TerminalLine = {
-		stream: 'system' | 'stdout' | 'stderr';
+		stream: 'system' | 'stdin' | 'stdout' | 'stderr';
 		text: string;
 		at: string;
 	};
@@ -28,6 +28,7 @@
 
 	function streamClass(stream: TerminalLine['stream']): string {
 		if (stream === 'stderr') return 'text-[#ff8278]';
+		if (stream === 'stdin') return 'text-[#b8f7cf]';
 		if (stream === 'system') return 'text-[#9ad7ff]';
 		return 'text-white';
 	}
