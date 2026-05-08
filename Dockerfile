@@ -16,6 +16,7 @@ RUN apt-get update \
     iputils-ping \
     postgresql-client \
     procps \
+    util-linux \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

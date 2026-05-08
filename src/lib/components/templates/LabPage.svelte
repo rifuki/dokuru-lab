@@ -183,7 +183,6 @@
 
 	const runtime = $derived(evidenceData?.runtime as RuntimeEvidence | undefined);
 	const terminalBusy = $derived(Boolean(running));
-	const terminalAcceptsStdin = $derived(running === 'exec');
 	const payloadActions = new Set(['pid-bomb', 'memory-bomb', 'cpu-burn', 'cpu-blast', 'sabotage-proxy']);
 	const stopActions = new Set(['cleanup', 'stop-payloads']);
 
@@ -416,7 +415,7 @@
 		terminalSocket.send(JSON.stringify(payload));
 	}
 
-	function sendTerminalStdin(text: string) {
+	function sendTerminalData(data: string) {
 		if (!terminalSocket || terminalSocket.readyState !== WebSocket.OPEN) {
 			pushTerminalLine({
 				stream: 'stderr',
@@ -426,28 +425,7 @@
 			return;
 		}
 
-		terminalSocket.send(JSON.stringify({ type: 'stdin', data: text }));
-	}
-
-	function submitTerminalInput(text: string) {
-		const commandText = text.trim();
-		if (!commandText) return;
-
-		if (running === 'exec') {
-			sendTerminalStdin(`${text}\n`);
-			return;
-		}
-
-		if (running) {
-			pushTerminalLine({
-				stream: 'stderr',
-				text: `terminal is busy running ${running}\n`,
-				at: timeLabel()
-			});
-			return;
-		}
-
-		sendTerminal({ type: 'exec', command: commandText });
+		terminalSocket.send(JSON.stringify({ type: 'terminal.data', data }));
 	}
 
 	function clearTerminal() {
@@ -757,11 +735,9 @@
 							<TerminalDrawer
 								lines={terminalLines}
 								connected={terminalConnected}
-								busy={terminalBusy}
-								stdinActive={terminalAcceptsStdin}
 								onClear={clearTerminal}
 								onClose={() => removePanel('terminal')}
-								onSubmitInput={submitTerminalInput}
+								onData={sendTerminalData}
 								hideHeader
 							/>
 						{:else}
@@ -785,11 +761,9 @@
 								<TerminalDrawer
 									lines={terminalLines}
 									connected={terminalConnected}
-									busy={terminalBusy}
-									stdinActive={terminalAcceptsStdin}
 									onClear={clearTerminal}
 									onClose={() => removePanel('terminal')}
-									onSubmitInput={submitTerminalInput}
+									onData={sendTerminalData}
 									hideHeader
 								/>
 							{:else}
@@ -821,11 +795,9 @@
 								<TerminalDrawer
 									lines={terminalLines}
 									connected={terminalConnected}
-									busy={terminalBusy}
-									stdinActive={terminalAcceptsStdin}
 									onClear={clearTerminal}
 									onClose={() => removePanel('terminal')}
-									onSubmitInput={submitTerminalInput}
+									onData={sendTerminalData}
 									hideHeader
 								/>
 							{:else}
@@ -889,11 +861,9 @@
 			<TerminalDrawer
 				lines={terminalLines}
 				connected={terminalConnected}
-				busy={terminalBusy}
-				stdinActive={terminalAcceptsStdin}
 				onClear={clearTerminal}
 				onClose={closeTerminal}
-				onSubmitInput={submitTerminalInput}
+				onData={sendTerminalData}
 			/>
 		</div>
 	</div>

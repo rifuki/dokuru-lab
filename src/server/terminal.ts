@@ -41,6 +41,7 @@ export class TerminalController {
 	private terminalActionRunning = false;
 	private activePayload: ActivePayload | null = null;
 	private activePayloadTimer: ReturnType<typeof setTimeout> | null = null;
+	private shellSessions = new WeakMap<WebSocket, ChildProcessWithoutNullStreams>();
 	private stdinChild: ChildProcessWithoutNullStreams | null = null;
 	private stopRequested = false;
 
@@ -54,9 +55,14 @@ export class TerminalController {
 			line(socket, 'system', 'connected to dokuru-lab-baseline terminal websocket\n');
 			line(socket, 'system', 'commands run inside the vulnerable container runtime\n');
 			this.sendActivePayload(socket);
+			this.startShellSession(socket);
 
 			socket.on('message', (raw) => {
 				void this.handleMessage(socket, raw);
+			});
+
+			socket.on('close', () => {
+				this.stopShellSession(socket);
 			});
 		});
 	}
@@ -72,6 +78,13 @@ export class TerminalController {
 		}
 
 		const type = String(message.type || '');
+
+		if (type === 'terminal.data') {
+			if (!this.writeShellData(socket, message.data)) {
+				line(socket, 'stderr', 'interactive shell is not available; reconnect the terminal\n');
+			}
+			return;
+		}
 
 		if (type === 'stdin') {
 			if (this.writeStdin(socket, message.data)) return;
@@ -157,6 +170,66 @@ export class TerminalController {
 		}
 	}
 
+	private startShellSession(socket: WebSocket): void {
+		const env = terminalEnv();
+		const shell = env.SHELL || '/bin/sh';
+		const child = spawn('script', ['-qfec', shell, '/dev/null'], {
+			env,
+			cwd: process.cwd(),
+			stdio: ['pipe', 'pipe', 'pipe']
+		});
+
+		this.attachShellProcess(socket, child, true);
+	}
+
+	private attachShellProcess(socket: WebSocket, child: ChildProcessWithoutNullStreams, allowFallback: boolean): void {
+		this.shellSessions.set(socket, child);
+		child.stdout.on('data', (chunk: Buffer) => line(socket, 'stdout', chunk.toString()));
+		child.stderr.on('data', (chunk: Buffer) => line(socket, 'stderr', chunk.toString()));
+		child.on('error', (error) => {
+			if (this.shellSessions.get(socket) === child) this.shellSessions.delete(socket);
+			line(socket, 'stderr', `interactive shell failed: ${error.message}\n`);
+			if (allowFallback) this.startPipeShellSession(socket);
+		});
+		child.on('close', (code, signal) => {
+			if (this.shellSessions.get(socket) === child) this.shellSessions.delete(socket);
+			line(socket, 'system', `interactive shell exited code=${code ?? 'null'} signal=${signal ?? 'none'}\n`);
+			if (allowFallback && code !== 0 && socket.readyState === 1) {
+				line(socket, 'system', 'falling back to pipe-backed shell\n');
+				this.startPipeShellSession(socket);
+			}
+		});
+	}
+
+	private startPipeShellSession(socket: WebSocket): void {
+		const env = terminalEnv();
+		const child = spawn(env.SHELL || '/bin/sh', ['-i'], {
+			env,
+			cwd: process.cwd(),
+			stdio: ['pipe', 'pipe', 'pipe']
+		});
+
+		this.attachShellProcess(socket, child, false);
+	}
+
+	private stopShellSession(socket: WebSocket): void {
+		const child = this.shellSessions.get(socket);
+		if (!child) return;
+		this.shellSessions.delete(socket);
+		child.kill('SIGTERM');
+	}
+
+	private writeShellData(socket: WebSocket, rawData: unknown): boolean {
+		const text = String(rawData ?? '');
+		if (!text) return true;
+
+		const child = this.shellSessions.get(socket);
+		if (!child || child.stdin.destroyed || child.killed) return false;
+
+		child.stdin.write(text);
+		return true;
+	}
+
 	private writeStdin(socket: WebSocket, rawData: unknown): boolean {
 		const text = String(rawData ?? '');
 		if (!text) return true;
@@ -178,7 +251,7 @@ export class TerminalController {
 		await new Promise<void>((resolve) => {
 			line(socket, 'system', `$ ${command}\n`);
 			const child = spawn('/bin/sh', ['-lc', command], {
-				env: process.env,
+				env: terminalEnv(),
 				cwd: process.cwd(),
 				stdio: ['pipe', 'pipe', 'pipe']
 			});
@@ -518,6 +591,15 @@ function cpuBlastWorkers(rawWorkers: unknown): number {
 
 function recommendedCpuBlastWorkers(): number {
 	return clamp(Math.max(cpus().length * 2, 8), 4, MAX_CPU_BLAST_WORKERS);
+}
+
+function terminalEnv(): NodeJS.ProcessEnv {
+	return {
+		...process.env,
+		SHELL: process.env.SHELL || '/bin/sh',
+		TERM: process.env.TERM || 'xterm-256color',
+		PS1: process.env.PS1 || '\\$ '
+	};
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

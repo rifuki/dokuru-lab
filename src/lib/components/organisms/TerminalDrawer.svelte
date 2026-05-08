@@ -1,153 +1,158 @@
 <script lang="ts">
-	import { tick } from 'svelte';
-	import { ArrowDown, Eraser, Send, Terminal as TerminalIcon, X } from '@lucide/svelte';
+	import { onMount } from 'svelte';
+	import { Eraser, Terminal as TerminalIcon, X } from '@lucide/svelte';
+	import '@xterm/xterm/css/xterm.css';
+	import type { FitAddon } from '@xterm/addon-fit';
+	import type { Terminal as XTerm } from '@xterm/xterm';
 	import type { TerminalLine } from '$lib/components/organisms/TerminalPanel.svelte';
-
-	type StreamKey = 'stdin' | 'stdout' | 'stderr' | 'system';
 
 	type Props = {
 		lines: TerminalLine[];
 		connected: boolean;
-		busy: boolean;
-		stdinActive: boolean;
 		hideHeader?: boolean;
 		onClear: () => void;
 		onClose: () => void;
-		onSubmitInput: (text: string) => void;
+		onData: (data: string) => void;
 	};
 
-	let { lines, connected, busy, stdinActive, hideHeader = false, onClear, onClose, onSubmitInput }: Props = $props();
-	let viewport = $state<HTMLDivElement | null>(null);
-	let stdinText = $state('');
-	let stickToBottom = $state(true);
-	let pendingCount = $state(0);
-	let activeStreams = $state<Record<StreamKey, boolean>>({
-		stdin: true,
-		stdout: true,
-		stderr: true,
-		system: true
-	});
+	let { lines, connected, hideHeader = false, onClear, onClose, onData }: Props = $props();
+	let host = $state<HTMLDivElement | null>(null);
+	let terminalVersion = $state(0);
+	let terminal: XTerm | null = null;
+	let fitAddon: FitAddon | null = null;
+	let renderedLineCount = 0;
 
-	const visibleLines = $derived(lines.filter((line) => activeStreams[line.stream]));
-
-	$effect(() => {
-		visibleLines.length;
-		void tick().then(() => {
-			if (!viewport) return;
-			if (stickToBottom) {
-				viewport.scrollTop = viewport.scrollHeight;
-				pendingCount = 0;
-			} else {
-				pendingCount += 1;
-			}
-		});
-	});
-
-	function onScroll() {
-		if (!viewport) return;
-		const distance = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
-		const next = distance < 28;
-		if (next !== stickToBottom) stickToBottom = next;
-		if (next) pendingCount = 0;
-	}
-
-	function jumpToLatest() {
-		if (!viewport) return;
-		viewport.scrollTop = viewport.scrollHeight;
-		stickToBottom = true;
-		pendingCount = 0;
-	}
-
-	function toggleStream(key: StreamKey) {
-		activeStreams = { ...activeStreams, [key]: !activeStreams[key] };
-	}
-
-	function streamColor(stream: TerminalLine['stream']): string {
-		if (stream === 'stderr') return 'text-[#ff8278]';
-		if (stream === 'stdin') return 'text-[#b8f7cf]';
-		if (stream === 'system') return 'text-[#9ad7ff]';
-		return 'text-white/90';
-	}
-
-	function streamGlyph(stream: TerminalLine['stream']): string {
-		if (stream === 'stderr') return 'err';
-		if (stream === 'stdin') return 'in';
-		if (stream === 'system') return 'sys';
-		return 'out';
-	}
-
-	function submitInput() {
-		const text = stdinText;
-		if (!text.trim() || inputDisabled) return;
-		onSubmitInput(text);
-		stdinText = '';
-	}
-
-	function onStdinKeydown(event: KeyboardEvent) {
-		if (event.key !== 'Enter' || event.shiftKey) return;
-		event.preventDefault();
-		submitInput();
-	}
-
-	const statusLabel = $derived(connected ? (busy ? 'streaming' : 'live') : 'connecting');
-	const inputDisabled = $derived(!connected || (busy && !stdinActive));
-	const inputActionLabel = $derived(stdinActive ? 'Send stdin' : 'Run command');
-	const inputPlaceholder = $derived(
-		!connected
-			? 'terminal websocket connecting'
-			: stdinActive
-				? 'send text to active exec process'
-				: busy
-					? 'wait for active action to finish'
-					: 'run command in container'
-	);
-	const filteredCount = $derived(visibleLines.length);
+	const statusLabel = $derived(connected ? 'interactive' : 'reconnecting');
 	const totalCount = $derived(lines.length);
 
-	const streamMeta: { key: StreamKey; label: string }[] = [
-		{ key: 'stdin', label: 'in' },
-		{ key: 'stdout', label: 'out' },
-		{ key: 'stderr', label: 'err' },
-		{ key: 'system', label: 'sys' }
-	];
+	onMount(() => {
+		let disposed = false;
+		let resizeObserver: ResizeObserver | null = null;
+		let dataDisposable: { dispose: () => void } | null = null;
+
+		void (async () => {
+			const [{ Terminal }, { FitAddon }] = await Promise.all([import('@xterm/xterm'), import('@xterm/addon-fit')]);
+			if (disposed || !host) return;
+
+			const term = new Terminal({
+				allowProposedApi: false,
+				convertEol: true,
+				cursorBlink: true,
+				cursorStyle: 'bar',
+				fontFamily: 'JetBrains Mono, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+				fontSize: 12,
+				lineHeight: 1.45,
+				scrollback: 4000,
+				theme: {
+					background: '#050505',
+					foreground: '#d8d8d8',
+					cursor: '#9ad7ff',
+					selectionBackground: '#1f5f8f66',
+					black: '#050505',
+					red: '#ff8278',
+					green: '#b8f7cf',
+					yellow: '#ffd479',
+					blue: '#9ad7ff',
+					magenta: '#c9a7ff',
+					cyan: '#70e2ff',
+					white: '#f2f2f2'
+				}
+			});
+
+			const fit = new FitAddon();
+			term.loadAddon(fit);
+			term.open(host);
+			terminal = term;
+			fitAddon = fit;
+			terminalVersion += 1;
+
+			dataDisposable = term.onData((data) => {
+				if (connected) onData(data);
+			});
+
+			resizeObserver = new ResizeObserver(() => fitTerminal());
+			resizeObserver.observe(host);
+			window.setTimeout(fitTerminal, 0);
+		})();
+
+		return () => {
+			disposed = true;
+			dataDisposable?.dispose();
+			resizeObserver?.disconnect();
+			terminal?.dispose();
+			terminal = null;
+			fitAddon = null;
+		};
+	});
+
+	$effect(() => {
+		terminalVersion;
+		lines.length;
+		if (!terminal) return;
+
+		if (lines.length < renderedLineCount) {
+			terminal.clear();
+			renderedLineCount = 0;
+		}
+
+		for (let index = renderedLineCount; index < lines.length; index += 1) {
+			writeTerminalLine(lines[index]);
+		}
+		renderedLineCount = lines.length;
+	});
+
+	function fitTerminal() {
+		try {
+			fitAddon?.fit();
+		} catch {
+			/* xterm cannot fit while hidden */
+		}
+	}
+
+	function writeTerminalLine(line: TerminalLine) {
+		if (!terminal) return;
+
+		if (line.stream === 'stderr') {
+			terminal.write(`\x1b[38;2;255;130;120m${line.text}\x1b[0m`);
+			return;
+		}
+
+		if (line.stream === 'system') {
+			terminal.write(`\x1b[38;2;154;215;255m${line.text}\x1b[0m`);
+			return;
+		}
+
+		terminal.write(line.text);
+	}
+
+	function clearTerminal() {
+		terminal?.clear();
+		renderedLineCount = 0;
+		onClear();
+	}
 </script>
 
-{#snippet filterStrip(compact: boolean)}
-	<div class="flex items-center border-b border-white/5 bg-[#0a0a0a] px-4 py-1.5 min-h-[32px]">
+{#snippet utilityStrip(compact: boolean)}
+	<div class="flex min-h-[32px] items-center border-b border-white/5 bg-[#0a0a0a] px-4 py-1.5">
 		{#if compact}
-			<span class="font-mono text-[10px] font-medium tracking-[0.08em] uppercase text-white/40">Terminal</span>
+			<span class="font-mono text-[10px] font-medium tracking-[0.08em] text-white/40 uppercase">Terminal</span>
 		{/if}
 		<div class="ml-auto flex items-center gap-3">
 			<span class="font-mono text-[10px] tracking-[0.02em] text-white/30 tabular-nums">
-				{filteredCount}{filteredCount !== totalCount ? `/${totalCount}` : ''} lines
+				{totalCount} events
 			</span>
-			<div class="flex items-center gap-2">
-				{#each streamMeta as { key, label } (key)}
-					{@const active = activeStreams[key]}
-					<button
-						type="button"
-						onclick={() => toggleStream(key)}
-						aria-pressed={active}
-						style="font-size: 10px;"
-						class="cursor-pointer font-mono transition-colors {active
-							? 'text-white/70'
-							: 'text-white/20 hover:text-white/50'}"
-					>
-						{label}
-					</button>
-				{/each}
-			</div>
+			<span class="font-mono text-[10px] tracking-[0.05em] text-white/30 uppercase">xterm.js</span>
 			{#if compact}
-				<div class="flex items-center gap-1 border-l border-white/10 pl-3 ml-1">
+				<div class="ml-1 flex items-center gap-1 border-l border-white/10 pl-3">
 					<button
 						type="button"
-						onclick={onClear}
+						onclick={clearTerminal}
 						disabled={totalCount === 0}
 						aria-label="Clear terminal"
 						title="Clear terminal"
 						class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
 					>
-						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+						<Eraser size={12} strokeWidth={1.7} />
 					</button>
 					<button
 						type="button"
@@ -156,7 +161,7 @@
 						title="Close panel"
 						class="grid h-6 w-6 cursor-pointer place-items-center rounded text-white/35 transition hover:bg-white/10 hover:text-white"
 					>
-						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+						<X size={12} strokeWidth={1.7} />
 					</button>
 				</div>
 			{/if}
@@ -165,130 +170,66 @@
 {/snippet}
 
 {#if !hideHeader}
-<header class="flex items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-white/5">
-	<div class="flex min-w-0 items-center gap-3">
-		<span class="truncate font-mono text-[13px] uppercase tracking-[0.1em] text-white">Terminal</span>
-		<span class="font-mono text-[11px] uppercase tracking-[0.05em] text-white/40">{statusLabel}</span>
-	</div>
-	<div class="flex shrink-0 items-center gap-2">
-		<button
-			type="button"
-			onclick={onClear}
-			disabled={totalCount === 0}
-			aria-label="Clear terminal"
-			title="Clear"
-			class="grid h-8 w-8 cursor-pointer place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
-		>
-			<Eraser size={14} strokeWidth={1.5} />
-		</button>
-		<button
-			type="button"
-			onclick={onClose}
-			aria-label="Close terminal"
-			title="Close"
-			class="grid h-8 w-8 cursor-pointer place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white"
-		>
-			<X size={16} strokeWidth={1.5} />
-		</button>
-	</div>
-</header>
-{@render filterStrip(false)}
+	<header class="flex items-center justify-between gap-3 border-b border-white/5 px-5 pt-5 pb-4">
+		<div class="flex min-w-0 items-center gap-3">
+			<span class="truncate font-mono text-[13px] tracking-[0.1em] text-white uppercase">Terminal</span>
+			<span class="font-mono text-[11px] tracking-[0.05em] text-white/40 uppercase">{statusLabel}</span>
+		</div>
+		<div class="flex shrink-0 items-center gap-2">
+			<button
+				type="button"
+				onclick={clearTerminal}
+				disabled={totalCount === 0}
+				aria-label="Clear terminal"
+				title="Clear"
+				class="grid h-8 w-8 cursor-pointer place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+			>
+				<Eraser size={14} strokeWidth={1.5} />
+			</button>
+			<button
+				type="button"
+				onclick={onClose}
+				aria-label="Close terminal"
+				title="Close"
+				class="grid h-8 w-8 cursor-pointer place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white"
+			>
+				<X size={16} strokeWidth={1.5} />
+			</button>
+		</div>
+	</header>
+	{@render utilityStrip(false)}
 {:else}
-{@render filterStrip(true)}
+	{@render utilityStrip(true)}
 {/if}
 
-<div
-	bind:this={viewport}
-	onscroll={onScroll}
-	class="relative flex-1 overflow-auto bg-[#050505] font-mono text-[12px] leading-[1.6]"
-	role="log"
-	aria-live="polite"
->
-	{#if totalCount === 0}
-		<div class="flex h-full flex-col items-center justify-center p-8 text-center text-white/40">
-			<TerminalIcon size={32} strokeWidth={1} class="mb-4 text-white/20" />
-			<p class="m-0 text-[13px] text-white/60">Awaiting websocket connection</p>
-			<p class="m-0 mt-2 max-w-xs text-[12px] text-white/30">Trigger a scenario to stream stdout, stderr, and system events here.</p>
+<div class="relative flex-1 overflow-hidden bg-[#050505]">
+	<div bind:this={host} class="terminal-host h-full w-full px-3 py-2" aria-label="Interactive terminal"></div>
+	{#if !connected}
+		<div class="pointer-events-none absolute inset-0 grid place-items-center bg-black/35 text-center backdrop-blur-[1px]">
+			<div class="rounded-lg border border-white/10 bg-black/75 px-4 py-3 shadow-lg">
+				<TerminalIcon size={22} strokeWidth={1.4} class="mx-auto mb-2 text-white/35" />
+				<p class="m-0 font-mono text-[11px] tracking-[0.04em] text-white/50 uppercase">reconnecting terminal</p>
+			</div>
 		</div>
-	{:else if filteredCount === 0}
-		<div class="flex h-full items-center justify-center p-8 text-center text-[12px] text-white/30">
-			<p class="m-0">No lines match the active filter</p>
-		</div>
-	{:else}
-		<ol class="m-0 list-none p-0 py-2">
-			{#each visibleLines as line, idx (idx)}
-				<li class="group relative flex items-start gap-4 px-5 py-[2px] hover:bg-white/[0.03]">
-					<span class="mt-0.5 shrink-0 select-none font-mono text-[10px] text-white/20 tabular-nums" aria-hidden="true">
-						{line.at}
-					</span>
-					<!-- Colored left border indicator based on stream -->
-					<div class={`absolute left-0 top-0 bottom-0 w-[2px] opacity-0 group-hover:opacity-100 transition-opacity ${
-						line.stream === 'stderr' ? 'bg-[#ff8278]' : 
-						line.stream === 'stdin' ? 'bg-[#b8f7cf]' :
-						line.stream === 'system' ? 'bg-[#9ad7ff]' : 'bg-white/40'
-					}`}></div>
-					
-					<pre class={`m-0 min-w-0 flex-1 whitespace-pre-wrap break-words font-mono text-[12px] leading-[1.6] ${
-						line.stream === 'stderr' ? 'text-[#ff8278]/90' : 
-						line.stream === 'stdin' ? 'text-[#b8f7cf]/90' :
-						line.stream === 'system' ? 'text-[#9ad7ff]/90' : 'text-white/80'
-					}`}>{line.text}</pre>
-				</li>
-			{/each}
-		</ol>
-	{/if}
-
-	{#if !stickToBottom && pendingCount > 0}
-		<button
-			type="button"
-			onclick={jumpToLatest}
-			class="sticky right-3 bottom-3 ml-auto flex cursor-pointer items-center gap-1.5 rounded-full bg-playstation-blue px-3 py-1.5 font-mono text-[10.5px] tracking-[0.04em] text-white shadow-[0_5px_9px_rgba(0,0,0,0.25)] transition hover:bg-link-hover"
-		>
-			<ArrowDown size={11} strokeWidth={2.4} />
-			{pendingCount > 99 ? '99+' : pendingCount} new
-		</button>
 	{/if}
 </div>
 
-<footer class="border-t border-white/5 px-4 py-2">
-	<div class="grid grid-cols-[minmax(0,1fr)_32px] items-center gap-2">
-		<input
-			value={stdinText}
-			oninput={(event) => (stdinText = event.currentTarget.value)}
-			onkeydown={onStdinKeydown}
-			disabled={inputDisabled}
-			placeholder={inputPlaceholder}
-			class="h-8 min-w-0 rounded-[5px] border border-white/10 bg-white/[0.04] px-2.5 font-mono text-[11px] text-white/85 outline-none transition placeholder:text-white/25 focus:border-playstation-blue/60 focus:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-45"
-			aria-label="Terminal input"
-		/>
-		<button
-			type="button"
-			onclick={submitInput}
-			disabled={inputDisabled || !stdinText.trim()}
-			class="grid h-8 w-8 cursor-pointer place-items-center rounded-[5px] bg-playstation-blue text-white transition hover:bg-link-hover disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/25"
-			aria-label={inputActionLabel}
-			title={inputActionLabel}
-		>
-			<Send size={13} strokeWidth={2} />
-		</button>
-	</div>
-	<div class="mt-1.5 flex items-center justify-between gap-3">
-		<div class="flex min-w-0 items-center gap-2">
-			<span class="font-mono text-[9.5px] tracking-[0.04em] {stickToBottom ? 'text-white/35' : 'text-white/18'}">auto-scroll</span>
-			<button
-				type="button"
-				onclick={() => {
-					stickToBottom = !stickToBottom;
-					if (stickToBottom) jumpToLatest();
-				}}
-				class="relative inline-flex h-3 w-6 cursor-pointer items-center rounded-full transition-colors duration-200 {stickToBottom ? 'bg-emerald-500' : 'bg-white/15'}"
-				title={stickToBottom ? 'Auto-scroll ON — click to pause' : 'Auto-scroll OFF — click to resume'}
-				aria-pressed={stickToBottom}
-				aria-label="Toggle auto-scroll"
-			>
-				<span class="absolute inline-block h-2 w-2 rounded-full bg-white shadow-sm transition-transform duration-200 {stickToBottom ? 'translate-x-[14px]' : 'translate-x-[2px]'}"></span>
-			</button>
-		</div>
-		<span class="shrink-0 font-mono text-[9.5px] tracking-[0.14em] text-white/18">drag edge to resize</span>
-	</div>
+<footer class="flex items-center justify-between gap-3 border-t border-white/5 px-4 py-1.5">
+	<span class="font-mono text-[9.5px] tracking-[0.04em] text-white/25">type directly in terminal</span>
+	<span class="shrink-0 font-mono text-[9.5px] tracking-[0.14em] text-white/18">drag edge to resize</span>
 </footer>
+
+<style>
+	.terminal-host :global(.xterm) {
+		height: 100%;
+	}
+
+	.terminal-host :global(.xterm-viewport) {
+		background-color: transparent !important;
+		scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
+	}
+
+	.terminal-host :global(.xterm-screen) {
+		width: 100%;
+	}
+</style>
