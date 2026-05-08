@@ -143,7 +143,7 @@
 	}
 </script>
 
-<Panel title="Baseline exploit chain" subtitle="Command injection to app/data compromise" class="@4xl/main:col-span-7">
+<Panel title="Baseline exploit chain" class="@4xl/main:col-span-7">
 	{#if activePayload}
 		<div class="mb-4 flex flex-col gap-3 rounded-lg border border-commerce/20 bg-commerce/5 p-3 @md/main:flex-row @md/main:items-center @md/main:justify-between">
 			<div>

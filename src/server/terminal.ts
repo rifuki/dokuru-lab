@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { cpus } from 'node:os';
 import { join } from 'node:path';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
@@ -594,12 +594,19 @@ function recommendedCpuBlastWorkers(): number {
 }
 
 function terminalEnv(): NodeJS.ProcessEnv {
+	const shell = preferredShell();
 	return {
 		...process.env,
-		SHELL: process.env.SHELL || '/bin/sh',
+		SHELL: shell,
 		TERM: process.env.TERM || 'xterm-256color',
 		PS1: process.env.PS1 || '\\$ '
 	};
+}
+
+function preferredShell(): string {
+	if (existsSync('/bin/bash')) return '/bin/bash';
+	if (existsSync('/usr/bin/bash')) return '/usr/bin/bash';
+	return '/bin/sh';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

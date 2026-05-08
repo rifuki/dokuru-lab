@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { Boxes, Cpu, Hash, MemoryStick } from '@lucide/svelte';
 	import type { RuntimeEvidence } from '$lib/types/lab';
 
@@ -10,6 +11,22 @@
 	};
 
 	let { runtime, connected, lastUpdated, onClose }: Props = $props();
+	let hostInfo = $state({ cpu_cores: 0, cpu_usage_percent: 0, memory_total_gb: 0, memory_available_gb: 0 });
+
+	onMount(() => {
+		void fetchHostInfo();
+		const interval = window.setInterval(fetchHostInfo, 3000);
+		return () => window.clearInterval(interval);
+	});
+
+	async function fetchHostInfo() {
+		try {
+			const response = await fetch('/api/monitor/host');
+			if (response.ok) hostInfo = await response.json();
+		} catch {
+			/* keep last host sample */
+		}
+	}
 
 	function asNumber(value?: string): number | null {
 		if (!value || value === 'max' || value === 'unavailable') return null;
@@ -42,8 +59,15 @@
 		return value?.split('\n')[0]?.trim() || '—';
 	}
 
+	function hostMemoryUsedPercent(): number {
+		if (!hostInfo.memory_total_gb) return 0;
+		return Math.min(100, Math.round(((hostInfo.memory_total_gb - hostInfo.memory_available_gb) / hostInfo.memory_total_gb) * 100));
+	}
+
 	const pidPct = $derived(percent(runtime?.cgroup.pids_current, runtime?.cgroup.pids_max));
 	const memPct = $derived(percent(runtime?.cgroup.memory_current, runtime?.cgroup.memory_max));
+	const hostCpuPct = $derived(Math.max(0, Math.min(100, Math.round(hostInfo.cpu_usage_percent || 0))));
+	const hostMemPct = $derived(hostMemoryUsedPercent());
 </script>
 
 <!-- Compact status strip -->
@@ -88,6 +112,36 @@
 		</div>
 	</div>
 
+	<!-- CPU row -->
+	<div class="rounded-xl bg-white/[0.04] px-4 py-3">
+		<div class="mb-2 flex items-center justify-between gap-2">
+			<div class="flex items-center gap-2">
+				<span class="grid h-6 w-6 place-items-center rounded-md bg-commerce/20 text-[#f08060]" aria-hidden="true">
+					<Cpu size={12} strokeWidth={1.5} />
+				</span>
+				<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">Host CPU</span>
+			</div>
+			<span class="font-mono text-[11.5px] font-medium text-white tabular-nums">{hostCpuPct}%</span>
+		</div>
+		<div class="h-1 overflow-hidden rounded-full bg-white/10">
+			<div class="h-full rounded-full bg-commerce transition-all duration-500" style={`width: ${hostCpuPct}%`}></div>
+		</div>
+		<div class="mt-2 grid gap-1.5">
+			<div class="flex justify-between gap-2">
+				<span class="font-mono text-[10px] text-white/35">cores</span>
+				<span class="font-mono text-[10px] text-white/70 tabular-nums">{hostInfo.cpu_cores || '—'}</span>
+			</div>
+			<div class="flex justify-between gap-2">
+				<span class="font-mono text-[10px] text-white/35">container cpu.max</span>
+				<span class="font-mono text-[10px] text-white/70 tabular-nums">{runtime?.cgroup.cpu_max || '—'}</span>
+			</div>
+			<div class="flex justify-between gap-2">
+				<span class="font-mono text-[10px] text-white/35">burners</span>
+				<span class="font-mono text-[10px] text-white/70 tabular-nums">{runtime?.processes.cpu_burners || '0'}</span>
+			</div>
+		</div>
+	</div>
+
 	<!-- Memory row -->
 	<div class="rounded-xl bg-white/[0.04] px-4 py-3">
 		<div class="mb-2 flex items-center justify-between gap-2">
@@ -99,41 +153,26 @@
 				<span class="font-mono text-[10px] text-white/25">5.11</span>
 			</div>
 			<span class="font-mono text-[11.5px] font-medium text-white tabular-nums">
-				{formatBytes(runtime?.cgroup.memory_current)}
+				{hostInfo.memory_total_gb ? `${hostMemPct}% host` : '—'}
 			</span>
 		</div>
 		<div class="h-1 overflow-hidden rounded-full bg-white/10">
-			<div class="h-full rounded-full bg-playstation-cyan transition-all duration-500" style={`width: ${memPct}%`}></div>
+			<div class="h-full rounded-full bg-playstation-cyan transition-all duration-500" style={`width: ${hostMemPct}%`}></div>
 		</div>
-		<div class="mt-2 flex justify-between">
-			<span class="font-mono text-[10px] text-white/35">limit</span>
-			<span class="font-mono text-[10px] text-white/70 tabular-nums">{formatBytes(runtime?.cgroup.memory_max)}</span>
-		</div>
-	</div>
-
-	<!-- CPU row -->
-	<div class="rounded-xl bg-white/[0.04] px-4 py-3">
-		<div class="mb-3 flex items-center gap-2">
-			<span class="grid h-6 w-6 place-items-center rounded-md bg-commerce/20 text-[#f08060]" aria-hidden="true">
-				<Cpu size={12} strokeWidth={1.5} />
-			</span>
-			<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">CPU</span>
-			<span class="font-mono text-[10px] text-white/25">5.12</span>
-		</div>
-		<dl class="grid gap-1.5">
+		<div class="mt-2 grid gap-1.5">
 			<div class="flex justify-between gap-2">
-				<dt class="font-mono text-[10px] text-white/35">cpu.weight</dt>
-				<dd class="m-0 font-mono text-[10px] text-white/70 tabular-nums">{runtime?.cgroup.cpu_weight || '—'}</dd>
+				<span class="font-mono text-[10px] text-white/35">host avail / total</span>
+				<span class="font-mono text-[10px] text-white/70 tabular-nums">{hostInfo.memory_available_gb || '—'} / {hostInfo.memory_total_gb || '—'} GiB</span>
 			</div>
 			<div class="flex justify-between gap-2">
-				<dt class="font-mono text-[10px] text-white/35">cpu.max</dt>
-				<dd class="m-0 font-mono text-[10px] text-white/70 tabular-nums">{runtime?.cgroup.cpu_max || '—'}</dd>
+				<span class="font-mono text-[10px] text-white/35">container used</span>
+				<span class="font-mono text-[10px] text-white/70 tabular-nums">{formatBytes(runtime?.cgroup.memory_current)}</span>
 			</div>
 			<div class="flex justify-between gap-2">
-				<dt class="font-mono text-[10px] text-white/35">burners</dt>
-				<dd class="m-0 font-mono text-[10px] text-white/70 tabular-nums">{runtime?.processes.cpu_burners || '0'}</dd>
+				<span class="font-mono text-[10px] text-white/35">container limit</span>
+				<span class="font-mono text-[10px] text-white/70 tabular-nums">{formatBytes(runtime?.cgroup.memory_max)}</span>
 			</div>
-		</dl>
+		</div>
 	</div>
 
 	<!-- Namespace row -->

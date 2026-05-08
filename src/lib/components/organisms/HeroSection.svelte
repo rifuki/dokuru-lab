@@ -105,20 +105,11 @@
 
 		<!-- Headline + CTAs -->
 		<div class="animate-rise-in max-w-4xl">
-			<div class="mb-4 inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-commerce/35 bg-commerce/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-[#ff9a6f]">
-				<span class="inline-block h-1.5 w-1.5 rounded-full bg-commerce" aria-hidden="true"></span>
-				<span>Default Docker Configuration</span>
-				<span class="text-white/35">no userns-remap · no cgroup limits</span>
-			</div>
-			<p class="mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-[#1883fd]">
-				<span class="inline-block h-1 w-1 rounded-full bg-[#1883fd]" aria-hidden="true"></span>
-				Baseline isolation lab
-			</p>
 			<h1 class="mb-3 text-[clamp(32px,4.4vw,56px)] leading-[1.04] font-light tracking-[-0.4px]">
 				Default Docker, <span class="text-white/55">one upload from host root.</span>
 			</h1>
-			<p class="mb-5 max-w-3xl text-[16px] leading-relaxed text-[#dcdcdc]">
-				A production-looking Compose stack with no explicit namespace sharing and no resource limits on the vulnerable app. Trigger payloads from <code class="font-mono text-[14px] text-white">dokuru-lab-baseline</code>, then let Dokuru prove where user namespace remap and cgroup limits break the chain.
+			<p class="mb-5 max-w-2xl text-[15px] leading-relaxed text-[#dcdcdc]">
+				Trigger payloads from <code class="font-mono text-[14px] text-white">dokuru-lab-baseline</code>, then watch the neighbor service and container evidence update live.
 			</p>
 			<div class="flex flex-wrap items-center gap-4">
 				<Button onclick={onProbe} disabled={Boolean(running)}>

@@ -49,6 +49,7 @@
 	let customerConnected = $state(false);
 	let terminalOpen = $state(false);
 	let terminalWidth = $state(420);
+	let terminalMaxWidth = $state(720);
 	let terminalResizing = $state(false);
 	type SidebarPanel = 'terminal' | 'monitor';
 	type SnapZone = 'top' | 'bottom' | 'left' | 'right' | 'replace';
@@ -168,7 +169,7 @@
 	let mounted = false;
 
 	const TERMINAL_MIN_WIDTH = 320;
-	const TERMINAL_MAX_WIDTH = 720;
+	const TERMINAL_MAX_WIDTH_RATIO = 0.75;
 	const TERMINAL_WIDTH_KEY = 'dokuru-lab-baseline.terminal.width';
 	const TERMINAL_OPEN_KEY = 'dokuru-lab-baseline.terminal.open';
 
@@ -188,6 +189,8 @@
 
 	onMount(() => {
 		mounted = true;
+		updateTerminalMaxWidth();
+		window.addEventListener('resize', updateTerminalMaxWidth);
 		restoreTerminalState();
 		connectMonitor();
 		connectTerminal();
@@ -198,8 +201,14 @@
 			terminalSocket?.close();
 			monitorSocket?.close();
 			customerSocket?.close();
+			window.removeEventListener('resize', updateTerminalMaxWidth);
 		};
 	});
+
+	function updateTerminalMaxWidth() {
+		terminalMaxWidth = Math.max(TERMINAL_MIN_WIDTH, Math.floor(window.innerWidth * TERMINAL_MAX_WIDTH_RATIO));
+		terminalWidth = Math.max(TERMINAL_MIN_WIDTH, Math.min(terminalMaxWidth, terminalWidth));
+	}
 
 	function restoreTerminalState() {
 		try {
@@ -207,7 +216,7 @@
 			if (storedWidth) {
 				const parsed = Number(storedWidth);
 				if (Number.isFinite(parsed)) {
-					terminalWidth = Math.max(TERMINAL_MIN_WIDTH, Math.min(TERMINAL_MAX_WIDTH, parsed));
+					terminalWidth = Math.max(TERMINAL_MIN_WIDTH, Math.min(terminalMaxWidth, parsed));
 				}
 			}
 			// Sidebar now defaults to closed on load to prevent intrusive auto-opening
@@ -237,7 +246,7 @@
 
 	function handleTerminalResize(next: number) {
 		terminalResizing = true;
-		terminalWidth = next;
+		terminalWidth = Math.max(TERMINAL_MIN_WIDTH, Math.min(terminalMaxWidth, next));
 	}
 
 	function handleTerminalResizeEnd() {
@@ -502,9 +511,6 @@
 							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Trigger a payload, watch the neighbor</h2>
 						</div>
-						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
-							Each scenario runs from inside <code>dokuru-lab-baseline</code>. Open the terminal sidebar to follow stdout/stderr while the customer signal updates live.
-						</p>
 					</header>
 
 					<div class="grid grid-cols-1 gap-4 @4xl/main:grid-cols-12">
@@ -539,9 +545,6 @@
 							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Real-time namespace and cgroup signals</h2>
 						</div>
-						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
-							Streamed over <code>/ws/monitor</code> straight from <code>dokuru-lab-baseline</code>. See the exact limits and isolation status below.
-						</p>
 					</header>
 
 					<LiveMonitorPanel {runtime} {lastUpdated} connected={monitorConnected} />
@@ -560,9 +563,6 @@
 							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Prove what the container can see</h2>
 						</div>
-						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
-							CIS Docker Benchmark rules <strong>2.10</strong>, <strong>5.16</strong>, <strong>5.17</strong>, <strong>5.21</strong>, <strong>5.31</strong>. Capture proof output before and after Dokuru recreates the container.
-						</p>
 					</header>
 
 					<NamespaceLabPanel
@@ -587,9 +587,6 @@
 							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Prove how much the container can consume</h2>
 						</div>
-						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
-							CIS Docker Benchmark rules <strong>5.11</strong>, <strong>5.12</strong>, <strong>5.29</strong>. Tune inputs, run pressure, then read the live monitor while Dokuru applies <code>mem_limit</code>, <code>cpu_shares</code>, and <code>pids_limit</code>.
-						</p>
 					</header>
 
 					<CgroupLabPanel
@@ -621,9 +618,6 @@
 							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Side-by-side reference for the report</h2>
 						</div>
-						<p class="m-0 max-w-xl text-[14.5px] leading-relaxed text-body-gray">
-							Side-by-side comparison of container isolation. The application remains vulnerable, but the blast radius is strictly contained.
-						</p>
 					</header>
 
 					<div class="grid grid-cols-1 gap-4 @4xl/main:grid-cols-12">
@@ -839,7 +833,7 @@
 	open={terminalOpen}
 	width={terminalWidth}
 	minWidth={TERMINAL_MIN_WIDTH}
-	maxWidth={TERMINAL_MAX_WIDTH}
+	maxWidth={terminalMaxWidth}
 	connected={terminalConnected}
 	busy={terminalBusy}
 	lineCount={terminalLines.length}

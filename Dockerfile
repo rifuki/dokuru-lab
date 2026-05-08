@@ -11,6 +11,7 @@ FROM oven/bun:1.3.9-debian
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
+    bash \
     curl \
     iproute2 \
     iputils-ping \

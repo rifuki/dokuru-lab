@@ -138,9 +138,6 @@
 			<span class="font-mono text-[10px] font-medium tracking-[0.08em] text-white/40 uppercase">Terminal</span>
 		{/if}
 		<div class="ml-auto flex items-center gap-3">
-			<span class="font-mono text-[10px] tracking-[0.02em] text-white/30 tabular-nums">
-				{totalCount} events
-			</span>
 			{#if compact}
 				<div class="ml-1 flex items-center gap-1 border-l border-white/10 pl-3">
 					<button
@@ -196,7 +193,6 @@
 			</button>
 		</div>
 	</header>
-	{@render utilityStrip(false)}
 {:else}
 	{@render utilityStrip(true)}
 {/if}
@@ -213,9 +209,8 @@
 	{/if}
 </div>
 
-<footer class="flex items-center justify-between gap-3 border-t border-white/5 px-4 py-1.5">
-	<span class="font-mono text-[9.5px] tracking-[0.04em] text-white/25">type directly in terminal</span>
-	<span class="shrink-0 font-mono text-[9.5px] tracking-[0.14em] text-white/18">drag edge to resize</span>
+<footer class="flex items-center justify-end border-t border-white/5 px-4 py-1.5">
+	<span class="font-mono text-[9.5px] tracking-[0.14em] text-white/18">drag edge to resize</span>
 </footer>
 
 <style>
