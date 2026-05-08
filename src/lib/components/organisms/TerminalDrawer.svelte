@@ -141,7 +141,6 @@
 			<span class="font-mono text-[10px] tracking-[0.02em] text-white/30 tabular-nums">
 				{totalCount} events
 			</span>
-			<span class="font-mono text-[10px] tracking-[0.05em] text-white/30 uppercase">xterm.js</span>
 			{#if compact}
 				<div class="ml-1 flex items-center gap-1 border-l border-white/10 pl-3">
 					<button
