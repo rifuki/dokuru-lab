@@ -91,7 +91,6 @@
 
 	const statusLabel = $derived(connected ? (busy ? 'streaming' : 'live') : 'connecting');
 	const inputDisabled = $derived(!connected || (busy && !stdinActive));
-	const inputLabel = $derived(stdinActive ? 'stdin' : 'exec');
 	const inputActionLabel = $derived(stdinActive ? 'Send stdin' : 'Run command');
 	const inputPlaceholder = $derived(
 		!connected
@@ -252,8 +251,7 @@
 </div>
 
 <footer class="border-t border-white/5 px-4 py-3">
-	<div class="grid grid-cols-[42px_minmax(0,1fr)_40px] items-center gap-2">
-		<span class="text-right font-mono text-[10px] tracking-[0.08em] text-white/35 uppercase">{inputLabel}</span>
+	<div class="grid grid-cols-[minmax(0,1fr)_40px] items-center gap-2">
 		<input
 			value={stdinText}
 			oninput={(event) => (stdinText = event.currentTarget.value)}
@@ -274,8 +272,8 @@
 			<Send size={15} strokeWidth={2} />
 		</button>
 	</div>
-	<div class="mt-2 flex items-center gap-2 pl-[50px]">
-		<div class="flex items-center gap-2">
+	<div class="mt-2 flex items-center justify-between gap-3">
+		<div class="flex min-w-0 items-center gap-2">
 			<span class="font-mono text-[10px] tracking-[0.04em] {stickToBottom ? 'text-white/40' : 'text-white/20'}">auto-scroll</span>
 			<button
 				type="button"
@@ -291,5 +289,6 @@
 				<span class="absolute inline-block h-[10px] w-[10px] rounded-full bg-white shadow-sm transition-transform duration-200 {stickToBottom ? 'translate-x-[14px]' : 'translate-x-[2px]'}"></span>
 			</button>
 		</div>
+		<span class="shrink-0 font-mono text-[10px] tracking-[0.16em] text-white/20">drag edge to resize</span>
 	</div>
 </footer>
