@@ -74,7 +74,11 @@ export class TerminalController {
 		const type = String(message.type || '');
 
 		if (type === 'stdin') {
-			this.writeStdin(socket, message.data);
+			if (this.writeStdin(socket, message.data)) return;
+
+			const command = String(message.data ?? '').trim();
+			if (!command) return;
+			await this.runTerminalAction(socket, 'exec', { command });
 			return;
 		}
 
@@ -90,6 +94,10 @@ export class TerminalController {
 			return;
 		}
 
+		await this.runTerminalAction(socket, type, message);
+	}
+
+	private async runTerminalAction(socket: WebSocket, type: string, message: TerminalPayload): Promise<void> {
 		if (this.terminalActionRunning) {
 			line(socket, 'stderr', 'terminal is busy running another action; wait or stop the active payload\n');
 			send(socket, 'terminal.exit', { action: type, code: 1 });
@@ -149,18 +157,18 @@ export class TerminalController {
 		}
 	}
 
-	private writeStdin(socket: WebSocket, rawData: unknown): void {
+	private writeStdin(socket: WebSocket, rawData: unknown): boolean {
 		const text = String(rawData ?? '');
-		if (!text) return;
+		if (!text) return true;
 
 		const child = this.stdinChild;
 		if (!child || child.stdin.destroyed || child.killed) {
-			line(socket, 'stderr', 'no active stdin target; run an exec command first\n');
-			return;
+			return false;
 		}
 
 		child.stdin.write(text);
 		line(socket, 'stdin', text);
+		return true;
 	}
 
 	private async runExec(socket: WebSocket, rawCommand: unknown): Promise<void> {

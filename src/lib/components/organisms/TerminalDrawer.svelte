@@ -9,13 +9,14 @@
 		lines: TerminalLine[];
 		connected: boolean;
 		busy: boolean;
+		stdinActive: boolean;
 		hideHeader?: boolean;
 		onClear: () => void;
 		onClose: () => void;
-		onSendStdin: (text: string) => void;
+		onSubmitInput: (text: string) => void;
 	};
 
-	let { lines, connected, busy, hideHeader = false, onClear, onClose, onSendStdin }: Props = $props();
+	let { lines, connected, busy, stdinActive, hideHeader = false, onClear, onClose, onSubmitInput }: Props = $props();
 	let viewport = $state<HTMLDivElement | null>(null);
 	let stdinText = $state('');
 	let stickToBottom = $state(true);
@@ -75,20 +76,35 @@
 		return 'out';
 	}
 
-	function submitStdin() {
+	function submitInput() {
 		const text = stdinText;
-		if (!text.trim()) return;
-		onSendStdin(`${text}\n`);
+		if (!text.trim() || inputDisabled) return;
+		onSubmitInput(text);
 		stdinText = '';
 	}
 
 	function onStdinKeydown(event: KeyboardEvent) {
 		if (event.key !== 'Enter' || event.shiftKey) return;
 		event.preventDefault();
-		submitStdin();
+		submitInput();
 	}
 
 	const statusLabel = $derived(connected ? (busy ? 'streaming' : 'live') : 'connecting');
+	const inputDisabled = $derived(!connected || (busy && !stdinActive));
+	const inputLabel = $derived(stdinActive ? 'stdin' : 'exec');
+	const inputActionLabel = $derived(stdinActive ? 'Send stdin' : 'Run command');
+	const inputPlaceholder = $derived(
+		!connected
+			? 'terminal websocket connecting'
+			: stdinActive
+				? 'send text to active exec process'
+				: busy
+					? 'wait for active action to finish'
+					: 'run command in container'
+	);
+	const inputHint = $derived(
+		stdinActive ? 'enter sends stdin · shift+enter keeps text' : 'enter runs command · use sh/bash for interactive stdin'
+	);
 	const filteredCount = $derived(visibleLines.length);
 	const totalCount = $derived(lines.length);
 
@@ -240,23 +256,23 @@
 
 <footer class="border-t border-white/5 px-4 py-2">
 	<div class="mb-2 flex items-center gap-2">
-		<span class="font-mono text-[10px] tracking-[0.04em] text-white/35">stdin</span>
+		<span class="font-mono text-[10px] tracking-[0.04em] text-white/35">{inputLabel}</span>
 		<input
 			value={stdinText}
 			oninput={(event) => (stdinText = event.currentTarget.value)}
 			onkeydown={onStdinKeydown}
-			disabled={!connected}
-			placeholder={busy ? 'send text to active exec process' : 'run an exec command, then send stdin'}
+			disabled={inputDisabled}
+			placeholder={inputPlaceholder}
 			class="min-w-0 flex-1 rounded-[4px] border border-white/10 bg-white/[0.04] px-2 py-1.5 font-mono text-[11px] text-white/85 outline-none transition placeholder:text-white/25 focus:border-playstation-blue/60 focus:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-45"
-			aria-label="Terminal stdin"
+			aria-label="Terminal input"
 		/>
 		<button
 			type="button"
-			onclick={submitStdin}
-			disabled={!connected || !stdinText.trim()}
+			onclick={submitInput}
+			disabled={inputDisabled || !stdinText.trim()}
 			class="grid h-7 w-7 cursor-pointer place-items-center rounded-[4px] bg-playstation-blue text-white transition hover:bg-link-hover disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/25"
-			aria-label="Send stdin"
-			title="Send stdin"
+			aria-label={inputActionLabel}
+			title={inputActionLabel}
 		>
 			<Send size={12} strokeWidth={2} />
 		</button>
@@ -278,6 +294,6 @@
 			<span class="absolute inline-block h-[10px] w-[10px] rounded-full bg-white shadow-sm transition-transform duration-200 {stickToBottom ? 'translate-x-[14px]' : 'translate-x-[2px]'}"></span>
 		</button>
 	</div>
-		<span class="font-mono text-[10px] tracking-[0.04em] text-white/25">enter sends · shift+enter keeps text</span>
+		<span class="font-mono text-[10px] tracking-[0.04em] text-white/25">{inputHint}</span>
 	</div>
 </footer>
