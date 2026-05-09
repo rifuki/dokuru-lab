@@ -195,9 +195,10 @@
 	const stopActions = new Set(['cleanup', 'stop-payloads']);
 	const routeCards = [
 		{ href: '/monitor', no: '01', title: 'Monitor', body: 'Host and container resource baseline.', Icon: Activity },
-		{ href: '/exploit', no: '02', title: 'Exploit', body: 'Command injection and app-data impact.', Icon: Bomb },
-		{ href: '/cgroup', no: '03', title: 'Cgroup', body: 'PID, memory, and CPU pressure last.', Icon: SlidersHorizontal },
-		{ href: '/evidence', no: '04', title: 'Evidence', body: 'Report-ready before/after proof.', Icon: FileSearch }
+		{ href: '/namespace', no: '02', title: 'Namespace', body: 'UID map, PID view, and namespace links.', Icon: Layers },
+		{ href: '/exploit', no: '03', title: 'Exploit', body: 'Command injection and app-data impact.', Icon: Bomb },
+		{ href: '/cgroup', no: '04', title: 'Cgroup', body: 'PID, memory, and CPU pressure last.', Icon: SlidersHorizontal },
+		{ href: '/evidence', no: '05', title: 'Evidence', body: 'Report-ready before/after proof.', Icon: FileSearch }
 	] as const;
 
 	onMount(() => {
@@ -528,7 +529,7 @@
 				</section>
 			{/if}
 
-			<!-- Section 02 · Blast-radius scenarios -->
+			<!-- Section 01 · Blast-radius scenarios -->
 			{#if page === 'exploit'}
 			<section id="scenarios" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
 				<div class="mx-auto max-w-[1480px]">
@@ -536,7 +537,7 @@
 						<div>
 							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
 								<Bomb size={18} strokeWidth={1.5} class="text-playstation-blue" />
-								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">02</span>
+								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">01</span>
 								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Blast radius</span>
 							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Trigger a payload, watch the neighbor</h2>
@@ -562,7 +563,7 @@
 			</section>
 			{/if}
 
-			<!-- Section 01 · Live monitor -->
+			<!-- Section 02 · Live monitor -->
 			{#if page === 'monitor'}
 			<section id="monitor" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
 				<div class="mx-auto max-w-[1480px]">
@@ -570,7 +571,7 @@
 						<div>
 							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
 								<Activity size={18} strokeWidth={1.5} class="text-playstation-blue" />
-								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">01</span>
+								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">02</span>
 								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Live monitor</span>
 							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Real-time namespace and cgroup signals</h2>
@@ -578,28 +579,37 @@
 					</header>
 
 					<LiveMonitorPanel {runtime} {lastUpdated} connected={monitorConnected} />
-
-					<details class="mt-8 rounded-[19px] border border-black/5 bg-white shadow-sm open:pb-6 transition-all hover:border-black/10">
-						<summary class="cursor-pointer select-none rounded-[19px] p-6 text-[15px] font-bold tracking-tight text-black hover:bg-black/[0.02]">
-							🔍 Show Technical Evidence (Namespace Isolation)
-						</summary>
-						<div class="px-6 pt-2">
-							<NamespaceLabPanel
-								{command}
-								{presets}
-								{running}
-								onCommandChange={(value) => (command = value)}
-								onRun={runExec}
-							/>
-						</div>
-					</details>
 				</div>
 			</section>
 			{/if}
 
+			<!-- Section 03 · Namespace isolation -->
+			{#if page === 'namespace'}
+			<section id="namespace" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
+				<div class="mx-auto max-w-[1480px]">
+					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
+						<div>
+							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
+								<Layers size={18} strokeWidth={1.5} class="text-playstation-blue" />
+								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">03</span>
+								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Namespace isolation</span>
+							</p>
+							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Prove what the container can see</h2>
+						</div>
+					</header>
 
+					<NamespaceLabPanel
+						{command}
+						{presets}
+						{running}
+						onCommandChange={(value) => (command = value)}
+						onRun={runExec}
+					/>
+				</div>
+			</section>
+			{/if}
 
-			<!-- Section 03 · Cgroup controls -->
+			<!-- Section 04 · Cgroup controls -->
 			{#if page === 'cgroup'}
 			<section id="cgroup" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
 				<div class="mx-auto max-w-[1480px]">
@@ -607,7 +617,7 @@
 						<div>
 							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
 								<SlidersHorizontal size={18} strokeWidth={1.5} class="text-playstation-blue" />
-								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">03</span>
+								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">04</span>
 								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Cgroup controls</span>
 							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Prove how much the container can consume</h2>
@@ -632,7 +642,7 @@
 			</section>
 			{/if}
 
-			<!-- Section 04 · Evidence -->
+			<!-- Section 05 · Evidence -->
 			{#if page === 'evidence'}
 			<section id="evidence" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
 				<div class="mx-auto max-w-[1480px]">
@@ -640,7 +650,7 @@
 						<div>
 							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
 								<FileSearch size={18} strokeWidth={1.5} class="text-playstation-blue" />
-								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">04</span>
+								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">05</span>
 								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Evidence</span>
 							</p>
 							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Side-by-side reference for the report</h2>
