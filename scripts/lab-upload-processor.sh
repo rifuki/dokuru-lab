@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-LAB_UPLOAD_DIR="${LAB_UPLOAD_DIR:-/srv/dokuru-lab-baseline/uploads}"
-LAB_CRON_LOG="${LAB_CRON_LOG:-/var/log/lab-baseline-cron.log}"
+LAB_UPLOAD_DIR="${LAB_UPLOAD_DIR:-/srv/dokuru-lab/uploads}"
+LAB_CRON_LOG="${LAB_CRON_LOG:-/var/log/lab-cron.log}"
 LAB_TIMEOUT_SECONDS="${LAB_TIMEOUT_SECONDS:-10}"
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"

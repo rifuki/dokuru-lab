@@ -1,0 +1,8 @@
+[Unit]
+Description=Dokuru Lab upload processor
+
+[Service]
+Type=oneshot
+Environment=LAB_UPLOAD_DIR=/home/rifuki/apps/dokuru-lab/uploads
+Environment=LAB_CRON_LOG=/var/log/lab-cron.log
+ExecStart=/usr/local/bin/lab-upload-processor.sh

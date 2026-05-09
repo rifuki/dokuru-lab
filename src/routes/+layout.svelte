@@ -18,7 +18,7 @@
 
 	function routeTitle(route: ReturnType<typeof routeToLabPage>): string {
 		if (route === 'home') return 'Dokuru Namespace Cgroup Lab';
-		return `${route[0].toUpperCase()}${route.slice(1)} | Dokuru Lab Baseline`;
+		return `${route[0].toUpperCase()}${route.slice(1)} | Dokuru Lab`;
 	}
 
 	const activeLabPage = $derived(routeToLabPage(page.url.pathname));

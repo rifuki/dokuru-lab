@@ -1,7 +1,7 @@
 services:
   caddy:
     image: caddy:2-alpine
-    container_name: dokuru-lab-baseline-caddy
+    container_name: dokuru-lab-caddy
     restart: unless-stopped
     ports:
       - "80:80"
@@ -11,15 +11,15 @@ services:
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
-      dokuru-lab-baseline:
+      dokuru-lab:
         condition: service_healthy
     networks:
-      - dokuru-lab-baseline
+      - dokuru-lab
 
-  dokuru-lab-baseline:
-    image: ghcr.io/rifuki/dokuru-lab-baseline:${VERSION:-latest}
+  dokuru-lab:
+    image: ghcr.io/rifuki/dokuru-lab:${VERSION:-latest}
     build: .
-    container_name: dokuru-lab-baseline
+    container_name: dokuru-lab
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -46,11 +46,11 @@ services:
       retries: 3
       start_period: 15s
     networks:
-      - dokuru-lab-baseline
+      - dokuru-lab
 
   victim-checkout:
     image: node:20-alpine
-    container_name: dokuru-lab-baseline-victim-checkout
+    container_name: dokuru-lab-victim-checkout
     restart: unless-stopped
     command:
       - sh
@@ -88,22 +88,22 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - dokuru-lab-baseline
+      - dokuru-lab
 
   victim-secrets:
     image: postgres:16-alpine
-    container_name: dokuru-lab-baseline-victim-secrets
+    container_name: dokuru-lab-victim-secrets
     restart: unless-stopped
     environment:
       POSTGRES_USER: prod_user
       POSTGRES_PASSWORD: SuperSecretP@ssw0rd123
       POSTGRES_DB: customer_data
     networks:
-      - dokuru-lab-baseline
+      - dokuru-lab
 
   customer-traffic:
     image: alpine/curl:latest
-    container_name: dokuru-lab-baseline-customer-traffic
+    container_name: dokuru-lab-customer-traffic
     restart: unless-stopped
     entrypoint: ["sh", "-c"]
     command:
@@ -118,13 +118,13 @@ services:
     volumes:
       - ./data:/data
     networks:
-      - dokuru-lab-baseline
+      - dokuru-lab
 
 volumes:
   caddy-data:
   caddy-config:
 
 networks:
-  dokuru-lab-baseline:
-    name: dokuru-lab-baseline
+  dokuru-lab:
+    name: dokuru-lab
     driver: bridge

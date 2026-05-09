@@ -20,7 +20,7 @@ const execFile = promisify(execFileCallback);
 const dataDir = process.env.LAB_DATA_DIR || '/app/data';
 const uploadDir = process.env.LAB_UPLOAD_DIR || '/app/uploads';
 const logDir = process.env.LAB_LOG_DIR || '/app/logs';
-const ransomwareKeyPath = process.env.LAB_RANSOMWARE_KEY_PATH || '/tmp/dokuru-lab-baseline-ransomware-key.txt';
+const ransomwareKeyPath = process.env.LAB_RANSOMWARE_KEY_PATH || '/tmp/dokuru-lab-ransomware-key.txt';
 const postgresHost = process.env.VICTIM_POSTGRES_HOST || 'victim-secrets';
 const postgresUser = process.env.VICTIM_POSTGRES_USER || 'prod_user';
 const postgresPassword = process.env.VICTIM_POSTGRES_PASSWORD || 'SuperSecretP@ssw0rd123';
@@ -295,7 +295,7 @@ export function triggerCron(): LabResponse {
 		ok: true,
 		scenario: 'mock host cron trigger',
 		trigger_file: marker,
-		message: 'Host-level lab-baseline-cron.timer should process uploaded .sh payloads from the bind mount.',
+		message: 'Host-level lab-cron.timer should process uploaded .sh payloads from the bind mount.',
 		uploaded_scripts: listFiles(uploadDir, (name) => name.endsWith('.sh')),
 		runtime: runtimeEvidence()
 	};
@@ -577,7 +577,7 @@ function seedDemoFiles(force: boolean): Record<string, unknown> {
 }
 
 async function seedPostgres(): Promise<PostgresResult> {
-	const sqlPath = '/tmp/dokuru-lab-baseline-seed.sql';
+	const sqlPath = '/tmp/dokuru-lab-seed.sql';
 	writeFileSync(
 		sqlPath,
 		[
@@ -602,7 +602,7 @@ async function seedPostgres(): Promise<PostgresResult> {
 }
 
 async function queryPostgres(sql: string): Promise<PostgresResult> {
-	const sqlPath = `/tmp/dokuru-lab-baseline-query-${Date.now()}.sql`;
+	const sqlPath = `/tmp/dokuru-lab-query-${Date.now()}.sql`;
 	writeFileSync(sqlPath, sql.trim() + '\n');
 	try {
 		return await queryPostgresFile(sqlPath, 20_000);

@@ -1,8 +1,8 @@
 # Hardening Results - Before vs After Dokuru
 
-**Target:** `base.lab.dokuru.rifuki.dev` (dokuru-lab-baseline)  
+**Target:** `lab.dokuru.rifuki.dev` (dokuru-lab)
 **Hardening Date:** 2026-05-08  
-**Audit File:** `dokuru-audit-dokuru-lab-baseline-2026-05-08.json`
+**Audit File:** `dokuru-audit-dokuru-lab-2026-05-08.json`
 
 ---
 
@@ -70,7 +70,7 @@
 
 #### **BEFORE:**
 ```bash
-curl "https://base.lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;id"
+curl "https://lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;id"
 # Output: uid=0(root) gid=0(root) groups=0(root)
 ```
 
@@ -78,7 +78,7 @@ curl "https://base.lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;id"
 
 #### **AFTER:**
 ```bash
-curl "https://base.lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;id"
+curl "https://lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;id"
 # Output: uid=1001 gid=1004 groups=1004
 ```
 
@@ -97,7 +97,7 @@ curl "https://base.lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;id"
 #### **BEFORE:**
 ```bash
 # Upload file from container (UID 0)
-ls -la ~/apps/dokuru-lab-baseline/uploads/
+ls -la ~/apps/dokuru-lab/uploads/
 # -rwxr-xr-x 1 root root innocent.jpg.sh
 ```
 
@@ -106,7 +106,7 @@ ls -la ~/apps/dokuru-lab-baseline/uploads/
 #### **AFTER:**
 ```bash
 # Upload file from container (UID 1001)
-ls -la ~/apps/dokuru-lab-baseline/uploads/
+ls -la ~/apps/dokuru-lab/uploads/
 # -rwxrwxr-x+ 1 100000 100000 innocent.jpg.sh
 ```
 
@@ -125,7 +125,7 @@ ls -la ~/apps/dokuru-lab-baseline/uploads/
 
 #### **BEFORE:**
 ```bash
-curl "https://base.lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;echo%20KEY%20%3E%20/root/.ssh/authorized_keys"
+curl "https://lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;echo%20KEY%20%3E%20/root/.ssh/authorized_keys"
 # Success: SSH key planted
 ```
 
@@ -133,7 +133,7 @@ curl "https://base.lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;echo%20KEY%20%3
 
 #### **AFTER:**
 ```bash
-curl "https://base.lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;echo%20KEY%20%3E%20/root/.ssh/authorized_keys"
+curl "https://lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;echo%20KEY%20%3E%20/root/.ssh/authorized_keys"
 # Error: Permission denied
 ```
 
@@ -151,7 +151,7 @@ curl "https://base.lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;echo%20KEY%20%3
 
 #### **BEFORE:**
 ```bash
-curl "https://base.lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;cat%20/etc/shadow"
+curl "https://lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;cat%20/etc/shadow"
 # root:*:20486:0:99999:7:::
 # daemon:*:20486:0:99999:7:::
 ```
@@ -160,7 +160,7 @@ curl "https://base.lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;cat%20/etc/shad
 
 #### **AFTER:**
 ```bash
-curl "https://base.lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;cat%20/etc/shadow"
+curl "https://lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;cat%20/etc/shadow"
 # Error: Permission denied
 ```
 

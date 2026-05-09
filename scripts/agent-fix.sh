@@ -2,7 +2,7 @@
 set -euo pipefail
 
 RULE_ID="${1:-}"
-REMOTE_HOST="${DOKURU_LAB_BASELINE_HOST:-google-dokuru-lab-baseline}"
+REMOTE_HOST="${DOKURU_LAB_HOST:-google-dokuru-lab}"
 AGENT_URL="${DOKURU_AGENT_URL:-http://127.0.0.1:3939}"
 
 if [ -z "$RULE_ID" ]; then
@@ -60,5 +60,5 @@ printf '\n'
 print_audit 'after'
 
 printf '\ncontainer: '
-docker inspect dokuru-lab-baseline --format 'PidMode={{.HostConfig.PidMode}} Memory={{.HostConfig.Memory}} PidsLimit={{.HostConfig.PidsLimit}} CapAdd={{json .HostConfig.CapAdd}} RestartCount={{.RestartCount}}'
+docker inspect dokuru-lab --format 'PidMode={{.HostConfig.PidMode}} Memory={{.HostConfig.Memory}} PidsLimit={{.HostConfig.PidsLimit}} CapAdd={{json .HostConfig.CapAdd}} RestartCount={{.RestartCount}}'
 REMOTE

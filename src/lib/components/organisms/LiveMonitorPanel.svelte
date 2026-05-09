@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { Boxes, Cpu, Hash, MemoryStick } from '@lucide/svelte';
 	import Panel from '$lib/components/molecules/Panel.svelte';
+	import StatusBadge from '$lib/components/atoms/StatusBadge.svelte';
 	import type { RuntimeEvidence } from '$lib/types/lab';
 
 	type Props = {
@@ -105,6 +106,7 @@
 					</div>
 				</div>
 				<div class="flex flex-col items-end gap-1.5">
+					<StatusBadge status={pidsUnlimited ? 'critical' : percent(runtime?.cgroup.pids_current, runtime?.cgroup.pids_max) > 80 ? 'warning' : 'healthy'} />
 					<strong class="font-mono text-[15px] font-bold text-black tabular-nums">{runtime?.cgroup.pids_current || '...'} / {formatPidLimit(runtime?.cgroup.pids_max)}</strong>
 				</div>
 			</div>
@@ -145,6 +147,7 @@
 					</div>
 				</div>
 				<div class="flex flex-col items-end gap-1.5">
+					<StatusBadge status={memUnlimited ? 'critical' : percent(runtime?.cgroup.memory_current, runtime?.cgroup.memory_max) > 80 ? 'warning' : 'healthy'} />
 					<strong class="text-right font-mono text-[15px] font-bold text-black tabular-nums">
 						{formatBytes(runtime?.cgroup.memory_current)}
 					</strong>
@@ -203,6 +206,9 @@
 						<span class="block text-[15px] font-bold tracking-tight text-black">CPU Pressure / Limit</span>
 						<span class="font-mono text-[11px] font-medium text-black/60">Rule 5.12: Core Isolation</span>
 					</div>
+				</div>
+				<div class="flex flex-col items-end gap-1.5">
+					<StatusBadge status={cpuUnthrottled || hostInfo.cpu_usage_percent > 80 ? 'critical' : hostInfo.cpu_usage_percent > 50 ? 'warning' : 'healthy'} />
 				</div>
 			</div>
 			<dl class="mt-4 grid gap-3 text-[13.5px]">

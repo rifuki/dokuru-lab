@@ -35,7 +35,7 @@
 		{
 			no: '01',
 			role: 'Attacker',
-			id: 'dokuru-lab-baseline',
+			id: 'dokuru-lab',
 			body: 'A vulnerable default-root web app with bind mounts. Upload and command-injection bugs become host-root evidence when userns-remap is off.',
 			Icon: Bomb,
 			tint: 'commerce'
@@ -109,7 +109,7 @@
 				Default Docker, <span class="text-white/55">one upload from host root.</span>
 			</h1>
 			<p class="mb-5 max-w-2xl text-[15px] leading-relaxed text-[#dcdcdc]">
-				Trigger payloads from <code class="font-mono text-[14px] text-white">dokuru-lab-baseline</code>, then watch the neighbor service and container evidence update live.
+				Trigger payloads from <code class="font-mono text-[14px] text-white">dokuru-lab</code>, then watch the neighbor service and container evidence update live.
 			</p>
 			<div class="flex flex-wrap items-center gap-4">
 				<Button onclick={onProbe} disabled={Boolean(running)}>

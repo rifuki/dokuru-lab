@@ -1,6 +1,6 @@
-# Dokuru Lab Baseline
+# Dokuru Lab
 
-Dokuru Lab Baseline is a deliberately vulnerable SvelteKit application for validating Docker namespace isolation and cgroup controls before and after Dokuru hardening.
+Dokuru Lab is a deliberately vulnerable SvelteKit application for validating Docker namespace isolation and cgroup controls before and after Dokuru hardening.
 
 The application is intentionally unsafe. Run it only on disposable lab infrastructure.
 
@@ -36,7 +36,7 @@ LAB_DATA_DIR=./data bun run start
 
 The Compose file runs Caddy and the intentionally vulnerable baseline app on a dedicated VPS.
 
-Caddy terminates HTTPS for `base.lab.dokuru.rifuki.dev` and proxies to `dokuru-lab-baseline:8080`.
+Caddy terminates HTTPS for `lab.dokuru.rifuki.dev` and proxies to `dokuru-lab:8080`.
 The app intentionally uses Docker's default isolation posture:
 
 - no `pid: host`, `ipc: host`, `uts: host`, or `userns_mode: host`
@@ -45,7 +45,7 @@ The app intentionally uses Docker's default isolation posture:
 - no memory, CPU, or PIDs limits on the vulnerable app
 - bind mounts for `./uploads`, `./logs`, and read-only `./config`
 
-This setup demonstrates two default Docker gaps: container root writes bind-mounted files as host root when user namespace remap is disabled, and an unconstrained container can still consume host resources without cgroup limits. Caddy and victim services keep normal resource limits so the audit noise stays focused on `dokuru-lab-baseline`.
+This setup demonstrates two default Docker gaps: container root writes bind-mounted files as host root when user namespace remap is disabled, and an unconstrained container can still consume host resources without cgroup limits. Caddy and victim services keep normal resource limits so the audit noise stays focused on `dokuru-lab`.
 
 The baseline lab adds victim services in the same Compose stack so the demo can show cross-container blast radius, not only introspection:
 
@@ -53,7 +53,7 @@ The baseline lab adds victim services in the same Compose stack so the demo can 
 - `victim-secrets`: PostgreSQL neighbor with demo customer records for post-compromise host-side proof.
 - `customer-traffic`: background curl loop that writes real customer latency to `./data/customer-traffic.log` for the UI.
 
-Point DNS for `base.lab.dokuru.rifuki.dev` to the VPS, then deploy:
+Point DNS for `lab.dokuru.rifuki.dev` to the VPS, then deploy:
 
 On the VPS, create `.env` from `.env.example` only if you want to override the app runtime values:
 
@@ -82,34 +82,34 @@ docker compose up --build -d
 The repository includes GitHub Actions workflows modeled after the Dokuru and rifuki.dev stacks:
 
 - `Quality Gate`: runs Bun install, SvelteKit checks, production build, Compose config validation, and a Docker smoke build.
-- `Build Dokuru Lab Baseline`: builds and publishes `ghcr.io/rifuki/dokuru-lab-baseline:latest`, `ghcr.io/rifuki/dokuru-lab-baseline:v<version>`, and `ghcr.io/rifuki/dokuru-lab-baseline:sha-<short-commit>` on `main`.
+- `Build Dokuru Lab`: builds and publishes `ghcr.io/rifuki/dokuru-lab:latest`, `ghcr.io/rifuki/dokuru-lab:v<version>`, and `ghcr.io/rifuki/dokuru-lab:sha-<short-commit>` on `main`.
 - `Deploy Compose Service`: reusable SSH deploy workflow that pulls the published image on the VPS and runs `docker compose -f docker-compose.yaml up -d --no-build`.
 
 The browser lab uses:
 
-- `wss://base.lab.dokuru.rifuki.dev/ws/monitor` for live namespace and cgroup metrics.
-- `wss://base.lab.dokuru.rifuki.dev/ws/terminal` for real stdout/stderr from commands and pressure tests. The terminal also forwards stdin to the active interactive `exec` command, so a browser operator can answer prompts without leaving the lab page.
-- `wss://base.lab.dokuru.rifuki.dev/ws/customer` for real checkout latency samples against `victim-checkout`.
+- `wss://lab.dokuru.rifuki.dev/ws/monitor` for live namespace and cgroup metrics.
+- `wss://lab.dokuru.rifuki.dev/ws/terminal` for real stdout/stderr from commands and pressure tests. The terminal also forwards stdin to the active interactive `exec` command, so a browser operator can answer prompts without leaving the lab page.
+- `wss://lab.dokuru.rifuki.dev/ws/customer` for real checkout latency samples against `victim-checkout`.
 
 Set these repository variables for automatic deployment from `main`:
 
 ```text
-DOKURU_LAB_BASELINE_DEPLOY_HOST
-DOKURU_LAB_BASELINE_DEPLOY_USER
-DOKURU_LAB_BASELINE_DEPLOY_PATH
+DOKURU_LAB_DEPLOY_HOST
+DOKURU_LAB_DEPLOY_USER
+DOKURU_LAB_DEPLOY_PATH
 ```
 
 Set this repository secret:
 
 ```text
-DOKURU_LAB_BASELINE_DEPLOY_SSH_KEY
+DOKURU_LAB_DEPLOY_SSH_KEY
 ```
 
 Optional values:
 
 ```text
-DOKURU_LAB_BASELINE_DEPLOY_PORT
-DOKURU_LAB_BASELINE_GHCR_TOKEN
+DOKURU_LAB_DEPLOY_PORT
+DOKURU_LAB_GHCR_TOKEN
 ```
 
 ## API Payloads

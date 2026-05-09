@@ -1,4 +1,4 @@
-# UI Improvement Plan - Dokuru Lab Baseline
+# UI Improvement Plan - Dokuru Lab
 
 **Date:** 2026-05-08  
 **Priority:** HIGH (untuk demo sidang)  
@@ -140,7 +140,7 @@ export function GET() {
 
 **Find & Replace:**
 ```bash
-# In dokuru-lab-baseline/src/
+# In dokuru-lab/src/
 sed -i 's/Memory Sandbox/Memory Limit/g' **/*.svelte
 sed -i 's/NO CPU QUOTA/UNLIMITED/g' **/*.svelte
 sed -i 's/Quota status/Limit status/g' **/*.svelte
@@ -337,7 +337,7 @@ Add banner at top:
 ### Phase 5: Deploy (15 min)
 - [ ] Commit changes
 - [ ] Push to GitHub (auto-deploy via CI/CD)
-- [ ] Verify on `https://base.lab.dokuru.rifuki.dev`
+- [ ] Verify on `https://lab.dokuru.rifuki.dev`
 - [ ] Test full demo flow
 
 **Total Estimated Time:** ~2.5 hours
@@ -349,12 +349,12 @@ Add banner at top:
 ### Test 1: Host Resource Info
 ```bash
 # Before attack
-curl https://base.lab.dokuru.rifuki.dev/api/monitor/host
+curl https://lab.dokuru.rifuki.dev/api/monitor/host
 # Expected: { cpu_cores: 2, cpu_usage_percent: 15, memory_total_gb: 4, memory_available_gb: 3 }
 
 # During cryptominer attack
-curl -X POST https://base.lab.dokuru.rifuki.dev/api/cpu-burn -d '{"seconds":30}'
-curl https://base.lab.dokuru.rifuki.dev/api/monitor/host
+curl -X POST https://lab.dokuru.rifuki.dev/api/cpu-burn -d '{"seconds":30}'
+curl https://lab.dokuru.rifuki.dev/api/monitor/host
 # Expected: { cpu_cores: 2, cpu_usage_percent: 95, ... }
 ```
 
@@ -364,11 +364,11 @@ curl https://base.lab.dokuru.rifuki.dev/api/monitor/host
 # Monitor page shows: Active burners: 0
 
 # During attack
-curl -X POST https://base.lab.dokuru.rifuki.dev/api/cpu-burn -d '{"seconds":30}'
+curl -X POST https://lab.dokuru.rifuki.dev/api/cpu-burn -d '{"seconds":30}'
 # Monitor page shows: Active burners: 4
 
 # After cleanup
-curl -X POST https://base.lab.dokuru.rifuki.dev/api/cleanup
+curl -X POST https://lab.dokuru.rifuki.dev/api/cleanup
 # Monitor page shows: Active burners: 0
 ```
 
@@ -378,7 +378,7 @@ curl -X POST https://base.lab.dokuru.rifuki.dev/api/cleanup
 # Monitor shows: 126 MB / 256 MB (49%)
 
 # During memory bomb
-curl -X POST https://base.lab.dokuru.rifuki.dev/api/memory-bomb -d '{"mb":200}'
+curl -X POST https://lab.dokuru.rifuki.dev/api/memory-bomb -d '{"mb":200}'
 # Monitor shows: 200 MB / 256 MB (78%)
 ```
 
