@@ -6,23 +6,12 @@
 
 	let { children } = $props();
 
-	function routeToLabPage(pathname: string) {
-		const normalized = pathname.replace(/\/$/, '') || '/';
-		if (normalized === '/monitor') return 'monitor';
-		if (normalized === '/namespace') return 'namespace';
-		if (normalized === '/exploit') return 'exploit';
-		if (normalized === '/cgroup') return 'cgroup';
-		if (normalized === '/evidence') return 'evidence';
-		return 'home';
-	}
-
-	function routeTitle(route: ReturnType<typeof routeToLabPage>): string {
-		if (route === 'home') return 'Dokuru Namespace Cgroup Lab';
-		return `${route[0].toUpperCase()}${route.slice(1)} | Dokuru Lab`;
-	}
-
-	const activeLabPage = $derived(routeToLabPage(page.url.pathname));
-	const title = $derived(routeTitle(activeLabPage));
+	const title = $derived.by(() => {
+		const pathname = page.url.pathname.replace(/\/$/, '') || '/';
+		if (pathname === '/') return 'Dokuru Namespace & Cgroup Lab';
+		const slug = pathname.slice(1);
+		return `${slug[0].toUpperCase()}${slug.slice(1)} | Dokuru Lab`;
+	});
 </script>
 
 <svelte:head>
@@ -30,9 +19,9 @@
 	<title>{title}</title>
 	<meta
 		name="description"
-		content="A clickable SvelteKit lab for validating Docker namespace isolation and cgroup controls."
+		content="A SvelteKit lab for validating Docker namespace isolation and cgroup controls. Single-page dashboard with live attack primitives and real-time signals."
 	/>
 </svelte:head>
 
-<LabPage page={activeLabPage} />
+<LabPage />
 {@render children()}
