@@ -25,44 +25,53 @@
 		children
 	}: Props = $props();
 
-	const alertBorder = {
-		danger: 'border-commerce/40',
-		warn: 'border-amber-400/40',
-		ok: 'border-emerald-400/30'
+	const alertStyles = {
+		danger: 'border-commerce/30 bg-commerce/[0.03]',
+		warn: 'border-amber-400/40 bg-amber-50/60',
+		ok: 'border-emerald-500/30 bg-emerald-50/60'
 	} as const;
 
-	const defaultBorder = 'border-white/8';
+	const defaultStyle = 'border-black/5 bg-white';
+
+	const iconAlertStyles = {
+		danger: 'bg-commerce/10 text-commerce',
+		warn: 'bg-amber-400/15 text-amber-700',
+		ok: 'bg-emerald-500/15 text-emerald-600'
+	} as const;
+
+	const defaultIconStyle = 'bg-playstation-blue/10 text-playstation-blue';
 
 	const progressColorClass = {
 		blue: 'bg-playstation-blue',
 		cyan: 'bg-playstation-cyan',
 		commerce: 'bg-commerce',
-		emerald: 'bg-emerald-400'
+		emerald: 'bg-emerald-500'
 	} as const;
 
-	const borderClass = $derived(alert ? alertBorder[alert] : defaultBorder);
+	const wrapperClass = $derived(alert ? alertStyles[alert] : defaultStyle);
+	const iconClass = $derived(alert ? iconAlertStyles[alert] : defaultIconStyle);
 </script>
 
-<article class={`rounded-lg border bg-white/[0.03] p-3.5 ${borderClass}`}>
+<article class={`rounded-lg border p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_3px_8px_rgba(0,0,0,0.06)] ${wrapperClass}`}>
 	<header class="mb-2 flex items-center justify-between gap-2">
-		<div class="flex items-center gap-2">
-			<span class="grid h-6 w-6 place-items-center rounded-md bg-white/10 text-white/80" aria-hidden="true">
+		<div class="flex min-w-0 items-center gap-2">
+			<span class={`grid h-6 w-6 shrink-0 place-items-center rounded-md ${iconClass}`} aria-hidden="true">
 				<Icon size={12} strokeWidth={2} />
 			</span>
-			<span class="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">{label}</span>
+			<span class="font-mono text-[10px] uppercase tracking-[0.1em] text-body-gray">{label}</span>
 			{#if rule}
-				<span class="font-mono text-[9.5px] text-white/30">{rule}</span>
+				<span class="font-mono text-[9.5px] text-body-gray/70">{rule}</span>
 			{/if}
 		</div>
 		{#if value !== undefined}
-			<span class="font-mono text-[13px] font-semibold tabular-nums text-white">
-				{value}{#if valueSuffix}<span class="ml-1 text-[10px] font-normal text-white/50">{valueSuffix}</span>{/if}
+			<span class="shrink-0 font-mono text-[13px] font-semibold tabular-nums text-ink">
+				{value}{#if valueSuffix}<span class="ml-1 text-[10px] font-normal text-body-gray">{valueSuffix}</span>{/if}
 			</span>
 		{/if}
 	</header>
 
 	{#if progress !== undefined}
-		<div class="h-1 overflow-hidden rounded-full bg-white/5">
+		<div class="h-1 overflow-hidden rounded-full bg-black/5">
 			<div
 				class={`h-full rounded-full transition-all duration-500 ${progressColorClass[progressColor]}`}
 				style={`width: ${Math.max(0, Math.min(100, progress))}%`}

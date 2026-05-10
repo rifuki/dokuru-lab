@@ -15,10 +15,10 @@
 		$props();
 
 	const base =
-		'inline-flex cursor-pointer items-center justify-center rounded-full font-medium tracking-[0.02em] transition-all duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.97] active:brightness-95';
+		'inline-flex cursor-pointer items-center justify-center rounded-full font-medium tracking-[0.01em] transition-all duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98] active:brightness-95';
 	const sizes: Record<ButtonSize, string> = {
-		sm: 'px-4 py-2 text-[13px]',
-		md: 'px-5 py-2.5 text-[14.5px]'
+		sm: 'min-h-8 px-3.5 py-1.5 text-[12px]',
+		md: 'min-h-10 px-5 py-2 text-[14px]'
 	};
 	const variants: Record<ButtonVariant, string> = {
 		primary:

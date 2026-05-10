@@ -12,8 +12,10 @@
 		Layers,
 		Lock,
 		MemoryStick,
+		Moon,
 		Radio,
 		ShieldAlert,
+		Sun,
 		ShoppingCart,
 		Terminal as TerminalIcon,
 		Upload,
@@ -24,6 +26,7 @@
 	import Button from '$lib/components/atoms/Button.svelte';
 	import AttackCard from '$lib/components/molecules/AttackCard.svelte';
 	import SignalCard from '$lib/components/molecules/SignalCard.svelte';
+	import TerminalHandle from '$lib/components/organisms/TerminalHandle.svelte';
 	import TerminalEventLog, {
 		type TerminalEvent
 	} from '$lib/components/organisms/TerminalEventLog.svelte';
@@ -45,6 +48,7 @@
 	let monitorConnected = $state(false);
 	let customerConnected = $state(false);
 	let terminalOpen = $state(false);
+	let lightMode = $state(false);
 	let terminalWidth = $state(480);
 	let terminalMaxWidth = $state(840);
 	let terminalResizing = $state(false);
@@ -72,6 +76,7 @@
 	const TERMINAL_MAX_RATIO = 0.7;
 	const TERMINAL_WIDTH_KEY = 'dokuru-lab.terminal.width';
 	const TERMINAL_OPEN_KEY = 'dokuru-lab.terminal.open';
+	const THEME_KEY = 'dokuru-lab.theme';
 
 	let hostname = $state('');
 
@@ -112,8 +117,30 @@
 			}
 			const storedOpen = window.localStorage.getItem(TERMINAL_OPEN_KEY);
 			terminalOpen = storedOpen === 'true';
+			lightMode = window.localStorage.getItem(THEME_KEY) === 'light';
 		} catch {
 			/* localStorage unavailable */
+		}
+	}
+
+	function toggleTheme() {
+		lightMode = !lightMode;
+		try {
+			window.localStorage.setItem(THEME_KEY, lightMode ? 'light' : 'dark');
+		} catch {
+			/* ignore */
+		}
+	}
+
+	function setTerminalWidth(next: number) {
+		terminalWidth = Math.max(TERMINAL_MIN_WIDTH, Math.min(terminalMaxWidth, next));
+	}
+
+	function persistTerminalWidth() {
+		try {
+			window.localStorage.setItem(TERMINAL_WIDTH_KEY, String(terminalWidth));
+		} catch {
+			/* ignore */
 		}
 	}
 
@@ -246,10 +273,11 @@
 
 			if (msg.type === 'terminal.exit') {
 				const code = msg.code as number | undefined;
+				const action = activeActionType;
 				finishShellEvent(code ?? null);
 				running = '';
 				activeActionType = null;
-				updateStatusByAction(activeActionType, code === 0 || code === undefined ? 'ok' : 'error');
+				updateStatusByAction(action, code === 0 || code === undefined ? 'ok' : 'error');
 				return;
 			}
 		};
@@ -296,7 +324,6 @@
 				running: true
 			}
 		].slice(-200);
-		if (!terminalOpen) toggleTerminal();
 	}
 
 	function appendShellLine(stream: 'stdout' | 'stderr' | 'stdin' | 'system', text: string) {
@@ -346,8 +373,6 @@
 				duration: undefined
 			}
 		].slice(-200);
-		if (!terminalOpen) toggleTerminal();
-
 		try {
 			const init: RequestInit = {
 				method,
@@ -390,8 +415,6 @@
 			...events,
 			{ id, at: timeLabel(), kind: 'http' as const, method: 'POST', path, body: '[multipart/form-data]', duration: undefined }
 		].slice(-200);
-		if (!terminalOpen) toggleTerminal();
-
 		try {
 			const response = await fetch(path, { method: 'POST', body: form });
 			const text = await response.text();
@@ -584,7 +607,7 @@
 			? { label: 'baseline · default docker', class: 'border-commerce/40 text-commerce bg-commerce/5' }
 			: isHardened
 				? { label: 'hardened · userns-remap', class: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/5' }
-				: { label: 'unknown · loading', class: 'border-white/20 text-white/60 bg-white/5' }
+				: { label: 'unknown · loading', class: 'border-black/15 text-body-gray bg-black/5' }
 	);
 
 	const cgroupMemoryUnlimited = $derived(evidence?.cgroup.memory_max === 'max');
@@ -625,15 +648,15 @@
 	}
 </script>
 
-<div class="flex min-h-screen bg-[#050608] text-white">
+<div class={`flex min-h-screen ${lightMode ? 'bg-[#f5f7fa] text-ink' : 'bg-[#050608] text-white'}`}>
 	<!-- ═══════════════════════════════════════════════════════════════ -->
 	<!-- Main dashboard                                                   -->
 	<!-- ═══════════════════════════════════════════════════════════════ -->
 	<div class="flex min-w-0 flex-1 flex-col">
 		<!-- Header (slim, sticky, auto-detect state) -->
-		<header class="sticky top-0 z-20 flex h-[52px] shrink-0 items-center gap-4 border-b border-white/5 bg-black/95 px-4 backdrop-blur sm:px-6">
-			<a href="/" class="inline-flex items-center gap-2.5 text-white no-underline">
-				<span class="grid h-7 w-7 place-items-center rounded-full bg-white text-playstation-blue">
+		<header class={`sticky top-0 z-20 flex h-[52px] shrink-0 items-center gap-4 border-b px-4 backdrop-blur sm:px-6 ${lightMode ? 'border-black/5 bg-white/95' : 'border-white/5 bg-black/95'}`}>
+			<a href="/" class={`inline-flex items-center gap-2.5 no-underline ${lightMode ? 'text-ink' : 'text-white'}`}>
+				<span class={`grid h-7 w-7 place-items-center rounded-full ${lightMode ? 'bg-playstation-blue text-white' : 'bg-white text-playstation-blue'}`}>
 					<FlaskConical size={14} strokeWidth={2.2} />
 				</span>
 				<span class="text-[14.5px] font-semibold tracking-tight">Dokuru Lab</span>
@@ -644,12 +667,12 @@
 				{stateBadge.label}
 			</span>
 
-			<nav class="ml-auto hidden items-center gap-4 font-mono text-[10.5px] uppercase tracking-[0.08em] text-white/45 lg:flex">
-				<a href="#attacks" class="inline-flex items-center gap-1.5 transition hover:text-white">
+			<nav class={`ml-auto hidden items-center gap-4 font-mono text-[10.5px] uppercase tracking-[0.08em] lg:flex ${lightMode ? 'text-body-gray' : 'text-white/45'}`}>
+				<a href="#attacks" class={`inline-flex items-center gap-1.5 transition ${lightMode ? 'hover:text-ink' : 'hover:text-white'}`}>
 					<Bomb size={11} strokeWidth={2.2} />
 					Attacks
 				</a>
-				<a href="#signals" class="inline-flex items-center gap-1.5 transition hover:text-white">
+				<a href="#signals" class={`inline-flex items-center gap-1.5 transition ${lightMode ? 'hover:text-ink' : 'hover:text-white'}`}>
 					<Gauge size={11} strokeWidth={2.2} />
 					Signals
 				</a>
@@ -665,21 +688,12 @@
 
 			<button
 				type="button"
-				onclick={toggleTerminal}
-				aria-label={terminalOpen ? 'Close terminal' : 'Open terminal'}
-				class={`ml-auto inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.08em] transition lg:ml-0 ${
-					terminalOpen
-						? 'border-playstation-cyan/60 bg-playstation-cyan/10 text-playstation-cyan'
-						: 'border-white/15 bg-white/5 text-white/70 hover:border-white/30 hover:text-white'
-				}`}
+				onclick={toggleTheme}
+				aria-label={lightMode ? 'Switch to dark mode' : 'Switch to light mode'}
+				class={`ml-auto inline-flex h-8 items-center gap-1.5 rounded-full border px-3 font-mono text-[10px] uppercase tracking-[0.08em] transition lg:ml-0 ${lightMode ? 'border-black/10 bg-black/[0.03] text-body-gray hover:border-black/20 hover:text-ink' : 'border-white/15 bg-white/5 text-white/70 hover:border-white/30 hover:text-white'}`}
 			>
-				<TerminalIcon size={11} strokeWidth={2.2} />
-				<span>terminal</span>
-				{#if events.length > 0}
-					<span class="rounded-full bg-white/10 px-1.5 py-0.5 text-[9.5px] tabular-nums">
-						{events.length > 99 ? '99+' : events.length}
-					</span>
-				{/if}
+				{#if lightMode}<Moon size={11} strokeWidth={2.2} />{:else}<Sun size={11} strokeWidth={2.2} />{/if}
+				<span>{lightMode ? 'dark' : 'light'}</span>
 			</button>
 		</header>
 
@@ -690,7 +704,7 @@
 					<div class="flex items-center gap-3 font-mono text-[11.5px] text-commerce">
 						<span class="inline-flex h-2 w-2 animate-pulse rounded-full bg-commerce" aria-hidden="true"></span>
 						<span class="uppercase tracking-[0.1em]">Active payload</span>
-						<span class="text-white">{activePayload.label}</span>
+						<span class={lightMode ? 'text-ink' : 'text-white'}>{activePayload.label}</span>
 					</div>
 					<Button size="sm" variant="commerce" onclick={stopPayloads} disabled={running === 'stop-payloads'}>
 						Stop payload
@@ -705,15 +719,15 @@
 			<section id="attacks" class="min-w-0 space-y-5">
 				<div class="mb-2 flex items-center gap-3">
 					<Bomb size={15} strokeWidth={2.2} class="text-commerce" />
-					<h2 class="m-0 text-[13px] font-mono uppercase tracking-[0.14em] text-white">Attack pad</h2>
-					<span class="font-mono text-[10.5px] text-white/40">from compromised container</span>
+					<h2 class={`m-0 font-mono text-[13px] uppercase tracking-[0.14em] ${lightMode ? 'text-ink' : 'text-white'}`}>Attack pad</h2>
+					<span class={`font-mono text-[10.5px] ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>from compromised container</span>
 				</div>
 
 				<!-- Section B: Docker misconfig (KEY demos) -->
-				<div id="docker-misconfig" class="space-y-3 rounded-xl border border-white/5 bg-white/[0.015] p-4">
+				<div id="docker-misconfig" class={`space-y-3 rounded-lg border p-4 ${lightMode ? 'border-black/5 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]' : 'border-white/5 bg-white/[0.015]'}`}>
 					<div class="flex items-center gap-2">
 						<ShieldAlert size={13} strokeWidth={2.2} class="text-commerce" />
-						<h3 class="m-0 text-[12px] font-semibold uppercase tracking-[0.1em] text-white/85">Docker misconfig exploits</h3>
+						<h3 class={`m-0 text-[12px] font-semibold uppercase tracking-[0.1em] ${lightMode ? 'text-ink' : 'text-white/85'}`}>Docker misconfig exploits</h3>
 						<span class="rounded-full bg-commerce/15 px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.08em] text-commerce">Dokuru fixes these</span>
 					</div>
 
@@ -722,15 +736,15 @@
 							icon={ShieldAlert}
 							index="B2"
 							title="SUID LPE Honeypot"
-							description="Drop /bin/bash into uploads with SUID bit. Admin executes it → becomes host root (baseline), becomes UID 100000 (hardened)."
+							description="Drop a SUID artifact into uploads. Baseline: container root can create host-root-owned files on the bind mount. Hardened: userns maps it to UID 100000."
 							rule="rule 2.10"
 							tag="key"
 							accent="commerce"
 							status={lastSuidStatus.status}
 							statusText={lastSuidStatus.text}
 						>
-							<Button size="sm" variant="commerce" onclick={planSuid}>Plant SUID trap</Button>
-							<Button size="sm" variant="ghost" onclick={cleanupTraps}>Cleanup</Button>
+							<Button size="sm" variant="commerce" onclick={planSuid} disabled={lastSuidStatus.status === 'running'}>Plant SUID trap</Button>
+							<Button size="sm" variant="ghost" onclick={cleanupTraps} disabled={lastSuidStatus.status === 'running' || lastSetcapStatus.status === 'running'}>Cleanup</Button>
 						</AttackCard>
 
 						<AttackCard
@@ -743,7 +757,7 @@
 							status={lastSetcapStatus.status}
 							statusText={lastSetcapStatus.text}
 						>
-							<Button size="sm" onclick={planSetcap}>Plant setcap trap</Button>
+							<Button size="sm" onclick={planSetcap} disabled={lastSetcapStatus.status === 'running'}>Plant setcap trap</Button>
 						</AttackCard>
 
 						<AttackCard
@@ -756,7 +770,7 @@
 							status={lastUploadStatus.status}
 							statusText={lastUploadStatus.text}
 						>
-							<Button size="sm" onclick={writeMarker}>Write ownership marker</Button>
+							<Button size="sm" onclick={writeMarker} disabled={lastUploadStatus.status === 'running'}>Write ownership marker</Button>
 						</AttackCard>
 
 						<AttackCard
@@ -816,10 +830,10 @@
 				</div>
 
 				<!-- Section A: Entry point -->
-				<div id="entry" class="space-y-3 rounded-xl border border-white/5 bg-white/[0.015] p-4">
+				<div id="entry" class={`space-y-3 rounded-lg border p-4 ${lightMode ? 'border-black/5 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]' : 'border-white/5 bg-white/[0.015]'}`}>
 					<div class="flex items-center gap-2">
 						<Bomb size={13} strokeWidth={2.2} class="text-amber-400" />
-						<h3 class="m-0 text-[12px] font-semibold uppercase tracking-[0.1em] text-white/85">Entry point</h3>
+						<h3 class={`m-0 text-[12px] font-semibold uppercase tracking-[0.1em] ${lightMode ? 'text-ink' : 'text-white/85'}`}>Entry point</h3>
 						<span class="rounded-full bg-amber-400/15 px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.08em] text-amber-300">app bug · not Dokuru scope</span>
 					</div>
 
@@ -842,20 +856,20 @@
 								class="w-full rounded-md border border-black/10 bg-white px-2.5 py-1.5 font-mono text-[12px] text-ink focus:ring-1 focus:ring-playstation-blue focus:outline-none"
 							/>
 							<div class="flex gap-2">
-								<Button size="sm" variant="commerce" onclick={executeInjection}>Execute injection</Button>
+									<Button size="sm" variant="commerce" onclick={executeInjection} disabled={lastPingStatus.status === 'running'}>Execute injection</Button>
 							</div>
 						</div>
 					</AttackCard>
 				</div>
 
 				<!-- Section C: App-level (scope boundary) -->
-				<div id="app-level" class="space-y-3 rounded-xl border border-white/5 bg-white/[0.015] p-4">
+				<div id="app-level" class={`space-y-3 rounded-lg border p-4 ${lightMode ? 'border-black/5 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]' : 'border-white/5 bg-white/[0.015]'}`}>
 					<div class="flex items-center gap-2">
-						<Lock size={13} strokeWidth={2.2} class="text-white/50" />
-						<h3 class="m-0 text-[12px] font-semibold uppercase tracking-[0.1em] text-white/85">App-level consequences</h3>
-						<span class="rounded-full bg-white/10 px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.08em] text-white/50">scope boundary</span>
+						<Lock size={13} strokeWidth={2.2} class={lightMode ? 'text-body-gray' : 'text-white/50'} />
+						<h3 class={`m-0 text-[12px] font-semibold uppercase tracking-[0.1em] ${lightMode ? 'text-ink' : 'text-white/85'}`}>App-level consequences</h3>
+						<span class={`rounded-full px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.08em] ${lightMode ? 'bg-black/5 text-body-gray' : 'bg-white/10 text-white/50'}`}>scope boundary</span>
 					</div>
-					<p class="m-0 text-[11.5px] leading-snug text-white/50">
+					<p class={`m-0 text-[11.5px] leading-snug ${lightMode ? 'text-body-gray' : 'text-white/50'}`}>
 						These succeed regardless of Dokuru. Fix belongs at the application layer (input validation, secrets management). Dokuru limits blast radius to app data — not host.
 					</p>
 
@@ -870,7 +884,7 @@
 							statusText={lastDumpStatus.text}
 						>
 							<Button size="sm" variant="ghost" onclick={seedData}>Seed data</Button>
-							<Button size="sm" onclick={dumpAppData}>Dump</Button>
+							<Button size="sm" onclick={dumpAppData} disabled={lastDumpStatus.status === 'running'}>Dump</Button>
 						</AttackCard>
 
 						<AttackCard
@@ -882,8 +896,8 @@
 							status={lastRansomStatus.status}
 							statusText={lastRansomStatus.text}
 						>
-							<Button size="sm" variant="commerce" onclick={runRansomware}>Encrypt files</Button>
-							<Button size="sm" variant="ghost" onclick={restoreData}>Restore</Button>
+							<Button size="sm" variant="commerce" onclick={runRansomware} disabled={lastRansomStatus.status === 'running'}>Encrypt files</Button>
+							<Button size="sm" variant="ghost" onclick={restoreData} disabled={lastRansomStatus.status === 'running'}>Restore</Button>
 						</AttackCard>
 					</div>
 				</div>
@@ -893,40 +907,40 @@
 			<aside id="signals" class="space-y-3 lg:sticky lg:top-[68px] lg:self-start">
 				<div class="mb-2 flex items-center gap-3">
 					<Gauge size={15} strokeWidth={2.2} class="text-playstation-cyan" />
-					<h2 class="m-0 text-[13px] font-mono uppercase tracking-[0.14em] text-white">Live signal</h2>
+				<h2 class={`m-0 font-mono text-[13px] uppercase tracking-[0.14em] ${lightMode ? 'text-ink' : 'text-white'}`}>Live signal</h2>
 					{#if lastUpdated}
-						<span class="ml-auto font-mono text-[10.5px] text-white/40 tabular-nums">{lastUpdated}</span>
+						<span class={`ml-auto font-mono text-[10.5px] tabular-nums ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>{lastUpdated}</span>
 					{/if}
 				</div>
 
 				<!-- Customer latency card -->
-				<article class="rounded-lg border border-white/8 bg-gradient-to-br from-[#08202e] to-[#050608] p-3.5">
+				<article class={`rounded-lg border p-3.5 ${lightMode ? 'border-black/5 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]' : 'border-white/8 bg-gradient-to-br from-[#08202e] to-[#050608]'}`}>
 					<header class="mb-2 flex items-center justify-between gap-2">
 						<div class="flex items-center gap-2">
 							<span class="grid h-6 w-6 place-items-center rounded-md bg-playstation-cyan/15 text-playstation-cyan">
 								<ShoppingCart size={12} strokeWidth={2} />
 							</span>
-							<span class="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">Customer latency</span>
+							<span class={`font-mono text-[10px] uppercase tracking-[0.1em] ${lightMode ? 'text-body-gray' : 'text-white/60'}`}>Customer latency</span>
 						</div>
-						<span class="font-mono text-[10px] text-white/40">
+						<span class={`font-mono text-[10px] ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>
 							{latestCustomer?.ok ? `http ${latestCustomer.status}` : latestCustomer?.ok === false ? 'down' : '—'}
 						</span>
 					</header>
 
 					<div class="mb-3 flex items-baseline justify-between gap-2">
-						<strong class="font-mono text-[28px] font-light tabular-nums text-white">
+						<strong class={`font-mono text-[28px] font-light tabular-nums ${lightMode ? 'text-ink' : 'text-white'}`}>
 							{latestCustomer?.ok ? `${latestCustomer.latency_ms}` : latestCustomer ? '—' : '—'}
-							<span class="text-[14px] text-white/40">ms</span>
+							<span class={`text-[14px] ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>ms</span>
 						</strong>
 						<div class="flex flex-col items-end gap-0.5 text-right">
-							<span class="font-mono text-[10.5px] text-white/50">avg {avgLatency}</span>
-							<span class="font-mono text-[10.5px] text-white/40">{recentCustomer.length} · {failCount} fail</span>
+							<span class={`font-mono text-[10.5px] ${lightMode ? 'text-body-gray' : 'text-white/50'}`}>avg {avgLatency}</span>
+							<span class={`font-mono text-[10.5px] ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>{recentCustomer.length} · {failCount} fail</span>
 						</div>
 					</div>
 
-					<div class="flex h-14 items-end gap-[2px] rounded-md bg-black/40 p-1.5">
+					<div class={`flex h-14 items-end gap-[2px] rounded-md p-1.5 ${lightMode ? 'bg-black/[0.03]' : 'bg-black/40'}`}>
 						{#if recentCustomer.length === 0}
-							<span class="w-full text-center font-mono text-[10px] text-white/30">waiting /ws/customer…</span>
+							<span class={`w-full text-center font-mono text-[10px] ${lightMode ? 'text-body-gray' : 'text-white/30'}`}>waiting /ws/customer…</span>
 						{/if}
 						{#each recentCustomer as sample}
 							<div
@@ -950,8 +964,8 @@
 				>
 					{#snippet children()}
 						<div class="flex items-center justify-between gap-2">
-							<span class="font-mono text-[9.5px] text-white/40">sleepers</span>
-							<span class="font-mono text-[10.5px] text-white/70 tabular-nums">{evidence?.processes.pid_bomb_sleepers || '0'}</span>
+							<span class={`font-mono text-[9.5px] ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>sleepers</span>
+							<span class={`font-mono text-[10.5px] tabular-nums ${lightMode ? 'text-ink' : 'text-white/70'}`}>{evidence?.processes.pid_bomb_sleepers || '0'}</span>
 						</div>
 						{#if cgroupPidsUnlimited}
 							<div class="rounded bg-amber-400/10 px-1.5 py-1 font-mono text-[9.5px] text-amber-300">pid limit not configured</div>
@@ -971,12 +985,12 @@
 				>
 					{#snippet children()}
 						<div class="flex items-center justify-between gap-2">
-							<span class="font-mono text-[9.5px] text-white/40">host total</span>
-							<span class="font-mono text-[10.5px] text-white/70 tabular-nums">{hostInfo.memory_total_gb} GB</span>
+							<span class={`font-mono text-[9.5px] ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>host total</span>
+							<span class={`font-mono text-[10.5px] tabular-nums ${lightMode ? 'text-ink' : 'text-white/70'}`}>{hostInfo.memory_total_gb} GB</span>
 						</div>
 						<div class="flex items-center justify-between gap-2">
-							<span class="font-mono text-[9.5px] text-white/40">host available</span>
-							<span class="font-mono text-[10.5px] text-white/70 tabular-nums">{hostInfo.memory_available_gb} GB · {hostMemPct}%</span>
+							<span class={`font-mono text-[9.5px] ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>host available</span>
+							<span class={`font-mono text-[10.5px] tabular-nums ${lightMode ? 'text-ink' : 'text-white/70'}`}>{hostInfo.memory_available_gb} GB · {hostMemPct}%</span>
 						</div>
 						{#if cgroupMemoryUnlimited}
 							<div class="rounded bg-commerce/10 px-1.5 py-1 font-mono text-[9.5px] text-commerce">unlimited — host-wide blast risk</div>
@@ -994,20 +1008,20 @@
 				>
 					{#snippet children()}
 						<div class="flex items-center justify-between gap-2">
-							<span class="font-mono text-[9.5px] text-white/40">cores</span>
-							<span class="font-mono text-[10.5px] text-white/70 tabular-nums">{hostInfo.cpu_cores}</span>
+							<span class={`font-mono text-[9.5px] ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>cores</span>
+							<span class={`font-mono text-[10.5px] tabular-nums ${lightMode ? 'text-ink' : 'text-white/70'}`}>{hostInfo.cpu_cores}</span>
 						</div>
 						<div class="flex items-center justify-between gap-2">
-							<span class="font-mono text-[9.5px] text-white/40">cpu.max</span>
-							<span class="font-mono text-[10.5px] text-white/70 tabular-nums">{evidence?.cgroup.cpu_max || '—'}</span>
+							<span class={`font-mono text-[9.5px] ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>cpu.max</span>
+							<span class={`font-mono text-[10.5px] tabular-nums ${lightMode ? 'text-ink' : 'text-white/70'}`}>{evidence?.cgroup.cpu_max || '—'}</span>
 						</div>
 						<div class="flex items-center justify-between gap-2">
-							<span class="font-mono text-[9.5px] text-white/40">cpu.weight</span>
-							<span class="font-mono text-[10.5px] text-white/70 tabular-nums">{evidence?.cgroup.cpu_weight || '—'}</span>
+							<span class={`font-mono text-[9.5px] ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>cpu.weight</span>
+							<span class={`font-mono text-[10.5px] tabular-nums ${lightMode ? 'text-ink' : 'text-white/70'}`}>{evidence?.cgroup.cpu_weight || '—'}</span>
 						</div>
 						<div class="flex items-center justify-between gap-2">
-							<span class="font-mono text-[9.5px] text-white/40">burners</span>
-							<span class={`font-mono text-[10.5px] tabular-nums ${(evidence?.cgroup.active_cpu_burners ?? 0) > 0 ? 'text-commerce' : 'text-white/70'}`}>
+							<span class={`font-mono text-[9.5px] ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>burners</span>
+							<span class={`font-mono text-[10.5px] tabular-nums ${(evidence?.cgroup.active_cpu_burners ?? 0) > 0 ? 'text-commerce' : lightMode ? 'text-ink' : 'text-white/70'}`}>
 								{evidence?.cgroup.active_cpu_burners ?? 0}
 							</span>
 						</div>
@@ -1017,16 +1031,16 @@
 				<SignalCard icon={UserCog} label="Namespace" rule="2.10">
 					{#snippet children()}
 						<div class="flex items-start justify-between gap-2">
-							<span class="font-mono text-[9.5px] text-white/40">uid_map</span>
-							<span class="max-w-[60%] truncate font-mono text-[10.5px] text-white/80 tabular-nums">{uidMapFirst}</span>
+							<span class={`font-mono text-[9.5px] ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>uid_map</span>
+							<span class={`max-w-[60%] truncate font-mono text-[10.5px] tabular-nums ${lightMode ? 'text-ink' : 'text-white/80'}`}>{uidMapFirst}</span>
 						</div>
 						<div class="flex items-center justify-between gap-2">
-							<span class="font-mono text-[9.5px] text-white/40">pid ns</span>
-							<span class="max-w-[60%] truncate font-mono text-[10.5px] text-white/70">{evidence?.pid_namespace || '—'}</span>
+							<span class={`font-mono text-[9.5px] ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>pid ns</span>
+							<span class={`max-w-[60%] truncate font-mono text-[10.5px] ${lightMode ? 'text-ink' : 'text-white/70'}`}>{evidence?.pid_namespace || '—'}</span>
 						</div>
 						<div class="flex items-center justify-between gap-2">
-							<span class="font-mono text-[9.5px] text-white/40">visible procs</span>
-							<span class="font-mono text-[10.5px] text-white/70 tabular-nums">{evidence?.processes.process_count || '—'}</span>
+							<span class={`font-mono text-[9.5px] ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>visible procs</span>
+							<span class={`font-mono text-[10.5px] tabular-nums ${lightMode ? 'text-ink' : 'text-white/70'}`}>{evidence?.processes.process_count || '—'}</span>
 						</div>
 					{/snippet}
 				</SignalCard>
@@ -1035,13 +1049,13 @@
 					{#snippet children()}
 						<div class="space-y-1.5">
 							{#if events.length === 0}
-								<p class="m-0 font-mono text-[10px] text-white/35">no actions yet</p>
+								<p class={`m-0 font-mono text-[10px] ${lightMode ? 'text-body-gray' : 'text-white/35'}`}>no actions yet</p>
 							{/if}
 							{#each events.slice(-5).reverse() as event (event.id)}
 								<div class="flex items-start gap-2">
-									<span class="shrink-0 font-mono text-[9.5px] text-white/30 tabular-nums">{event.at}</span>
+									<span class={`shrink-0 font-mono text-[9.5px] tabular-nums ${lightMode ? 'text-body-gray' : 'text-white/30'}`}>{event.at}</span>
 									{#if event.kind === 'http'}
-										<span class="truncate font-mono text-[10px] text-white/70">
+										<span class={`truncate font-mono text-[10px] ${lightMode ? 'text-ink' : 'text-white/70'}`}>
 											{event.method} {event.path.replace(/^\/api\//, '')}
 										</span>
 										<span class={`ml-auto shrink-0 font-mono text-[9.5px] tabular-nums ${event.error ? 'text-commerce' : event.status && event.status < 400 ? 'text-emerald-400' : 'text-amber-300'}`}>
@@ -1049,9 +1063,9 @@
 										</span>
 									{:else if event.kind === 'shell'}
 										<span class="truncate font-mono text-[10px] text-emerald-400/80">$ {event.command || 'shell'}</span>
-										<span class="ml-auto shrink-0 font-mono text-[9.5px] text-white/40">{event.running ? '…' : 'done'}</span>
+										<span class={`ml-auto shrink-0 font-mono text-[9.5px] ${lightMode ? 'text-body-gray' : 'text-white/40'}`}>{event.running ? '…' : 'done'}</span>
 									{:else}
-										<span class="truncate font-mono text-[10px] text-white/55">{event.text}</span>
+										<span class={`truncate font-mono text-[10px] ${lightMode ? 'text-body-gray' : 'text-white/55'}`}>{event.text}</span>
 									{/if}
 								</div>
 							{/each}
@@ -1062,8 +1076,8 @@
 		</main>
 
 		<!-- Footer -->
-		<footer class="mt-auto border-t border-white/5 bg-black/60 px-4 py-3 sm:px-6">
-			<div class="mx-auto flex max-w-[1640px] items-center gap-3 font-mono text-[10.5px] tracking-[0.04em] text-white/35">
+		<footer class={`mt-auto border-t px-4 py-3 sm:px-6 ${lightMode ? 'border-black/5 bg-white/70' : 'border-white/5 bg-black/60'}`}>
+			<div class={`mx-auto flex max-w-[1640px] items-center gap-3 font-mono text-[10.5px] tracking-[0.04em] ${lightMode ? 'text-body-gray' : 'text-white/35'}`}>
 				<AlertOctagon size={12} strokeWidth={2} />
 				<span>disposable lab host · endpoints intentionally expose shell execution and resource pressure</span>
 				<span class="ml-auto">{hostname}</span>
@@ -1074,6 +1088,19 @@
 	<!-- ═══════════════════════════════════════════════════════════════ -->
 	<!-- Terminal sidebar (desktop right-docked, resizable)               -->
 	<!-- ═══════════════════════════════════════════════════════════════ -->
+	<TerminalHandle
+		open={terminalOpen}
+		width={terminalWidth}
+		minWidth={TERMINAL_MIN_WIDTH}
+		maxWidth={terminalMaxWidth}
+		connected={terminalConnected}
+		busy={Boolean(running)}
+		eventCount={events.length}
+		onToggle={toggleTerminal}
+		onResize={setTerminalWidth}
+		onResizeEnd={persistTerminalWidth}
+	/>
+
 	<aside
 		class="sticky top-0 hidden h-screen shrink-0 self-start overflow-hidden border-l border-white/5 bg-[#0a0a0a] lg:block"
 		style="width: {terminalOpen ? terminalWidth : 0}px; transition: {terminalResizing ? 'none' : 'width 220ms cubic-bezier(0.22,1,0.36,1)'};"

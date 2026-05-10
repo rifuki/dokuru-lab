@@ -313,7 +313,7 @@
 											<button
 												type="button"
 												onclick={() => copyText(event.id + '-json', copyJson(event))}
-												class="inline-flex items-center gap-1 rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 font-mono text-[9.5px] text-white/60 transition hover:border-white/25 hover:text-white"
+										class="inline-flex h-6 items-center gap-1 rounded border border-white/10 bg-white/[0.03] px-1.5 font-mono text-[9px] text-white/55 transition hover:border-white/25 hover:text-white"
 												title="Copy JSON"
 											>
 												<Copy size={9} strokeWidth={2} />
@@ -322,7 +322,7 @@
 											<button
 												type="button"
 												onclick={() => copyText(event.id + '-curl', asCurl(event))}
-												class="inline-flex items-center gap-1 rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 font-mono text-[9.5px] text-white/60 transition hover:border-white/25 hover:text-white"
+										class="inline-flex h-6 items-center gap-1 rounded border border-white/10 bg-white/[0.03] px-1.5 font-mono text-[9px] text-white/55 transition hover:border-white/25 hover:text-white"
 												title="Copy as curl"
 											>
 												<Copy size={9} strokeWidth={2} />
@@ -350,8 +350,8 @@
 	</div>
 
 	<!-- Input prompt -->
-	<footer class="flex shrink-0 items-center gap-2 border-t border-white/5 bg-[#050505] px-3 py-2">
-		<span class="font-mono text-[12px] text-emerald-400">$</span>
+	<footer class="flex h-11 shrink-0 items-center gap-2 border-t border-white/5 bg-[#050505] px-3">
+		<span class="font-mono text-[11px] text-emerald-400">$</span>
 		<input
 			type="text"
 			placeholder={connected ? 'type shell command · Enter to run' : 'reconnecting…'}
@@ -359,7 +359,7 @@
 			oninput={(e) => (input = e.currentTarget.value)}
 			onkeydown={onKeyDown}
 			disabled={!connected}
-			class="min-w-0 flex-1 bg-transparent font-mono text-[12px] text-white placeholder:text-white/25 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+			class="min-w-0 flex-1 bg-transparent font-mono text-[11px] text-white placeholder:text-white/25 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 		/>
 		<button
 			type="button"
