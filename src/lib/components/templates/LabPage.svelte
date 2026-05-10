@@ -1,30 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import BlastRadiusPanel from '$lib/components/organisms/BlastRadiusPanel.svelte';
-	import CgroupLabPanel from '$lib/components/organisms/CgroupLabPanel.svelte';
-	import CustomerLiveView from '$lib/components/organisms/CustomerLiveView.svelte';
+	import ControlDeck from '$lib/components/organisms/ControlDeck.svelte';
 	import HeroSection from '$lib/components/organisms/HeroSection.svelte';
-	import LiveMonitorPanel from '$lib/components/organisms/LiveMonitorPanel.svelte';
 	import Masthead from '$lib/components/organisms/Masthead.svelte';
-	import NamespaceLabPanel from '$lib/components/organisms/NamespaceLabPanel.svelte';
-	import ProofChecklistPanel from '$lib/components/organisms/ProofChecklistPanel.svelte';
-	import RuntimeEvidencePanel from '$lib/components/organisms/RuntimeEvidencePanel.svelte';
 	import TerminalDrawer from '$lib/components/organisms/TerminalDrawer.svelte';
 	import TerminalHandle from '$lib/components/organisms/TerminalHandle.svelte';
 	import SidebarMonitor from '$lib/components/organisms/SidebarMonitor.svelte';
 	import type { TerminalLine } from '$lib/components/organisms/TerminalPanel.svelte';
-	import {
-		Activity,
-		AlertOctagon,
-		Bomb,
-		FileSearch,
-		FlaskConical,
-		Layers,
-		SlidersHorizontal,
-		Terminal as TerminalIcon,
-		Trash2,
-		X
-	} from '@lucide/svelte';
+	import { Activity, AlertOctagon, FlaskConical, Terminal as TerminalIcon } from '@lucide/svelte';
 	import type {
 		ActivePayload,
 		CommandPreset,
@@ -34,20 +17,31 @@
 	} from '$lib/types/lab';
 
 	type LabRoute = 'home' | 'monitor' | 'namespace' | 'exploit' | 'cgroup' | 'evidence';
+	type UiTheme = 'dark' | 'light';
+	type ActionState = 'running' | 'success' | 'error';
+	type ActionStatus = {
+		state: ActionState;
+		label: string;
+		at: string;
+		detail?: string;
+	};
 	type Props = {
 		page?: LabRoute;
 	};
 
 	let { page = 'home' }: Props = $props();
 
+	let uiTheme = $state<UiTheme>('dark');
+	let pingHost = $state('127.0.0.1; id; cat /proc/self/uid_map; cat /sys/fs/cgroup/memory.max');
 	let command = $state('id; cat /proc/self/uid_map; cat /proc/self/gid_map');
 	let pidCount = $state(120);
 	let memoryMb = $state(3072);
-	let cpuSeconds = $state(5);
+	let cpuSeconds = $state(35);
 	let running = $state('');
+	let httpRunning = $state('');
 	let evidenceData = $state<LabResponse | null>(null);
-	let cgroupResult = $state<LabResponse | null>(null);
 	let lastUpdated = $state('');
+	let actionStatuses = $state<Record<string, ActionStatus>>({});
 	let terminalLines = $state<TerminalLine[]>([]);
 	let customerSamples = $state<CustomerSample[]>([]);
 	let activePayload = $state<ActivePayload | null>(null);
@@ -190,19 +184,35 @@
 	];
 
 	const runtime = $derived(evidenceData?.runtime as RuntimeEvidence | undefined);
-	const terminalBusy = $derived(Boolean(running));
+	const terminalBusy = $derived(Boolean(running || httpRunning));
+	const runtimeLabel = $derived(runtimeStateLabel(runtime?.uid_map));
 	const payloadActions = new Set(['pid-bomb', 'memory-bomb', 'cpu-burn', 'cpu-blast', 'sabotage-proxy']);
 	const stopActions = new Set(['cleanup', 'stop-payloads']);
-	const routeCards = [
-		{ href: '/monitor', no: '01', title: 'Monitor', body: 'Host and container resource baseline.', Icon: Activity },
-		{ href: '/namespace', no: '02', title: 'Namespace', body: 'UID map, PID view, and namespace links.', Icon: Layers },
-		{ href: '/exploit', no: '03', title: 'Exploit', body: 'Command injection and app-data impact.', Icon: Bomb },
-		{ href: '/cgroup', no: '04', title: 'Cgroup', body: 'PID, memory, and CPU pressure last.', Icon: SlidersHorizontal },
-		{ href: '/evidence', no: '05', title: 'Evidence', body: 'Report-ready before/after proof.', Icon: FileSearch }
-	] as const;
+	const actionLabels: Record<string, string> = {
+		health: 'Container health',
+		probe: 'Probe write',
+		exec: 'Namespace command',
+		ping: 'Command injection',
+		upload: 'Bind marker',
+		'suid-trap': 'SUID trap',
+		'setcap-trap': 'Setcap trap',
+		'cleanup-traps': 'Cleanup traps',
+		'pid-bomb': 'PID bomb',
+		'memory-bomb': 'Memory pressure',
+		'cpu-burn': 'CPU burn',
+		'cpu-blast': 'CPU blast',
+		'customer-probe': 'Customer probe',
+		'dump': 'Dump app data',
+		ransomware: 'Ransomware demo',
+		restore: 'Restore data',
+		cleanup: 'Cleanup payloads',
+		'stop-payloads': 'Stop payloads'
+	};
+	const THEME_KEY = 'dokuru-lab.theme';
 
 	onMount(() => {
 		mounted = true;
+		restoreUiTheme();
 		updateTerminalMaxWidth();
 		window.addEventListener('resize', updateTerminalMaxWidth);
 		restoreTerminalState();
@@ -210,6 +220,7 @@
 		connectTerminal();
 		connectCustomer();
 		void refreshEvidence(true);
+		if (page !== 'home') window.setTimeout(scrollControlDeck, 80);
 		return () => {
 			mounted = false;
 			terminalSocket?.close();
@@ -218,6 +229,33 @@
 			window.removeEventListener('resize', updateTerminalMaxWidth);
 		};
 	});
+
+	$effect(() => {
+		if (!mounted || page === 'home') return;
+		window.setTimeout(scrollControlDeck, 0);
+	});
+
+	function scrollControlDeck() {
+		document.getElementById('control-deck')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	}
+
+	function restoreUiTheme() {
+		try {
+			const stored = window.localStorage.getItem(THEME_KEY);
+			if (stored === 'dark' || stored === 'light') uiTheme = stored;
+		} catch {
+			/* localStorage unavailable */
+		}
+	}
+
+	function toggleTheme() {
+		uiTheme = uiTheme === 'dark' ? 'light' : 'dark';
+		try {
+			window.localStorage.setItem(THEME_KEY, uiTheme);
+		} catch {
+			/* ignore */
+		}
+	}
 
 	function updateTerminalMaxWidth() {
 		terminalMaxWidth = Math.max(TERMINAL_MIN_WIDTH, Math.floor(window.innerWidth * TERMINAL_MAX_WIDTH_RATIO));
@@ -246,6 +284,26 @@
 		} catch {
 			/* ignore */
 		}
+	}
+
+	function openSidebarPanel(panel: SidebarPanel = 'terminal') {
+		terminalOpen = true;
+		if (!activePanels.includes(panel)) {
+			activePanels = activePanels.length === 0 ? [panel] : [panel, ...activePanels].slice(0, 2);
+		}
+		try {
+			window.localStorage.setItem(TERMINAL_OPEN_KEY, 'true');
+		} catch {
+			/* ignore */
+		}
+	}
+
+	function openTerminal() {
+		openSidebarPanel('terminal');
+	}
+
+	function openMonitorPanel() {
+		openSidebarPanel('monitor');
 	}
 
 	function closeTerminal() {
@@ -308,10 +366,15 @@
 			}
 
 			if (message.type === 'terminal.start') {
-				running = String(message.action || 'terminal');
+				const action = String(message.action || 'terminal');
+				running = action;
+				markAction(action, 'running');
 			}
 
 			if (message.type === 'terminal.exit') {
+				const action = String(message.action || running || 'terminal');
+				const code = Number(message.code ?? 0);
+				markAction(action, code === 0 ? 'success' : 'error');
 				running = '';
 				void refreshEvidence(false);
 			}
@@ -340,7 +403,10 @@
 	}
 
 	async function refreshEvidence(showLoading = true) {
-		if (showLoading) running = 'health';
+		if (showLoading) {
+			running = 'health';
+			markAction('health', 'running');
+		}
 		const result = await requestJson('/api/evidence');
 		evidenceData = result;
 		lastUpdated = new Date().toLocaleTimeString('en-US', {
@@ -349,7 +415,10 @@
 			minute: '2-digit',
 			second: '2-digit'
 		});
-		if (showLoading) running = '';
+		if (showLoading) {
+			markAction('health', result.ok ? 'success' : 'error');
+			running = '';
+		}
 	}
 
 	async function runProbe() {
@@ -361,7 +430,6 @@
 	}
 
 	function runPidBomb() {
-		cgroupResult = { ok: true, scenario: 'PIDs cgroup pressure', requested: pidCount };
 		sendTerminal({ type: 'pid-bomb', count: pidCount });
 	}
 
@@ -369,8 +437,8 @@
 		sendTerminal({ type: 'memory-bomb', mb: memoryMb });
 	}
 
-	function runCpuBurn() {
-		sendTerminal({ type: 'cpu-burn', seconds: cpuSeconds });
+	function runCpuBlast() {
+		sendTerminal({ type: 'cpu-blast', seconds: cpuSeconds });
 	}
 
 	function runCustomerProbe() {
@@ -381,8 +449,81 @@
 		sendTerminal({ type: 'stop-payloads' });
 	}
 
-	function cleanupPidBomb() {
-		sendTerminal({ type: 'cleanup' });
+	async function runUploadOwnershipProof() {
+		const payload = [
+			'Dokuru ownership marker',
+			`created_at=${new Date().toISOString()}`,
+			'purpose=container-root-bind-mount-proof',
+			''
+		].join('\n');
+
+		const form = new FormData();
+		form.set('file', new File([payload], 'ownership-proof.txt', { type: 'text/plain' }));
+		await runHttpAction('upload', '/api/upload', { method: 'POST', body: form });
+	}
+
+	async function runSuidTrap() {
+		await runHttpAction('suid-trap', '/api/exploit/suid-trap', { method: 'POST' });
+	}
+
+	async function runSetcapTrap() {
+		await runHttpAction('setcap-trap', '/api/exploit/setcap-trap', { method: 'POST' });
+	}
+
+	async function runCleanupTraps() {
+		await runHttpAction('cleanup-traps', '/api/exploit/cleanup-traps', { method: 'POST' });
+	}
+
+	async function runCommandInjection() {
+		await runHttpAction('ping', `/api/ping?host=${encodeURIComponent(pingHost)}`);
+	}
+
+	async function dumpAppData() {
+		await runHttpAction('dump', '/api/demo/dump', { method: 'POST' });
+	}
+
+	async function runRansomware() {
+		await runHttpAction('ransomware', '/api/exploit/ransomware', { method: 'POST' });
+	}
+
+	async function restoreDemoData() {
+		await runHttpAction('restore', '/api/demo/reset', { method: 'POST' });
+	}
+
+	async function runHttpAction(key: string, path: string, options: RequestInit = {}) {
+		if (running || httpRunning) {
+			pushTerminalLine({
+				stream: 'stderr',
+				text: `busy running ${running || httpRunning}; wait before starting ${actionLabels[key] || key}\n`,
+				at: timeLabel()
+			});
+			markAction(key, 'error', 'busy');
+			openTerminal();
+			return;
+		}
+
+		openTerminal();
+		httpRunning = key;
+		markAction(key, 'running');
+		const method = String(options.method || 'GET').toUpperCase();
+		pushTerminalLine({ stream: 'system', text: `$ fetch ${method} ${path}\n`, at: timeLabel() });
+
+		try {
+			const result = await requestJson(path, options);
+			pushTerminalLine({
+				stream: result.ok ? 'stdout' : 'stderr',
+				text: `${JSON.stringify(result, null, 2).slice(0, 5000)}\n`,
+				at: timeLabel()
+			});
+			markAction(key, result.ok ? 'success' : 'error', `${result.http_status || 'n/a'}`);
+			void refreshEvidence(false);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			pushTerminalLine({ stream: 'stderr', text: `${message}\n`, at: timeLabel() });
+			markAction(key, 'error', message);
+		} finally {
+			httpRunning = '';
+		}
 	}
 
 	async function requestJson(path: string, options: RequestInit = {}): Promise<LabResponse> {
@@ -398,13 +539,15 @@
 
 	function sendTerminal(payload: Record<string, unknown>) {
 		const action = String(payload.type || 'terminal');
+		openTerminal();
 
-		if (!stopActions.has(action) && running) {
+		if (!stopActions.has(action) && (running || httpRunning)) {
 			pushTerminalLine({
 				stream: 'stderr',
-				text: `terminal is busy running ${running}\n`,
+				text: `terminal is busy running ${running || httpRunning}\n`,
 				at: timeLabel()
 			});
+			markAction(action, 'error', 'busy');
 			return;
 		}
 
@@ -414,6 +557,7 @@
 				text: `${activePayload.label} is still active; stop it before starting another payload\n`,
 				at: timeLabel()
 			});
+			markAction(action, 'error', 'payload-active');
 			return;
 		}
 
@@ -423,10 +567,12 @@
 				text: 'terminal websocket is not connected\n',
 				at: timeLabel()
 			});
+			markAction(action, 'error', 'websocket-offline');
 			return;
 		}
 
 		running = action;
+		markAction(action, 'running');
 		terminalSocket.send(JSON.stringify(payload));
 	}
 
@@ -449,6 +595,26 @@
 
 	function pushTerminalLine(line: TerminalLine) {
 		terminalLines = [...terminalLines, line].slice(-600);
+	}
+
+	function markAction(key: string, state: ActionState, detail?: string) {
+		actionStatuses = {
+			...actionStatuses,
+			[key]: {
+				state,
+				label: actionLabels[key] || key,
+				at: timeLabel(),
+				detail
+			}
+		};
+	}
+
+	function runtimeStateLabel(uidMap?: string): string {
+		const first = uidMap?.split('\n')[0]?.trim();
+		if (!first) return 'runtime · loading';
+		if (first.startsWith('0 0 ')) return 'userns off · live';
+		if (first.startsWith('0 100000 ') || first.includes(' 100000 ')) return 'userns on · live';
+		return 'runtime · live';
 	}
 
 	function parseSocketMessage(value: unknown): Record<string, unknown> | null {
@@ -491,185 +657,70 @@
 	}
 </script>
 
-<div class="flex min-h-screen bg-slate-50 text-ink">
+<div class={`flex min-h-screen ${uiTheme === 'dark' ? 'bg-black text-white' : 'bg-white text-ink'}`}>
 	<!-- Main column -->
 	<div class="@container/page flex min-w-0 flex-1 flex-col">
-		<Masthead {monitorConnected} monitorLastUpdated={lastUpdated} />
+		<Masthead
+			{monitorConnected}
+			monitorLastUpdated={lastUpdated}
+			theme={uiTheme}
+			{runtimeLabel}
+			onThemeToggle={toggleTheme}
+		/>
 
 		<main class="@container/main flex flex-1 flex-col">
-			{#if page === 'home'}
-				<HeroSection
-					{monitorConnected}
-					{terminalConnected}
-					{customerConnected}
-					onProbe={runProbe}
-					{running}
-				/>
-				<section class="px-4 py-12 sm:px-6 md:px-8 lg:py-16">
-					<div class="mx-auto max-w-[1480px]">
-						<header class="mb-6">
-							<h2 class="m-0 text-[clamp(28px,3.6vw,44px)] leading-tight font-light text-black">Demo route</h2>
-						</header>
-						<div class="grid gap-4 @xl/main:grid-cols-2 @4xl/main:grid-cols-5">
-							{#each routeCards as card (card.href)}
-								{@const CardIcon = card.Icon}
-								<a href={card.href} class="group rounded-2xl bg-white p-5 text-ink no-underline shadow-[0_5px_9px_rgba(0,0,0,0.06)] ring-1 ring-black/5 transition hover:-translate-y-1 hover:ring-playstation-blue/25">
-									<div class="mb-5 flex items-start justify-between gap-3">
-										<span class="grid h-10 w-10 place-items-center rounded-xl bg-playstation-blue/10 text-playstation-blue" aria-hidden="true">
-											<CardIcon size={18} strokeWidth={1.6} />
-										</span>
-										<span class="font-mono text-[11px] tracking-[0.12em] text-body-gray">{card.no}</span>
-									</div>
-									<h3 class="m-0 mb-2 text-[18px] font-semibold tracking-tight text-black">{card.title}</h3>
-									<p class="m-0 text-[13px] leading-relaxed text-body-gray">{card.body}</p>
-								</a>
-							{/each}
-						</div>
-					</div>
-				</section>
-			{/if}
+			<HeroSection
+				{monitorConnected}
+				{terminalConnected}
+				{customerConnected}
+				theme={uiTheme}
+				onProbe={runProbe}
+				running={running || httpRunning}
+			/>
 
-			<!-- Section 01 · Blast-radius scenarios -->
-			{#if page === 'exploit'}
-			<section id="scenarios" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
-				<div class="mx-auto max-w-[1480px]">
-					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
-						<div>
-							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
-								<Bomb size={18} strokeWidth={1.5} class="text-playstation-blue" />
-								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">01</span>
-								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Blast radius</span>
-							</p>
-							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Trigger a payload, watch the neighbor</h2>
-						</div>
-					</header>
-
-					<div class="grid grid-cols-1 gap-4 @4xl/main:grid-cols-12">
-						<CustomerLiveView samples={customerSamples} connected={customerConnected} />
-						<BlastRadiusPanel
-							{running}
-							{activePayload}
-							onCustomerProbe={runCustomerProbe}
-							onStopPayloads={stopActivePayload}
-							onTerminalLine={(stream, text) =>
-								pushTerminalLine({
-									stream,
-									text,
-									at: timeLabel()
-								})}
-						/>
-					</div>
-				</div>
-			</section>
-			{/if}
-
-			<!-- Section 02 · Live monitor -->
-			{#if page === 'monitor'}
-			<section id="monitor" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
-				<div class="mx-auto max-w-[1480px]">
-					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
-						<div>
-							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
-								<Activity size={18} strokeWidth={1.5} class="text-playstation-blue" />
-								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">02</span>
-								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Live monitor</span>
-							</p>
-							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Real-time namespace and cgroup signals</h2>
-						</div>
-					</header>
-
-					<LiveMonitorPanel {runtime} {lastUpdated} connected={monitorConnected} />
-				</div>
-			</section>
-			{/if}
-
-			<!-- Section 03 · Namespace isolation -->
-			{#if page === 'namespace'}
-			<section id="namespace" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
-				<div class="mx-auto max-w-[1480px]">
-					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
-						<div>
-							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
-								<Layers size={18} strokeWidth={1.5} class="text-playstation-blue" />
-								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">03</span>
-								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Namespace isolation</span>
-							</p>
-							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Prove what the container can see</h2>
-						</div>
-					</header>
-
-					<NamespaceLabPanel
-						{command}
-						{presets}
-						{running}
-						onCommandChange={(value) => (command = value)}
-						onRun={runExec}
-					/>
-				</div>
-			</section>
-			{/if}
-
-			<!-- Section 04 · Cgroup controls -->
-			{#if page === 'cgroup'}
-			<section id="cgroup" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
-				<div class="mx-auto max-w-[1480px]">
-					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
-						<div>
-							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
-								<SlidersHorizontal size={18} strokeWidth={1.5} class="text-playstation-blue" />
-								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">04</span>
-								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Cgroup controls</span>
-							</p>
-							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Prove how much the container can consume</h2>
-						</div>
-					</header>
-
-					<CgroupLabPanel
-						{pidCount}
-						{memoryMb}
-						{cpuSeconds}
-						result={cgroupResult}
-						{running}
-						onPidCountChange={(value) => (pidCount = value)}
-						onMemoryChange={(value) => (memoryMb = value)}
-						onCpuChange={(value) => (cpuSeconds = value)}
-						onPidBomb={runPidBomb}
-						onMemoryBomb={runMemoryBomb}
-						onCpuBurn={runCpuBurn}
-						onCleanup={cleanupPidBomb}
-					/>
-				</div>
-			</section>
-			{/if}
-
-			<!-- Section 05 · Evidence -->
-			{#if page === 'evidence'}
-			<section id="evidence" class="scroll-mt-20 px-4 py-12 sm:px-6 md:px-8 lg:py-16">
-				<div class="mx-auto max-w-[1480px]">
-					<header class="mb-6 flex flex-col justify-between gap-3 @4xl/main:flex-row @4xl/main:items-end">
-						<div>
-							<p class="m-0 mb-2 inline-flex items-center gap-2 text-[13px] font-medium text-playstation-blue">
-								<FileSearch size={18} strokeWidth={1.5} class="text-playstation-blue" />
-								<span class="font-mono text-[11px] tabular-nums text-playstation-blue/70">05</span>
-								<span class="text-[14px] uppercase tracking-[0.1em] text-playstation-blue">Evidence</span>
-							</p>
-							<h2 class="m-0 text-[clamp(26px,3.4vw,38px)] leading-tight font-light text-black">Side-by-side reference for the report</h2>
-						</div>
-					</header>
-
-					<div class="grid grid-cols-1 gap-4 @4xl/main:grid-cols-12">
-						<RuntimeEvidencePanel
-							{runtime}
-							ok={Boolean(evidenceData?.ok)}
-							onRefresh={() => refreshEvidence(true)}
-							onProbe={runProbe}
-							{running}
-						/>
-						<ProofChecklistPanel />
-					</div>
-				</div>
-			</section>
-			{/if}
+			<ControlDeck
+				{page}
+				theme={uiTheme}
+				{pingHost}
+				{command}
+				{presets}
+				{pidCount}
+				{memoryMb}
+				{cpuSeconds}
+				busy={terminalBusy}
+				{running}
+				{activePayload}
+				{runtime}
+				evidenceOk={Boolean(evidenceData?.ok)}
+				{lastUpdated}
+				{monitorConnected}
+				{customerConnected}
+				{customerSamples}
+				{actionStatuses}
+				onPingHostChange={(value) => (pingHost = value)}
+				onCommandChange={(value) => (command = value)}
+				onPidCountChange={(value) => (pidCount = value)}
+				onMemoryChange={(value) => (memoryMb = value)}
+				onCpuChange={(value) => (cpuSeconds = value)}
+				onRunInjection={runCommandInjection}
+				onRunCommand={runExec}
+				onUploadMarker={runUploadOwnershipProof}
+				onSuidTrap={runSuidTrap}
+				onSetcapTrap={runSetcapTrap}
+				onCleanupTraps={runCleanupTraps}
+				onPidBomb={runPidBomb}
+				onMemoryBomb={runMemoryBomb}
+				onCpuBlast={runCpuBlast}
+				onStopPayloads={stopActivePayload}
+				onCustomerProbe={runCustomerProbe}
+				onDumpData={dumpAppData}
+				onRansomware={runRansomware}
+				onRestoreData={restoreDemoData}
+				onRefreshEvidence={() => refreshEvidence(true)}
+				onProbeWrite={runProbe}
+				onOpenTerminal={openTerminal}
+				onOpenMonitor={openMonitorPanel}
+			/>
 		</main>
 
 		<footer class="bg-playstation-blue px-4 py-7 text-sm text-white sm:px-6 md:px-8">
