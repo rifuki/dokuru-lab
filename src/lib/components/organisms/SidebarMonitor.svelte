@@ -78,6 +78,12 @@
 		return '—';
 	}
 
+	function compactHostSource(value?: string): string {
+		if (!value) return 'free -m';
+		if (value.includes('host kernel view')) return 'free -m (kernel view)';
+		return value;
+	}
+
 	function usernsState(): { label: string; headline: string; detail: string; tone: string; headlineTone: string; safe: boolean } {
 		const uid = firstLine(runtime?.uid_map);
 		if (/^0\s+0\s+/.test(uid)) {
@@ -138,68 +144,68 @@
 
 	<!-- PIDs row -->
 	<div class="rounded-xl bg-white/[0.04] px-4 py-3">
-		<div class="mb-2 flex items-center justify-between gap-2">
-			<div class="flex items-center gap-2">
-				<span class="grid h-6 w-6 place-items-center rounded-md bg-playstation-blue/25 text-[#7ab8f5]" aria-hidden="true">
+		<div class="mb-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+			<div class="flex min-w-0 items-center gap-2">
+				<span class="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-playstation-blue/25 text-[#7ab8f5]" aria-hidden="true">
 					<Hash size={12} strokeWidth={1.5} />
 				</span>
 				<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">PIDs</span>
 				<span class="font-mono text-[10px] text-white/25">5.29</span>
 			</div>
-			<span class="font-mono text-[11.5px] font-medium text-white tabular-nums">
+			<span class="shrink-0 whitespace-nowrap font-mono text-[11.5px] font-medium text-white tabular-nums">
 				{runtime?.cgroup.pids_current || '—'} / {runtime?.cgroup.pids_max || '—'}
 			</span>
 		</div>
 		<div class="h-1 overflow-hidden rounded-full bg-white/10">
 			<div class="h-full rounded-full bg-playstation-blue transition-all duration-500" style={`width: ${pidPct}%`}></div>
 		</div>
-		<div class="mt-2 flex justify-between">
-			<span class="font-mono text-[10px] text-white/35">sleepers</span>
-			<span class="font-mono text-[10px] text-white/70 tabular-nums">{runtime?.processes.pid_bomb_sleepers || '0'}</span>
+		<div class="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,45%)] items-center gap-2">
+			<span class="min-w-0 truncate font-mono text-[10px] text-white/35">sleepers</span>
+			<span class="min-w-0 text-right font-mono text-[10px] text-white/70 tabular-nums">{runtime?.processes.pid_bomb_sleepers || '0'}</span>
 		</div>
 	</div>
 
 	<!-- CPU row -->
 	<div class="rounded-xl bg-white/[0.04] px-4 py-3">
-		<div class="mb-2 flex items-center justify-between gap-2">
-			<div class="flex items-center gap-2">
-				<span class="grid h-6 w-6 place-items-center rounded-md bg-commerce/20 text-[#f08060]" aria-hidden="true">
+		<div class="mb-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+			<div class="flex min-w-0 items-center gap-2">
+				<span class="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-commerce/20 text-[#f08060]" aria-hidden="true">
 					<Cpu size={12} strokeWidth={1.5} />
 				</span>
-				<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">System CPU</span>
+				<span class="min-w-0 truncate font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">System CPU</span>
 			</div>
-			<span class="font-mono text-[11.5px] font-medium text-white tabular-nums">{hostCpuPct}%</span>
+			<span class="shrink-0 whitespace-nowrap font-mono text-[11.5px] font-medium text-white tabular-nums">{hostCpuPct}%</span>
 		</div>
 		<div class="h-1 overflow-hidden rounded-full bg-white/10">
 			<div class="h-full rounded-full bg-commerce transition-all duration-500" style={`width: ${hostCpuPct}%`}></div>
 		</div>
 		<div class="mt-2 grid gap-1.5">
-			<div class="flex justify-between gap-2">
-				<span class="font-mono text-[10px] text-white/35">cores</span>
-				<span class="font-mono text-[10px] text-white/70 tabular-nums">{hostInfo.cpu_cores || '—'}</span>
+			<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,45%)] items-center gap-2">
+				<span class="min-w-0 truncate font-mono text-[10px] text-white/35">cores</span>
+				<span class="min-w-0 text-right font-mono text-[10px] text-white/70 tabular-nums">{hostInfo.cpu_cores || '—'}</span>
 			</div>
-			<div class="flex justify-between gap-2">
-				<span class="font-mono text-[10px] text-white/35">dokuru-lab cpu.max</span>
-				<span class="font-mono text-[10px] text-white/70 tabular-nums">{runtime?.cgroup.cpu_max || '—'}</span>
+			<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,45%)] items-start gap-2">
+				<span class="min-w-0 truncate font-mono text-[10px] text-white/35">dokuru-lab cpu.max</span>
+				<span class="min-w-0 break-words text-right font-mono text-[10px] text-white/70 tabular-nums" title={runtime?.cgroup.cpu_max || '—'}>{runtime?.cgroup.cpu_max || '—'}</span>
 			</div>
-			<div class="flex justify-between gap-2">
-				<span class="font-mono text-[10px] text-white/35">burners</span>
-				<span class="font-mono text-[10px] text-white/70 tabular-nums">{runtime?.processes.cpu_burners || '0'}</span>
+			<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,45%)] items-center gap-2">
+				<span class="min-w-0 truncate font-mono text-[10px] text-white/35">burners</span>
+				<span class="min-w-0 text-right font-mono text-[10px] text-white/70 tabular-nums">{runtime?.processes.cpu_burners || '0'}</span>
 			</div>
 		</div>
 	</div>
 
 	<!-- Memory row -->
 	<div class="rounded-xl bg-white/[0.04] px-4 py-3">
-		<div class="mb-2 flex items-center justify-between gap-2">
-			<div class="flex items-center gap-2">
-				<span class="grid h-6 w-6 place-items-center rounded-md bg-playstation-cyan/20 text-[#9ad7ff]" aria-hidden="true">
+		<div class="mb-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+			<div class="flex min-w-0 items-center gap-2">
+				<span class="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-playstation-cyan/20 text-[#9ad7ff]" aria-hidden="true">
 					<MemoryStick size={12} strokeWidth={1.5} />
 				</span>
-				<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">Memory</span>
+				<span class="min-w-0 truncate font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">Memory</span>
 				<span class="font-mono text-[10px] text-white/25">5.11</span>
 			</div>
-			<span class="font-mono text-[11.5px] font-medium text-white tabular-nums">
+			<span class="shrink-0 whitespace-nowrap font-mono text-[11.5px] font-medium text-white tabular-nums">
 				{hostInfo.memory_total_gb ? `${hostMemPct}% host used` : '—'}
 			</span>
 		</div>
@@ -207,58 +213,58 @@
 			<div class="h-full rounded-full bg-playstation-cyan transition-all duration-500" style={`width: ${hostMemPct}%`}></div>
 		</div>
 		<div class="mt-2 grid gap-1.5">
-			<div class="flex justify-between gap-2">
-				<span class="font-mono text-[10px] text-white/35">host used / total</span>
-				<span class="font-mono text-[10px] text-white/70 tabular-nums">{formatHostMemory(hostMemoryUsedMib())} / {formatHostMemory(hostInfo.memory_total_mib, hostInfo.memory_total_gb)}</span>
+			<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,45%)] items-start gap-2">
+				<span class="min-w-0 truncate font-mono text-[10px] text-white/35">host used / total</span>
+				<span class="min-w-0 break-words text-right font-mono text-[10px] text-white/70 tabular-nums">{formatHostMemory(hostMemoryUsedMib())} / {formatHostMemory(hostInfo.memory_total_mib, hostInfo.memory_total_gb)}</span>
 			</div>
-			<div class="flex justify-between gap-2">
-				<span class="font-mono text-[10px] text-white/35">host available</span>
-				<span class="font-mono text-[10px] text-white/70 tabular-nums">{formatHostMemory(hostInfo.memory_available_mib, hostInfo.memory_available_gb)}</span>
+			<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,45%)] items-start gap-2">
+				<span class="min-w-0 truncate font-mono text-[10px] text-white/35">host available</span>
+				<span class="min-w-0 break-words text-right font-mono text-[10px] text-white/70 tabular-nums">{formatHostMemory(hostInfo.memory_available_mib, hostInfo.memory_available_gb)}</span>
 			</div>
-			<div class="flex justify-between gap-2">
-				<span class="font-mono text-[10px] text-white/35">dokuru-lab used</span>
-				<span class="font-mono text-[10px] text-white/70 tabular-nums">{formatBytes(runtime?.cgroup.memory_current)}</span>
+			<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,45%)] items-start gap-2">
+				<span class="min-w-0 truncate font-mono text-[10px] text-white/35">dokuru-lab used</span>
+				<span class="min-w-0 break-words text-right font-mono text-[10px] text-white/70 tabular-nums">{formatBytes(runtime?.cgroup.memory_current)}</span>
 			</div>
-			<div class="flex justify-between gap-2">
-				<span class="font-mono text-[10px] text-white/35">dokuru-lab limit</span>
-				<span class="font-mono text-[10px] text-white/70 tabular-nums">{formatBytes(runtime?.cgroup.memory_max)}</span>
+			<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,45%)] items-start gap-2">
+				<span class="min-w-0 truncate font-mono text-[10px] text-white/35">dokuru-lab limit</span>
+				<span class="min-w-0 break-words text-right font-mono text-[10px] text-white/70 tabular-nums">{formatBytes(runtime?.cgroup.memory_max)}</span>
 			</div>
-			<div class="flex justify-between gap-2">
-				<span class="font-mono text-[10px] text-white/35">host source</span>
-				<span class="max-w-[62%] truncate font-mono text-[10px] text-white/45 text-right" title={hostInfo.memory_source || 'free -m'}>{hostInfo.memory_source || 'free -m'}</span>
+			<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,45%)] items-center gap-2">
+				<span class="min-w-0 truncate font-mono text-[10px] text-white/35">host source</span>
+				<span class="min-w-0 truncate text-right font-mono text-[10px] text-white/45" title={hostInfo.memory_source || 'free -m'}>{compactHostSource(hostInfo.memory_source)}</span>
 			</div>
 		</div>
 	</div>
 
 	<!-- Root mapping evidence row -->
 	<div class="rounded-xl bg-white/[0.04] px-4 py-3">
-		<div class="mb-3 flex items-center justify-between gap-2">
-			<div class="flex items-center gap-2">
-				<span class="grid h-6 w-6 place-items-center rounded-md bg-[#9ad7ff]/15 text-[#9ad7ff]" aria-hidden="true">
+		<div class="mb-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+			<div class="flex min-w-0 items-center gap-2">
+				<span class="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-[#9ad7ff]/15 text-[#9ad7ff]" aria-hidden="true">
 					{#if userns.safe}
 						<ShieldCheck size={12} strokeWidth={1.5} />
 					{:else}
 						<ShieldAlert size={12} strokeWidth={1.5} />
 					{/if}
 				</span>
-				<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">Host-root risk</span>
+				<span class="min-w-0 truncate font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">Host-root risk</span>
 			</div>
-			<span class={`rounded-full px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] ${userns.tone}`}>{userns.label}</span>
+			<span class={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] ${userns.tone}`}>{userns.label}</span>
 		</div>
 		<p class={`m-0 mb-1 text-[13px] font-semibold ${userns.headlineTone}`}>{userns.headline}</p>
 		<p class="m-0 mb-3 text-[11px] leading-snug text-white/42">{userns.detail}</p>
 		<dl class="grid gap-1.5">
-			<div class="flex justify-between gap-2">
+			<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,45%)] items-center gap-2">
 				<dt class="font-mono text-[10px] text-white/35">UID 0 map</dt>
-				<dd class="m-0 max-w-[55%] truncate font-mono text-[10px] text-white/70 tabular-nums text-right">{firstLine(runtime?.uid_map)}</dd>
+				<dd class="m-0 min-w-0 truncate text-right font-mono text-[10px] text-white/70 tabular-nums" title={firstLine(runtime?.uid_map)}>{firstLine(runtime?.uid_map)}</dd>
 			</div>
-			<div class="flex justify-between gap-2">
+			<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,45%)] items-center gap-2">
 				<dt class="font-mono text-[10px] text-white/35">PID namespace</dt>
-				<dd class="m-0 max-w-[55%] truncate font-mono text-[10px] text-white/70 tabular-nums text-right">{runtime?.pid_namespace || '—'}</dd>
+				<dd class="m-0 min-w-0 truncate text-right font-mono text-[10px] text-white/70 tabular-nums" title={runtime?.pid_namespace || '—'}>{runtime?.pid_namespace || '—'}</dd>
 			</div>
-			<div class="flex justify-between gap-2">
-				<dt class="font-mono text-[10px] text-white/35">processes visible</dt>
-				<dd class="m-0 font-mono text-[10px] text-white/70 tabular-nums">{runtime?.processes.process_count || '—'} in lab</dd>
+			<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,45%)] items-center gap-2">
+				<dt class="min-w-0 truncate font-mono text-[10px] text-white/35">processes visible</dt>
+				<dd class="m-0 min-w-0 text-right font-mono text-[10px] text-white/70 tabular-nums">{runtime?.processes.process_count || '—'} in lab</dd>
 			</div>
 		</dl>
 	</div>
