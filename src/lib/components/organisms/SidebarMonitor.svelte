@@ -158,7 +158,7 @@
 				<span class="grid h-6 w-6 place-items-center rounded-md bg-commerce/20 text-[#f08060]" aria-hidden="true">
 					<Cpu size={12} strokeWidth={1.5} />
 				</span>
-				<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">Host CPU</span>
+				<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">System CPU</span>
 			</div>
 			<span class="font-mono text-[11.5px] font-medium text-white tabular-nums">{hostCpuPct}%</span>
 		</div>
@@ -171,7 +171,7 @@
 				<span class="font-mono text-[10px] text-white/70 tabular-nums">{hostInfo.cpu_cores || '—'}</span>
 			</div>
 			<div class="flex justify-between gap-2">
-				<span class="font-mono text-[10px] text-white/35">container cpu.max</span>
+				<span class="font-mono text-[10px] text-white/35">dokuru-lab cpu.max</span>
 				<span class="font-mono text-[10px] text-white/70 tabular-nums">{runtime?.cgroup.cpu_max || '—'}</span>
 			</div>
 			<div class="flex justify-between gap-2">
@@ -192,7 +192,7 @@
 				<span class="font-mono text-[10px] text-white/25">5.11</span>
 			</div>
 			<span class="font-mono text-[11.5px] font-medium text-white tabular-nums">
-				{hostInfo.memory_total_gb ? `${hostMemPct}% host` : '—'}
+				{hostInfo.memory_total_gb ? `${hostMemPct}% kernel` : '—'}
 			</span>
 		</div>
 		<div class="h-1 overflow-hidden rounded-full bg-white/10">
@@ -200,15 +200,15 @@
 		</div>
 		<div class="mt-2 grid gap-1.5">
 			<div class="flex justify-between gap-2">
-				<span class="font-mono text-[10px] text-white/35">host avail / total</span>
+				<span class="font-mono text-[10px] text-white/35">kernel avail / total</span>
 				<span class="font-mono text-[10px] text-white/70 tabular-nums">{formatHostMemory(hostInfo.memory_available_mib, hostInfo.memory_available_gb)} / {formatHostMemory(hostInfo.memory_total_mib, hostInfo.memory_total_gb)}</span>
 			</div>
 			<div class="flex justify-between gap-2">
-				<span class="font-mono text-[10px] text-white/35">container used</span>
+				<span class="font-mono text-[10px] text-white/35">dokuru-lab used</span>
 				<span class="font-mono text-[10px] text-white/70 tabular-nums">{formatBytes(runtime?.cgroup.memory_current)}</span>
 			</div>
 			<div class="flex justify-between gap-2">
-				<span class="font-mono text-[10px] text-white/35">container limit</span>
+				<span class="font-mono text-[10px] text-white/35">dokuru-lab limit</span>
 				<span class="font-mono text-[10px] text-white/70 tabular-nums">{formatBytes(runtime?.cgroup.memory_max)}</span>
 			</div>
 		</div>

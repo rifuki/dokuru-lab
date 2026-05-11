@@ -579,8 +579,8 @@
 
 {#snippet resourceSignal()}
 	<div class="grid gap-3">
-		{@render metricRow('PIDs', `${runtime?.cgroup.pids_current || '—'} / ${runtime?.cgroup.pids_max || '—'}`, pidPct, 'bg-playstation-blue')}
-		{@render metricRow('Memory', `${formatBytes(runtime?.cgroup.memory_current)} / ${formatBytes(runtime?.cgroup.memory_max)}`, memPct, 'bg-playstation-cyan')}
+		{@render metricRow('dokuru-lab PIDs', `${runtime?.cgroup.pids_current || '—'} / ${runtime?.cgroup.pids_max || '—'}`, pidPct, 'bg-playstation-blue')}
+		{@render metricRow('dokuru-lab memory', `${formatBytes(runtime?.cgroup.memory_current)} / ${formatBytes(runtime?.cgroup.memory_max)}`, memPct, 'bg-playstation-cyan')}
 		{@render metricRow('CPU burners', activeBurners, Number(activeBurners) > 0 ? 100 : 0, 'bg-commerce')}
 		<div class={`rounded-2xl border p-4 ${dark ? 'border-white/8 bg-white/[0.025]' : 'border-black/6 bg-white'}`}>
 			<dl class="grid gap-2 font-mono text-[11px]">

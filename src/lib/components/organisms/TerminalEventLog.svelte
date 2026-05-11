@@ -316,20 +316,22 @@
 											<button
 												type="button"
 												onclick={() => copyText(event.id + '-json', copyPayload(event))}
-												class="inline-flex h-6 items-center gap-1 rounded border border-white/10 bg-white/[0.03] px-1.5 font-mono text-[9px] text-white/55 transition hover:border-white/25 hover:text-white"
+											style="font-size: 9px; line-height: 1;"
+											class="inline-flex h-5 items-center gap-1 rounded-[5px] border border-white/10 bg-white/[0.025] px-1.5 font-mono font-medium tracking-[0.08em] text-white/45 uppercase transition hover:border-white/25 hover:bg-white/[0.055] hover:text-white"
 												title="Copy JSON"
 											>
-												<Copy size={9} strokeWidth={2} />
-												{copied === event.id + '-json' ? 'copied' : 'json'}
+												<Copy size={8} strokeWidth={2} />
+												{copied === event.id + '-json' ? 'ok' : 'json'}
 											</button>
 											<button
 												type="button"
 												onclick={() => copyText(event.id + '-curl', asCurl(event))}
-												class="inline-flex h-6 items-center gap-1 rounded border border-white/10 bg-white/[0.03] px-1.5 font-mono text-[9px] text-white/55 transition hover:border-white/25 hover:text-white"
+											style="font-size: 9px; line-height: 1;"
+											class="inline-flex h-5 items-center gap-1 rounded-[5px] border border-white/10 bg-white/[0.025] px-1.5 font-mono font-medium tracking-[0.08em] text-white/45 uppercase transition hover:border-white/25 hover:bg-white/[0.055] hover:text-white"
 												title="Copy as curl"
 											>
-												<Copy size={9} strokeWidth={2} />
-												{copied === event.id + '-curl' ? 'copied' : 'curl'}
+												<Copy size={8} strokeWidth={2} />
+												{copied === event.id + '-curl' ? 'ok' : 'curl'}
 											</button>
 										</div>
 									</div>
