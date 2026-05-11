@@ -53,9 +53,9 @@
 		},
 		{
 			no: '03',
-			role: 'Latency Probe',
-			id: 'latency-probe sidecar',
-			body: 'A separate probe hits checkout on a loop. Its latency feed makes cgroup blast radius visible without trusting the attacker app.',
+			role: 'Checkout Monitor',
+			id: 'checkout-monitor sidecar',
+			body: 'A separate monitor hits checkout on a loop. Its latency feed makes cgroup blast radius visible without trusting the attacker app.',
 			Icon: Radio,
 			tint: 'cyan'
 		}
@@ -106,7 +106,7 @@
 			<span class={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 ${dark ? 'border-white/8 bg-white/[0.03]' : 'border-black/8 bg-black/[0.025]'}`}>
 				<Radio size={11} strokeWidth={2.2} class={dark ? 'text-white/45' : 'text-black/35'} />
 				<span class={`inline-block h-1.5 w-1.5 rounded-full ${dot(customerConnected)}`} aria-hidden="true"></span>
-				<span>latency probe</span>
+				<span>checkout monitor</span>
 			</span>
 		</div>
 
@@ -145,7 +145,7 @@
 					</h2>
 				</div>
 				<span class={`hidden font-mono text-[10.5px] tracking-[0.06em] sm:inline ${dark ? 'text-white/35' : 'text-black/35'}`}>
-					lab → protected API → latency probe
+					lab → protected API → checkout monitor
 				</span>
 			</div>
 

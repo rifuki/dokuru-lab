@@ -32,7 +32,7 @@ export function createCustomerRuntime(options: CustomerRuntimeOptions): Customer
 	}
 
 	async function customerProbe(): Promise<CustomerSample> {
-		const trafficSample = customerTrafficSample(options);
+		const trafficSample = checkoutMonitorSample(options);
 		if (trafficSample) return trafficSample;
 		return directCustomerProbe(options.checkoutApiUrl);
 	}
@@ -86,8 +86,8 @@ async function directCustomerProbe(checkoutApiUrl: string): Promise<CustomerSamp
 	}
 }
 
-function customerTrafficSample(options: CustomerRuntimeOptions): CustomerSample | null {
-	const path = join(options.dataDir, 'latency-probe.log');
+function checkoutMonitorSample(options: CustomerRuntimeOptions): CustomerSample | null {
+	const path = join(options.dataDir, 'checkout-monitor.log');
 
 	try {
 		const lines = readFileSync(path, 'utf8')
@@ -113,9 +113,9 @@ function customerTrafficSample(options: CustomerRuntimeOptions): CustomerSample 
 				status: 'STALE',
 				latency_ms: ageMs,
 				url: options.checkoutApiUrl,
-				source: 'latency-probe',
+				source: 'checkout-monitor',
 				observed_at: observedAt,
-				error: `latency-probe sample is stale (${ageMs}ms old)`
+				error: `checkout-monitor sample is stale (${ageMs}ms old)`
 			};
 		}
 
@@ -124,7 +124,7 @@ function customerTrafficSample(options: CustomerRuntimeOptions): CustomerSample 
 			status,
 			latency_ms: Number.isFinite(latencyMs) ? latencyMs : 0,
 			url: options.checkoutApiUrl,
-			source: 'latency-probe',
+			source: 'checkout-monitor',
 			observed_at: observedAt,
 			error: match[4]
 		};

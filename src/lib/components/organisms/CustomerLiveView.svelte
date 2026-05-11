@@ -83,7 +83,7 @@
 
 		<div class="flex h-28 items-end gap-1 rounded-xl bg-black/30 p-2" aria-label="customer latency bars">
 			{#if recent.length === 0}
-				<div class="w-full text-center text-sm text-white/50">waiting for latency probe...</div>
+				<div class="w-full text-center text-sm text-white/50">waiting for checkout monitor...</div>
 			{/if}
 			{#each recent as sample}
 				<div
@@ -130,6 +130,6 @@
 	</div>
 
 	<p class="m-0 mt-3 text-sm leading-relaxed text-body-gray">
-		Latency is sampled by the <code>latency-probe</code> sidecar hitting the Protected Checkout API (<code>checkout-api</code>). Even when the attacker lab steals CPU or memory, this signal originates from a separate container so blast radius is observable end-to-end.
+		Latency is sampled by the <code>checkout-monitor</code> sidecar hitting the Protected Checkout API (<code>checkout-api</code>). Even when the attacker lab steals CPU or memory, this signal originates from a separate container so blast radius is observable end-to-end.
 	</p>
 </Panel>

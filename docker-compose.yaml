@@ -101,15 +101,15 @@ services:
     networks:
       - dokuru-lab
 
-  latency-probe:
+  checkout-monitor:
     image: alpine/curl:latest
-    container_name: dokuru-lab-latency-probe
+    container_name: dokuru-lab-checkout-monitor
     restart: unless-stopped
     entrypoint: ["sh", "-c"]
     command:
       - |
         while true; do
-          { date -u +%Y-%m-%dT%H:%M:%SZ | tr '\n' ' '; curl -sS -m 2 -o /dev/null -w 'status=%{http_code} latency_s=%{time_total}\n' http://checkout-api:3000/checkout 2>/dev/null || true; } | tee -a /data/latency-probe.log
+          { date -u +%Y-%m-%dT%H:%M:%SZ | tr '\n' ' '; curl -sS -m 2 -o /dev/null -w 'status=%{http_code} latency_s=%{time_total}\n' http://checkout-api:3000/checkout 2>/dev/null || true; } | tee -a /data/checkout-monitor.log
           sleep 0.5
         done
     depends_on:

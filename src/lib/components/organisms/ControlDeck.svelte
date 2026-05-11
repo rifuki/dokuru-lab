@@ -598,7 +598,7 @@
 			</div>
 			<div class={`flex h-32 items-end gap-1 rounded-2xl p-2 ${dark ? 'bg-black/35' : 'bg-white/70'}`} aria-label="Customer latency bars">
 				{#if recentSamples.length === 0}
-					<div class={`grid h-full w-full place-items-center text-[13px] ${muted()}`}>waiting for latency probe</div>
+					<div class={`grid h-full w-full place-items-center text-[13px] ${muted()}`}>waiting for checkout monitor</div>
 				{/if}
 				{#each recentSamples as sample}
 					<div class={`min-w-1 flex-1 rounded-t ${barTone(sample)}`} style={`height: ${barHeight(sample)}%`} title={sample.ok ? `${sample.latency_ms}ms` : sample.error || 'failed'}></div>
