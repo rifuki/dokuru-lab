@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Boxes, Cpu, Hash, MemoryStick } from '@lucide/svelte';
+	import { Cpu, Hash, MemoryStick, ShieldAlert, ShieldCheck } from '@lucide/svelte';
 	import type { RuntimeEvidence } from '$lib/types/lab';
 
 	type Props = {
@@ -11,7 +11,16 @@
 	};
 
 	let { runtime, connected, lastUpdated, onClose }: Props = $props();
-	let hostInfo = $state({ cpu_cores: 0, cpu_usage_percent: 0, memory_total_gb: 0, memory_available_gb: 0 });
+	type HostInfo = {
+		cpu_cores: number;
+		cpu_usage_percent: number;
+		memory_total_gb: number;
+		memory_available_gb: number;
+		memory_total_mib?: number;
+		memory_available_mib?: number;
+	};
+
+	let hostInfo = $state<HostInfo>({ cpu_cores: 0, cpu_usage_percent: 0, memory_total_gb: 0, memory_available_gb: 0 });
 
 	onMount(() => {
 		void fetchHostInfo();
@@ -60,14 +69,44 @@
 	}
 
 	function hostMemoryUsedPercent(): number {
-		if (!hostInfo.memory_total_gb) return 0;
-		return Math.min(100, Math.round(((hostInfo.memory_total_gb - hostInfo.memory_available_gb) / hostInfo.memory_total_gb) * 100));
+		const total = hostInfo.memory_total_mib || hostInfo.memory_total_gb * 1024;
+		const available = hostInfo.memory_available_mib || hostInfo.memory_available_gb * 1024;
+		if (!total) return 0;
+		return Math.min(100, Math.round(((total - available) / total) * 100));
+	}
+
+	function formatHostMemory(mib?: number, gb?: number): string {
+		if (mib && mib > 0) return `${mib} MiB`;
+		if (gb && gb > 0) return `${gb.toFixed(gb >= 10 ? 0 : 1)} GiB`;
+		return '—';
+	}
+
+	function usernsState(): { label: string; detail: string; tone: string; safe: boolean } {
+		const uid = firstLine(runtime?.uid_map);
+		if (uid.startsWith('0 0 ')) {
+			return {
+				label: 'userns off',
+				detail: 'container root maps to host root',
+				tone: 'bg-commerce/15 text-commerce',
+				safe: false
+			};
+		}
+		if (/^0\s+\d{4,}/.test(uid)) {
+			return {
+				label: 'userns on',
+				detail: 'root is remapped on host',
+				tone: 'bg-emerald-400/15 text-emerald-400',
+				safe: true
+			};
+		}
+		return { label: 'checking', detail: 'waiting for uid_map', tone: 'bg-white/10 text-white/45', safe: false };
 	}
 
 	const pidPct = $derived(percent(runtime?.cgroup.pids_current, runtime?.cgroup.pids_max));
 	const memPct = $derived(percent(runtime?.cgroup.memory_current, runtime?.cgroup.memory_max));
 	const hostCpuPct = $derived(Math.max(0, Math.min(100, Math.round(hostInfo.cpu_usage_percent || 0))));
 	const hostMemPct = $derived(hostMemoryUsedPercent());
+	const userns = $derived(usernsState());
 </script>
 
 <!-- Compact status strip -->
@@ -162,7 +201,7 @@
 		<div class="mt-2 grid gap-1.5">
 			<div class="flex justify-between gap-2">
 				<span class="font-mono text-[10px] text-white/35">host avail / total</span>
-				<span class="font-mono text-[10px] text-white/70 tabular-nums">{hostInfo.memory_available_gb || '—'} / {hostInfo.memory_total_gb || '—'} GiB</span>
+				<span class="font-mono text-[10px] text-white/70 tabular-nums">{formatHostMemory(hostInfo.memory_available_mib, hostInfo.memory_available_gb)} / {formatHostMemory(hostInfo.memory_total_mib, hostInfo.memory_total_gb)}</span>
 			</div>
 			<div class="flex justify-between gap-2">
 				<span class="font-mono text-[10px] text-white/35">container used</span>
@@ -175,25 +214,33 @@
 		</div>
 	</div>
 
-	<!-- Namespace row -->
+	<!-- Isolation evidence row -->
 	<div class="rounded-xl bg-white/[0.04] px-4 py-3">
-		<div class="mb-3 flex items-center gap-2">
+		<div class="mb-3 flex items-center justify-between gap-2">
+			<div class="flex items-center gap-2">
 			<span class="grid h-6 w-6 place-items-center rounded-md bg-[#9ad7ff]/15 text-[#9ad7ff]" aria-hidden="true">
-				<Boxes size={12} strokeWidth={1.5} />
+				{#if userns.safe}
+					<ShieldCheck size={12} strokeWidth={1.5} />
+				{:else}
+					<ShieldAlert size={12} strokeWidth={1.5} />
+				{/if}
 			</span>
-			<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">Namespace</span>
+				<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">Isolation</span>
+			</div>
+			<span class={`rounded-full px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] ${userns.tone}`}>{userns.label}</span>
 		</div>
+		<p class="m-0 mb-2 truncate font-mono text-[9.5px] text-white/32">{userns.detail}</p>
 		<dl class="grid gap-1.5">
 			<div class="flex justify-between gap-2">
-				<dt class="font-mono text-[10px] text-white/35">UID map</dt>
+				<dt class="font-mono text-[10px] text-white/35">root map</dt>
 				<dd class="m-0 max-w-[55%] truncate font-mono text-[10px] text-white/70 tabular-nums text-right">{firstLine(runtime?.uid_map)}</dd>
 			</div>
 			<div class="flex justify-between gap-2">
-				<dt class="font-mono text-[10px] text-white/35">PID ns</dt>
+				<dt class="font-mono text-[10px] text-white/35">PID boundary</dt>
 				<dd class="m-0 max-w-[55%] truncate font-mono text-[10px] text-white/70 tabular-nums text-right">{runtime?.pid_namespace || '—'}</dd>
 			</div>
 			<div class="flex justify-between gap-2">
-				<dt class="font-mono text-[10px] text-white/35">visible procs</dt>
+				<dt class="font-mono text-[10px] text-white/35">proc visibility</dt>
 				<dd class="m-0 font-mono text-[10px] text-white/70 tabular-nums">{runtime?.processes.process_count || '—'}</dd>
 			</div>
 		</dl>

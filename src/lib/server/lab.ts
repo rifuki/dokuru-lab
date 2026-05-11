@@ -66,26 +66,35 @@ export function getHostResourceInfo() {
 		cpuUsage = 0;
 	}
 	
-	// Get memory info (in GB)
+	// Get memory info in MiB. `free -g` floors small VPS values, so a 1971 MiB host
+	// was misleadingly displayed as 1 GiB.
 	let memoryTotalGb = 0;
 	let memoryAvailableGb = 0;
+	let memoryTotalMib = 0;
+	let memoryAvailableMib = 0;
 	try {
-		const memOutput = execFileSync('sh', ['-c', "free -g | grep Mem | awk '{print $2,$7}'"], { timeout: 2000 })
+		const memOutput = execFileSync('sh', ['-c', "free -m | awk '/^Mem:/ {print $2,$7}'"], { timeout: 2000 })
 			.toString()
 			.trim()
 			.split(' ');
-		memoryTotalGb = parseInt(memOutput[0]) || 0;
-		memoryAvailableGb = parseInt(memOutput[1]) || 0;
+		memoryTotalMib = parseInt(memOutput[0]) || 0;
+		memoryAvailableMib = parseInt(memOutput[1]) || 0;
+		memoryTotalGb = Math.round((memoryTotalMib / 1024) * 10) / 10;
+		memoryAvailableGb = Math.round((memoryAvailableMib / 1024) * 10) / 10;
 	} catch {
 		memoryTotalGb = 0;
 		memoryAvailableGb = 0;
+		memoryTotalMib = 0;
+		memoryAvailableMib = 0;
 	}
 	
 	return {
 		cpu_cores: cpuCores,
 		cpu_usage_percent: Math.round(cpuUsage * 10) / 10,
 		memory_total_gb: memoryTotalGb,
-		memory_available_gb: memoryAvailableGb
+		memory_available_gb: memoryAvailableGb,
+		memory_total_mib: memoryTotalMib,
+		memory_available_mib: memoryAvailableMib
 	};
 }
 
