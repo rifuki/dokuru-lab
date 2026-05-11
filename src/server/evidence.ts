@@ -47,6 +47,14 @@ export function memorySummary(): string {
 	return `memory.current=${cgroup.memory_current} memory.max=${cgroup.memory_max}`;
 }
 
+export function payloadProcessCounts(): { pidSleepers: number; memoryHolders: number; cpuBurners: number } {
+	return {
+		pidSleepers: countProcesses("pgrep -fc '[d]okuru_pid_slp|[d]okuru_pid_bomb_sleep' 2>/dev/null || true"),
+		memoryHolders: countProcesses("pgrep -fc '[d]okuru_memory_hold' 2>/dev/null || true"),
+		cpuBurners: countProcesses("pgrep -fc '[d]okuru_cpu_burn' 2>/dev/null || true")
+	};
+}
+
 export function readFirst(paths: string[]): string {
 	for (const path of paths) {
 		try {
@@ -57,12 +65,19 @@ export function readFirst(paths: string[]): string {
 }
 
 function processEvidence(): ProcessEvidence {
+	const counts = payloadProcessCounts();
 	return {
 		process_count: commandSync("ps -eo pid= | wc -l | tr -d ' '"),
-		pid_bomb_sleepers: commandSync("pgrep -fc '[d]okuru_pid_slp|[d]okuru_pid_bomb_sleep' 2>/dev/null || true"),
-		cpu_burners: commandSync("pgrep -fc '[d]okuru_cpu_burn' 2>/dev/null || true"),
+		pid_bomb_sleepers: String(counts.pidSleepers),
+		memory_holders: String(counts.memoryHolders),
+		cpu_burners: String(counts.cpuBurners),
 		top_processes: commandSync('ps -eo pid,ppid,user,comm | head -12')
 	};
+}
+
+function countProcesses(command: string): number {
+	const count = Number.parseInt(commandSync(command), 10);
+	return Number.isFinite(count) ? count : 0;
 }
 
 function namespaceLink(path: string): string {

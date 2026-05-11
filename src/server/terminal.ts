@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { RawData, WebSocket, WebSocketServer } from 'ws';
 import type { ActivePayload, CustomerSample } from '../lib/types/lab';
-import { cgroupSummary, memorySummary, readFirst } from './evidence';
+import { cgroupSummary, memorySummary, payloadProcessCounts, readFirst } from './evidence';
 import { clamp, delay, runShell } from './shell';
 import { line, send } from './socket';
 
@@ -126,8 +126,9 @@ export class TerminalController {
 			return;
 		}
 
-		if (payloadActions.has(type) && this.activePayload) {
-			line(socket, 'stderr', `${this.activePayload.label} is still active; stop it before starting another payload\n`);
+		const activeRuntimePayload = this.activePayload ?? runtimePayloadActivity();
+		if (payloadActions.has(type) && activeRuntimePayload) {
+			line(socket, 'stderr', `${activeRuntimePayload.label} is still active; stop it before starting another payload\n`);
 			this.sendActivePayload(socket);
 			send(socket, 'terminal.exit', { action: type, code: 1 });
 			return;
@@ -344,27 +345,27 @@ export class TerminalController {
 				break;
 			}
 
-			try {
-				const child = spawn(
-					process.execPath,
-					['-e', "process.title='dokuru_pid_slp'; setTimeout(() => {}, 60000);"],
-					{ detached: true, stdio: 'ignore' }
-				);
-				child.unref();
-				spawned += 1;
-				line(socket, 'stdout', `[${String(index + 1).padStart(3, '0')}] spawned sleeper pid=${child.pid}\n`);
-				if ((index + 1) % 20 === 0) {
-					line(socket, 'stdout', cgroupSummary());
-				}
-				await delay(8);
-			} catch (error) {
-				line(socket, 'stderr', `spawn failed at ${index + 1}: ${error instanceof Error ? error.message : String(error)}\n`);
+			const child = await spawnDetachedNode(['-e', "process.title='dokuru_pid_slp'; setTimeout(() => {}, 60000);"]);
+			if (child.error) {
+				line(socket, 'stderr', `spawn stopped at ${index + 1}: ${child.error.message}; PID cgroup likely reached its limit\n`);
 				break;
 			}
+
+			spawned += 1;
+			if (spawned <= 12 || spawned % 25 === 0 || spawned === count) {
+				line(socket, 'stdout', `[${String(spawned).padStart(3, '0')}] spawned sleeper pid=${child.pid ?? 'unknown'}\n`);
+			} else if (spawned === 13) {
+				line(socket, 'stdout', '... spawned sleeper output sampled; monitor shows live count ...\n');
+			}
+			if (spawned % 20 === 0) {
+				line(socket, 'stdout', cgroupSummary());
+			}
+			await delay(8);
 		}
 
 		line(socket, 'stdout', `spawned ${spawned}/${count} requested sleeper processes\n`);
 		line(socket, 'stdout', cgroupSummary());
+		if (spawned === 0) this.clearActivePayload('pid-bomb');
 	}
 
 	private async runMemoryBomb(socket: WebSocket, rawMb: unknown): Promise<void> {
@@ -474,19 +475,20 @@ allocateBatch();
 		let spawned = 0;
 
 		for (let index = 0; index < workers; index += 1) {
-			try {
-				const child = spawn(process.execPath, ['-e', script], { detached: true, stdio: 'ignore' });
-				child.unref();
-				spawned += 1;
-				line(socket, 'stdout', `[miner ${index + 1}/${workers}] pid=${child.pid}\n`);
-			} catch (error) {
-				line(socket, 'stderr', `failed to spawn miner ${index + 1}: ${error instanceof Error ? error.message : String(error)}\n`);
+			const child = await spawnDetachedNode(['-e', script]);
+			if (child.error) {
+				line(socket, 'stderr', `failed to spawn miner ${index + 1}: ${child.error.message}\n`);
+				continue;
 			}
+
+			spawned += 1;
+			line(socket, 'stdout', `[miner ${index + 1}/${workers}] pid=${child.pid ?? 'unknown'}\n`);
 		}
 
 		await delay(250);
 		line(socket, 'stdout', `spawned ${spawned}/${workers} CPU miners for ${seconds}s; watch Active burners and customer latency\n`);
 		line(socket, 'stdout', cgroupSummary());
+		if (spawned === 0) this.clearActivePayload('cpu-blast');
 	}
 
 	private async runCustomerProbe(socket: WebSocket): Promise<void> {
@@ -542,6 +544,7 @@ allocateBatch();
 			5_000
 		);
 		line(socket, 'stdout', `payload processes cleaned up; ${cgroupSummary()}`);
+		this.broadcastActivePayload();
 	}
 
 	private async runStopPayloads(socket: WebSocket): Promise<void> {
@@ -556,6 +559,7 @@ allocateBatch();
 			5_000
 		);
 		line(socket, 'stdout', `active payload stopped; payload processes terminated; ${cgroupSummary()}`);
+		this.broadcastActivePayload();
 	}
 
 	private stopMemoryPayload(): void {
@@ -602,7 +606,7 @@ allocateBatch();
 	}
 
 	private sendActivePayload(socket: WebSocket): void {
-		send(socket, 'terminal.payload', { payload: this.activePayload });
+		send(socket, 'terminal.payload', { payload: this.activePayload ?? runtimePayloadActivity() });
 	}
 
 	private broadcastActivePayload(): void {
@@ -610,6 +614,47 @@ allocateBatch();
 			this.sendActivePayload(socket);
 		}
 	}
+}
+
+function spawnDetachedNode(args: string[]): Promise<{ pid?: number; error?: Error }> {
+	return new Promise((resolveSpawn) => {
+		let settled = false;
+		const settle = (result: { pid?: number; error?: Error }) => {
+			if (settled) return;
+			settled = true;
+			resolveSpawn(result);
+		};
+
+		try {
+			const child = spawn(process.execPath, args, { detached: true, stdio: 'ignore' });
+			child.once('error', (error) => settle({ error }));
+			child.once('spawn', () => {
+				child.unref();
+				settle({ pid: child.pid });
+			});
+		} catch (error) {
+			settle({ error: error instanceof Error ? error : new Error(String(error)) });
+		}
+	});
+}
+
+function runtimePayloadActivity(): ActivePayload | null {
+	const counts = payloadProcessCounts();
+	let type = '';
+	let label = '';
+	if (counts.pidSleepers > 0) {
+		type = 'pid-bomb';
+		label = 'PID bomb';
+	} else if (counts.memoryHolders > 0) {
+		type = 'memory-bomb';
+		label = 'Memory pressure';
+	} else if (counts.cpuBurners > 0) {
+		type = 'cpu-blast';
+		label = 'CPU pressure';
+	}
+
+	if (!type) return null;
+	return { type, label, startedAt: new Date().toISOString() };
 }
 
 function payloadDurationMs(type: string, message: TerminalPayload): number | null {

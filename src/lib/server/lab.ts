@@ -132,6 +132,7 @@ export function processEvidence(): ProcessEvidence {
 	return {
 		process_count: commandSync("ps -eo pid= | wc -l | tr -d ' '"),
 		pid_bomb_sleepers: commandSync("pgrep -fc '[d]okuru_pid_slp|[d]okuru_pid_bomb_sleep' 2>/dev/null || true"),
+		memory_holders: commandSync("pgrep -fc '[d]okuru_memory_hold' 2>/dev/null || true"),
 		cpu_burners: commandSync("pgrep -fc '[d]okuru_cpu_burn' 2>/dev/null || true"),
 		top_processes: commandSync('ps -eo pid,ppid,user,comm | head -12')
 	};

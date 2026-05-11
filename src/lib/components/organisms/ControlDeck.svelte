@@ -52,6 +52,7 @@
 		runtime?: RuntimeEvidence;
 		evidenceOk: boolean;
 		lastUpdated: string;
+		terminalConnected: boolean;
 		monitorConnected: boolean;
 		customerConnected: boolean;
 		customerSamples: CustomerSample[];
@@ -96,6 +97,7 @@
 		runtime,
 		evidenceOk,
 		lastUpdated,
+		terminalConnected,
 		monitorConnected,
 		customerConnected,
 		customerSamples,
@@ -135,6 +137,14 @@
 	const pidPct = $derived(percent(runtime?.cgroup.pids_current, runtime?.cgroup.pids_max));
 	const memPct = $derived(percent(runtime?.cgroup.memory_current, runtime?.cgroup.memory_max));
 	const activeBurners = $derived(runtime?.processes.cpu_burners || String(runtime?.cgroup.active_cpu_burners ?? 0));
+	const pidSleepers = $derived(processCount(runtime?.processes.pid_bomb_sleepers));
+	const memoryHolders = $derived(processCount(runtime?.processes.memory_holders));
+	const cpuBurners = $derived(processCount(activeBurners));
+	const payloadProcessCount = $derived(pidSleepers + memoryHolders + cpuBurners);
+	const hasPayloadActivity = $derived(Boolean(activePayload) || payloadProcessCount > 0);
+	const payloadName = $derived(activePayload?.label ?? inferredPayloadLabel());
+	const payloadRunDisabled = $derived(busy || hasPayloadActivity || !terminalConnected);
+	const stopPayloadDisabled = $derived(!terminalConnected || running === 'stop-payloads' || !hasPayloadActivity);
 	const rootMap = $derived(rootMapState());
 
 	$effect(() => {
@@ -178,6 +188,18 @@
 		if (!value || value === 'max' || value === 'unavailable') return null;
 		const parsed = Number(value.trim());
 		return Number.isFinite(parsed) ? parsed : null;
+	}
+
+	function processCount(value?: string): number {
+		const parsed = Number.parseInt(value || '0', 10);
+		return Number.isFinite(parsed) ? parsed : 0;
+	}
+
+	function inferredPayloadLabel(): string {
+		if (pidSleepers > 0) return 'PID bomb';
+		if (memoryHolders > 0) return 'Memory pressure';
+		if (cpuBurners > 0) return 'CPU pressure';
+		return 'Payload';
 	}
 
 	function isUnlimited(value?: string): boolean {
@@ -339,10 +361,10 @@
 						<p class={`m-0 mb-1 font-mono text-[10.5px] tracking-[0.14em] uppercase ${muted()}`}>Attack pad</p>
 						<h3 class="m-0 text-[22px] font-light tracking-tight">One viewport for the whole demo</h3>
 					</div>
-					{#if activePayload}
+					{#if hasPayloadActivity}
 						<div class="inline-flex items-center gap-2 rounded-full border border-commerce/20 bg-commerce/10 px-3 py-1.5 text-[12px] text-commerce">
 							<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-commerce" aria-hidden="true"></span>
-							<span class="font-mono">{activePayload.label}</span>
+							<span class="font-mono">{payloadName}</span>
 						</div>
 					{/if}
 				</div>
@@ -386,13 +408,18 @@
 								<p class={`m-0 mb-1 font-mono text-[10.5px] tracking-[0.14em] uppercase ${muted()}`}>Resource pressure</p>
 								<h4 class="m-0 text-[16px] font-semibold tracking-tight">Trigger resource pressure and watch Resource/Traffic</h4>
 							</div>
-							<Button size="xs" variant="commerce" onclick={onStopPayloads} disabled={running === 'stop-payloads'}>Stop payload</Button>
+							<Button size="xs" variant="commerce" onclick={onStopPayloads} disabled={stopPayloadDisabled}>Stop payload</Button>
 						</div>
+						{#if hasPayloadActivity}
+							<p class={`m-0 mb-3 text-[12px] ${muted()}`}>Resource payload is active. Start buttons are locked until Stop payload finishes.</p>
+						{:else}
+							<p class={`m-0 mb-3 text-[12px] ${muted()}`}>No payload is active. Stop payload stays disabled until a pressure run starts.</p>
+						{/if}
 
 						<div class="grid gap-3 @2xl/main:grid-cols-3">
-							{@render pressureCard('pid-bomb', 'PIDs', Hash, `${pidCount}`, 'sleepers', pidCount, 1, 500, onPidCountChange, onPidBomb)}
-							{@render pressureCard('memory-bomb', 'Memory', MemoryStick, `${memoryMb} MB`, 'hold', memoryMb, 1, 3500, onMemoryChange, onMemoryBomb)}
-							{@render pressureCard('cpu-blast', 'CPU blast', Cpu, `${cpuSeconds}s`, 'miners', cpuSeconds, 5, 90, onCpuChange, onCpuBlast)}
+							{@render pressureCard('pid-bomb', 'PIDs', Hash, `${pidCount}`, 'sleepers', pidCount, 1, 500, onPidCountChange, onPidBomb, payloadRunDisabled)}
+							{@render pressureCard('memory-bomb', 'Memory', MemoryStick, `${memoryMb} MB`, 'hold', memoryMb, 1, 3500, onMemoryChange, onMemoryBomb, payloadRunDisabled)}
+							{@render pressureCard('cpu-blast', 'CPU blast', Cpu, `${cpuSeconds}s`, 'miners', cpuSeconds, 5, 90, onCpuChange, onCpuBlast, payloadRunDisabled)}
 						</div>
 					</div>
 
@@ -528,7 +555,7 @@
 	</article>
 {/snippet}
 
-{#snippet pressureCard(key: string, title: string, Icon: typeof Activity, valueLabel: string, unitLabel: string, value: number, min: number, max: number, onChange: (value: number) => void, action: () => void | Promise<void>)}
+{#snippet pressureCard(key: string, title: string, Icon: typeof Activity, valueLabel: string, unitLabel: string, value: number, min: number, max: number, onChange: (value: number) => void, action: () => void | Promise<void>, disabled = false)}
 	<article class={`rounded-xl border p-3 ${dark ? 'border-white/8 bg-black/20' : 'border-black/6 bg-black/[0.02]'}`}>
 		<div class="mb-2 flex items-center justify-between gap-2">
 			<div class="flex items-center gap-2">
@@ -549,10 +576,11 @@
 			min={min}
 			max={max}
 			value={value}
+			disabled={disabled}
 			oninput={(event) => onChange(Number(event.currentTarget.value))}
-			class="mb-3 w-full accent-playstation-blue"
+			class="mb-3 w-full accent-playstation-blue disabled:cursor-not-allowed disabled:opacity-45"
 		/>
-		<Button size="xs" onclick={action} disabled={busy}>{title === 'CPU blast' ? 'Start blast' : `Run ${title}`}</Button>
+		<Button size="xs" onclick={action} {disabled}>{title === 'CPU blast' ? 'Start blast' : `Run ${title}`}</Button>
 	</article>
 {/snippet}
 
@@ -604,6 +632,9 @@
 					<div class={`min-w-1 flex-1 rounded-t ${barTone(sample)}`} style={`height: ${barHeight(sample)}%`} title={sample.ok ? `${sample.latency_ms}ms` : sample.error || 'failed'}></div>
 				{/each}
 			</div>
+			{#if hasPayloadActivity}
+				<p class={`m-0 mt-3 text-[11.5px] leading-relaxed ${muted()}`}>If this stays green during {payloadName}, isolation is working: the pressure is scoped to <code>dokuru-lab</code>, while checkout runs in a separate protected container.</p>
+			{/if}
 		</div>
 		<div class="grid grid-cols-3 gap-2">
 			{@render miniStat('avg', avgLatency)}
@@ -624,6 +655,7 @@
 				<div class="flex justify-between gap-3"><dt class={muted()}>CPU quota file</dt><dd class="m-0 text-right">{runtime?.cgroup.cpu_max || 'loading'}</dd></div>
 				<div class="flex justify-between gap-3"><dt class={muted()}>CPU weight file</dt><dd class="m-0 text-right">{runtime?.cgroup.cpu_weight || 'loading'}</dd></div>
 				<div class="flex justify-between gap-3"><dt class={muted()}>PID sleepers</dt><dd class="m-0 text-right">{runtime?.processes.pid_bomb_sleepers || '0'}</dd></div>
+				<div class="flex justify-between gap-3"><dt class={muted()}>Memory holders</dt><dd class="m-0 text-right">{runtime?.processes.memory_holders || '0'}</dd></div>
 			</dl>
 		</div>
 	</div>

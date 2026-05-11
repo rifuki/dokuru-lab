@@ -12,6 +12,7 @@ export type CgroupEvidence = {
 export type ProcessEvidence = {
 	process_count: string;
 	pid_bomb_sleepers: string;
+	memory_holders: string;
 	cpu_burners: string;
 	top_processes: string;
 };

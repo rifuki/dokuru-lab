@@ -793,6 +793,7 @@
 				{runtime}
 				evidenceOk={Boolean(evidenceData?.ok)}
 				{lastUpdated}
+				{terminalConnected}
 				{monitorConnected}
 				{customerConnected}
 				{customerSamples}
