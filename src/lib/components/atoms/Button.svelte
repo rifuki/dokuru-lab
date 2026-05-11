@@ -1,6 +1,6 @@
 <script lang="ts">
 	type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'commerce';
-	type ButtonSize = 'sm' | 'md';
+	type ButtonSize = 'xs' | 'sm' | 'md';
 
 	type Props = {
 		variant?: ButtonVariant;
@@ -17,6 +17,7 @@
 	const base =
 		'inline-flex cursor-pointer items-center justify-center rounded-full font-medium tracking-[0.02em] transition-all duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.97] active:brightness-95';
 	const sizes: Record<ButtonSize, string> = {
+		xs: 'px-3 py-1.5 text-[12px]',
 		sm: 'px-4 py-2 text-[13px]',
 		md: 'px-5 py-2.5 text-[14.5px]'
 	};

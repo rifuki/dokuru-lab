@@ -370,7 +370,7 @@
 								class={`min-h-10 rounded-full border px-4 font-mono text-[12.5px] transition focus:ring-2 focus:outline-none ${inputClass()}`}
 								aria-label="Command injection payload"
 							/>
-							<Button size="sm" variant="commerce" onclick={onRunInjection} disabled={busy}>Execute</Button>
+							<Button size="xs" variant="commerce" onclick={onRunInjection} disabled={busy}>Execute</Button>
 						</div>
 					</article>
 
@@ -386,7 +386,7 @@
 								<p class={`m-0 mb-1 font-mono text-[10.5px] tracking-[0.14em] uppercase ${muted()}`}>Resource pressure</p>
 								<h4 class="m-0 text-[16px] font-semibold tracking-tight">Trigger resource pressure and watch Resource/Traffic</h4>
 							</div>
-							<Button size="sm" variant="commerce" onclick={onStopPayloads} disabled={running === 'stop-payloads'}>Stop payload</Button>
+							<Button size="xs" variant="commerce" onclick={onStopPayloads} disabled={running === 'stop-payloads'}>Stop payload</Button>
 						</div>
 
 						<div class="grid gap-3 @2xl/main:grid-cols-3">
@@ -431,7 +431,7 @@
 								class={`mb-2.5 min-h-20 w-full resize-y rounded-xl border px-3 py-2 font-mono text-[12px] transition focus:ring-2 focus:outline-none ${inputClass()}`}
 								aria-label="Root-map command"
 							></textarea>
-							<Button size="sm" onclick={onRunCommand} disabled={busy}>Run command</Button>
+							<Button size="xs" onclick={onRunCommand} disabled={busy}>Run command</Button>
 						</article>
 
 						<article class={`rounded-2xl border p-4 ${cardClass()}`}>
@@ -445,9 +445,9 @@
 								</div>
 							</div>
 							<div class="grid gap-2">
-								<Button size="sm" onclick={onDumpData} disabled={busy}>Dump sample data</Button>
-								<Button size="sm" variant="commerce" onclick={onRansomware} disabled={busy}>Encrypt customer files</Button>
-								<Button size="sm" onclick={onRestoreData} disabled={busy}>
+								<Button size="xs" onclick={onDumpData} disabled={busy}>Dump sample data</Button>
+								<Button size="xs" variant="commerce" onclick={onRansomware} disabled={busy}>Encrypt customer files</Button>
+								<Button size="xs" onclick={onRestoreData} disabled={busy}>
 									<span class="inline-flex items-center gap-1.5"><RotateCcw size={13} strokeWidth={2} /> Restore data</span>
 								</Button>
 							</div>
@@ -455,8 +455,8 @@
 					</div>
 
 					<div class="flex flex-wrap items-center justify-between gap-3">
-						<Button size="sm" onclick={onCleanupTraps} disabled={busy}>Cleanup SUID/setcap</Button>
-						<Button size="sm" onclick={onCustomerProbe} disabled={busy}>Probe protected API</Button>
+						<Button size="xs" onclick={onCleanupTraps} disabled={busy}>Cleanup SUID/setcap</Button>
+						<Button size="xs" onclick={onCustomerProbe} disabled={busy}>Probe protected API</Button>
 					</div>
 				</div>
 			</section>
@@ -474,13 +474,13 @@
 						</span>
 					</div>
 
-					<div class="grid grid-cols-2 gap-2 @md/main:grid-cols-4">
+					<div class="flex gap-1.5 overflow-x-auto pb-1">
 						{#each signalTabs as tab (tab.id)}
 							{@const TabIcon = tab.Icon}
 							<button
 								type="button"
 								onclick={() => (signalView = tab.id)}
-								class={`inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-full border px-2.5 py-2 text-[12px] font-medium transition ${
+								class={`inline-flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1 rounded-full border px-2.5 text-[11px] font-medium whitespace-nowrap transition ${
 									signalView === tab.id
 										? 'border-playstation-blue bg-playstation-blue text-white'
 										: dark
@@ -488,7 +488,7 @@
 											: 'border-black/10 bg-white text-black/55 hover:text-black'
 								}`}
 							>
-								<TabIcon size={13} strokeWidth={1.8} /> {tab.label}
+								<TabIcon size={11} strokeWidth={1.8} /> {tab.label}
 							</button>
 						{/each}
 					</div>
@@ -524,7 +524,7 @@
 				{@render statusGlyph(key, 10)} {statusText(key)}
 			</span>
 		</div>
-		<Button size="sm" variant={emphasis ? 'commerce' : 'primary'} onclick={action} disabled={busy}>{buttonLabel}</Button>
+		<Button size="xs" variant={emphasis ? 'commerce' : 'primary'} onclick={action} disabled={busy}>{buttonLabel}</Button>
 	</article>
 {/snippet}
 
@@ -552,7 +552,7 @@
 			oninput={(event) => onChange(Number(event.currentTarget.value))}
 			class="mb-3 w-full accent-playstation-blue"
 		/>
-		<Button size="sm" onclick={action} disabled={busy}>{title === 'CPU blast' ? 'Start blast' : `Run ${title}`}</Button>
+		<Button size="xs" onclick={action} disabled={busy}>{title === 'CPU blast' ? 'Start blast' : `Run ${title}`}</Button>
 	</article>
 {/snippet}
 
@@ -676,10 +676,10 @@
 				{@render proofLine('memory.max', formatBytes(runtime?.cgroup.memory_max))}
 			</dl>
 			<div class="flex flex-wrap gap-2">
-				<Button size="sm" onclick={onRefreshEvidence} disabled={running === 'health'}>
+				<Button size="xs" onclick={onRefreshEvidence} disabled={running === 'health'}>
 					<span class="inline-flex items-center gap-1.5"><RefreshCw size={13} strokeWidth={1.7} /> Refresh</span>
 				</Button>
-				<Button size="sm" onclick={onProbeWrite} disabled={busy}>Probe write</Button>
+				<Button size="xs" onclick={onProbeWrite} disabled={busy}>Probe write</Button>
 			</div>
 		</div>
 		<div class={`rounded-2xl border p-4 ${dark ? 'border-white/8 bg-white/[0.025]' : 'border-black/6 bg-white'}`}>

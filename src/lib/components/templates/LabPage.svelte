@@ -3,7 +3,7 @@
 	import ControlDeck from '$lib/components/organisms/ControlDeck.svelte';
 	import HeroSection from '$lib/components/organisms/HeroSection.svelte';
 	import Masthead from '$lib/components/organisms/Masthead.svelte';
-	import TerminalEventLog, { type TerminalEvent } from '$lib/components/organisms/TerminalEventLog.svelte';
+	import TerminalEventLog, { type TerminalCompletion, type TerminalEvent } from '$lib/components/organisms/TerminalEventLog.svelte';
 	import TerminalHandle from '$lib/components/organisms/TerminalHandle.svelte';
 	import SidebarMonitor from '$lib/components/organisms/SidebarMonitor.svelte';
 	import { Activity, AlertOctagon, FlaskConical, Terminal as TerminalIcon } from '@lucide/svelte';
@@ -64,6 +64,7 @@
 	let splitContainerEl = $state<HTMLDivElement | null>(null);
 	let draggingPanel = $state<SidebarPanel | null>(null);
 	let dragHoverZone = $state<SnapZone | null>(null);
+	const completionRequests = new Map<string, (completion: TerminalCompletion | null) => void>();
 
 	function onSplitPointerDown(event: PointerEvent) {
 		event.preventDefault();
@@ -359,6 +360,11 @@
 			const message = parseSocketMessage(event.data);
 			if (!message) return;
 
+			if (message.type === 'terminal.complete') {
+				resolveTerminalCompletion(message);
+				return;
+			}
+
 			if (message.type === 'terminal.payload') {
 				activePayload = normalizeActivePayload(message.payload);
 				return;
@@ -597,6 +603,37 @@
 		}
 
 		sendTerminal({ type: 'exec', command: text });
+	}
+
+	function requestTerminalCompletion(input: string, cursor: number): Promise<TerminalCompletion | null> {
+		if (!terminalSocket || terminalSocket.readyState !== WebSocket.OPEN) return Promise.resolve(null);
+
+		const requestId = createEventId('complete');
+		return new Promise((resolve) => {
+			const timeout = window.setTimeout(() => {
+				completionRequests.delete(requestId);
+				resolve(null);
+			}, 700);
+
+			completionRequests.set(requestId, (completion) => {
+				window.clearTimeout(timeout);
+				resolve(completion);
+			});
+
+			terminalSocket?.send(JSON.stringify({ type: 'complete', requestId, command: input, cursor }));
+		});
+	}
+
+	function resolveTerminalCompletion(message: Record<string, unknown>) {
+		const requestId = String(message.requestId || '');
+		const resolve = completionRequests.get(requestId);
+		if (!resolve) return;
+		completionRequests.delete(requestId);
+
+		resolve({
+			replacement: typeof message.replacement === 'string' ? message.replacement : undefined,
+			options: Array.isArray(message.options) ? message.options.map(String) : undefined
+		});
 	}
 
 	function clearEvents() {
@@ -885,6 +922,7 @@
 								onClear={clearEvents}
 								onClose={() => removePanel('terminal')}
 								onSend={sendShellInput}
+								onComplete={requestTerminalCompletion}
 								{hostname}
 							/>
 						{:else}
@@ -912,6 +950,7 @@
 									onClear={clearEvents}
 									onClose={() => removePanel('terminal')}
 									onSend={sendShellInput}
+									onComplete={requestTerminalCompletion}
 									{hostname}
 								/>
 							{:else}
@@ -947,6 +986,7 @@
 									onClear={clearEvents}
 									onClose={() => removePanel('terminal')}
 									onSend={sendShellInput}
+									onComplete={requestTerminalCompletion}
 									{hostname}
 								/>
 							{:else}
@@ -1014,6 +1054,7 @@
 				onClear={clearEvents}
 				onClose={closeTerminal}
 				onSend={sendShellInput}
+				onComplete={requestTerminalCompletion}
 				{hostname}
 			/>
 		</div>

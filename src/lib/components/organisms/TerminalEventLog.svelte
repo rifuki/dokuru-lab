@@ -31,6 +31,11 @@
 				text: string;
 				level?: 'info' | 'warn' | 'error';
 			};
+
+	export type TerminalCompletion = {
+		replacement?: string;
+		options?: string[];
+	};
 </script>
 
 <script lang="ts">
@@ -55,18 +60,24 @@
 		onClear: () => void;
 		onClose?: () => void;
 		onSend: (command: string) => void;
+		onComplete?: (command: string, cursor: number) => Promise<TerminalCompletion | null>;
 		hostname: string;
 	};
 
-	let { events, connected, running, onClear, onClose, onSend, hostname }: Props = $props();
+	let { events, connected, running, onClear, onClose, onSend, onComplete, hostname }: Props = $props();
 
 	let input = $state('');
+	let inputEl = $state<HTMLInputElement | null>(null);
 	let filter = $state('');
 	let showSearch = $state(false);
 	let expanded = $state<Record<string, boolean>>({});
 	let viewport = $state<HTMLDivElement | null>(null);
 	let autoScroll = $state(true);
 	let copied = $state('');
+	let history = $state<string[]>([]);
+	let historyIndex = $state(-1);
+	let draftInput = $state('');
+	let completing = $state(false);
 
 	$effect(() => {
 		events.length;
@@ -104,14 +115,53 @@
 	function submit() {
 		const value = input.trim();
 		if (!value) return;
+		if (history[history.length - 1] !== value) history = [...history, value].slice(-80);
+		historyIndex = -1;
+		draftInput = '';
 		onSend(value);
 		input = '';
+	}
+
+	function recallHistory(direction: -1 | 1) {
+		if (history.length === 0) return;
+		if (historyIndex === -1) {
+			draftInput = input;
+			historyIndex = history.length;
+		}
+
+		historyIndex = Math.max(0, Math.min(history.length, historyIndex + direction));
+		input = historyIndex === history.length ? draftInput : history[historyIndex];
+		void tick().then(() => inputEl?.setSelectionRange(input.length, input.length));
+	}
+
+	async function completeCurrentInput() {
+		if (!onComplete || completing || !inputEl) return;
+		const original = input;
+		const cursor = inputEl.selectionStart ?? input.length;
+		completing = true;
+		try {
+			const completion = await onComplete(input, cursor);
+			if (!completion?.replacement || input !== original || completion.replacement === input) return;
+			input = completion.replacement;
+			void tick().then(() => inputEl?.setSelectionRange(input.length, input.length));
+		} finally {
+			completing = false;
+		}
 	}
 
 	function onKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Enter' && !event.shiftKey) {
 			event.preventDefault();
 			submit();
+		} else if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			recallHistory(-1);
+		} else if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			recallHistory(1);
+		} else if (event.key === 'Tab') {
+			event.preventDefault();
+			void completeCurrentInput();
 		}
 	}
 
@@ -339,11 +389,6 @@
 								</div>
 							{/if}
 						{:else if event.kind === 'shell'}
-							{#if event.command}
-								<div class="mb-2 rounded-md border border-white/10 bg-black/50 px-2.5 py-1.5 font-mono text-[11px] text-emerald-400">
-									$ {event.command}
-								</div>
-							{/if}
 							<pre class="m-0 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md border border-white/5 bg-black/40 px-2.5 py-2 font-mono text-[11px] leading-[1.55]">{#each event.lines as line}<span class={streamClass(line.stream)}>{line.text}</span>{/each}</pre>
 						{:else}
 							<p class="m-0 font-mono text-[11px] text-white/60">{event.text}</p>
@@ -357,8 +402,9 @@
 	<footer class="flex h-11 shrink-0 items-center gap-2 border-t border-white/5 bg-[#050505] px-3">
 		<span class="font-mono text-[11px] text-emerald-400">$</span>
 		<input
+			bind:this={inputEl}
 			type="text"
-			placeholder={connected ? 'type shell command - Enter to run' : 'reconnecting...'}
+			placeholder={connected ? 'Enter to run · ↑ history · Tab complete' : 'reconnecting...'}
 			value={input}
 			oninput={(event) => (input = event.currentTarget.value)}
 			onkeydown={onKeyDown}

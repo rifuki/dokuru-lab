@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { cpus } from 'node:os';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { cpus, tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { RawData, WebSocket, WebSocketServer } from 'ws';
 import type { ActivePayload, CustomerSample } from '../lib/types/lab';
@@ -17,6 +17,8 @@ type TerminalPayload = {
 	mb?: unknown;
 	seconds?: unknown;
 	workers?: unknown;
+	requestId?: unknown;
+	cursor?: unknown;
 };
 
 type TerminalControllerOptions = {
@@ -42,6 +44,7 @@ export class TerminalController {
 	private activePayload: ActivePayload | null = null;
 	private activePayloadTimer: ReturnType<typeof setTimeout> | null = null;
 	private shellSessions = new WeakMap<WebSocket, ChildProcessWithoutNullStreams>();
+	private shellCwds = new WeakMap<WebSocket, string>();
 	private stdinChild: ChildProcessWithoutNullStreams | null = null;
 	private stopRequested = false;
 
@@ -52,6 +55,7 @@ export class TerminalController {
 
 	attach(): void {
 		this.server.on('connection', (socket) => {
+			this.shellCwds.set(socket, process.cwd());
 			line(socket, 'system', 'connected to dokuru-lab terminal websocket\n');
 			line(socket, 'system', 'commands run inside the vulnerable container runtime\n');
 			this.sendActivePayload(socket);
@@ -83,6 +87,11 @@ export class TerminalController {
 			if (!this.writeShellData(socket, message.data)) {
 				line(socket, 'stderr', 'interactive shell is not available; reconnect the terminal\n');
 			}
+			return;
+		}
+
+		if (type === 'complete') {
+			this.sendCompletion(socket, message);
 			return;
 		}
 
@@ -214,6 +223,7 @@ export class TerminalController {
 
 	private stopShellSession(socket: WebSocket): void {
 		const child = this.shellSessions.get(socket);
+		this.shellCwds.delete(socket);
 		if (!child) return;
 		this.shellSessions.delete(socket);
 		child.kill('SIGTERM');
@@ -247,16 +257,19 @@ export class TerminalController {
 	private async runExec(socket: WebSocket, rawCommand: unknown): Promise<void> {
 		const command = String(rawCommand || 'id').trim().slice(0, 1000) || 'id';
 		const isInteractive = ['sh', 'bash', 'zsh'].includes(command.trim());
+		const cwd = this.shellCwds.get(socket) || process.cwd();
+		const cwdMarkerPath = join(tmpdir(), `dokuru-terminal-cwd-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`);
+		const wrappedCommand = `${command}\nstatus=$?\npwd > ${shellQuote(cwdMarkerPath)}\nexit "$status"\n`;
 
 		await new Promise<void>((resolve) => {
 			line(socket, 'system', `$ ${command}\n`);
-			const child = spawn('/bin/sh', ['-lc', command], {
+			const child = spawn('/bin/sh', ['-lc', wrappedCommand], {
 				env: terminalEnv(),
-				cwd: process.cwd(),
+				cwd,
 				stdio: ['pipe', 'pipe', 'pipe']
 			});
 			this.stdinChild = child;
-			
+
 			if (isInteractive) {
 				child.stdin.write('PS1="\\$ "\n');
 			}
@@ -272,9 +285,40 @@ export class TerminalController {
 			child.on('close', (code, signal) => {
 				clearTimeout(timeout);
 				if (this.stdinChild === child) this.stdinChild = null;
+				this.captureShellCwd(socket, cwd, cwdMarkerPath);
 				line(socket, 'system', `process exited code=${code ?? 'null'} signal=${signal ?? 'none'}\n`);
 				resolve();
 			});
+		});
+	}
+
+	private captureShellCwd(socket: WebSocket, previousCwd: string, markerPath: string): void {
+		try {
+			const nextCwd = readFileSync(markerPath, 'utf8').trim();
+			if (nextCwd && existsSync(nextCwd) && statSync(nextCwd).isDirectory()) {
+				this.shellCwds.set(socket, nextCwd);
+				if (nextCwd !== previousCwd) line(socket, 'system', `cwd=${nextCwd}\n`);
+			}
+		} catch {
+			/* command exited before cwd marker was written */
+		} finally {
+			try {
+				unlinkSync(markerPath);
+			} catch {
+				/* temp file already gone */
+			}
+		}
+	}
+
+	private sendCompletion(socket: WebSocket, message: TerminalPayload): void {
+		const command = String(message.command ?? '');
+		const cursorValue = Number(message.cursor ?? command.length);
+		const cursor = Number.isFinite(cursorValue) ? clamp(cursorValue, 0, command.length) : command.length;
+		const completion = completeCommandInput(command, cursor, this.shellCwds.get(socket) || process.cwd());
+		send(socket, 'terminal.complete', {
+			requestId: String(message.requestId || ''),
+			input: command,
+			...completion
 		});
 	}
 
@@ -607,6 +651,105 @@ function preferredShell(): string {
 	if (existsSync('/bin/bash')) return '/bin/bash';
 	if (existsSync('/usr/bin/bash')) return '/usr/bin/bash';
 	return '/bin/sh';
+}
+
+type CompletionResult = {
+	replacement?: string;
+	options: string[];
+};
+
+const commandSuggestions = [
+	'cat',
+	'cd',
+	'clear',
+	'cp',
+	'env',
+	'find',
+	'grep',
+	'head',
+	'id',
+	'ls',
+	'mkdir',
+	'pwd',
+	'ps',
+	'rm',
+	'tail',
+	'whoami',
+	'cat /proc/self/uid_map',
+	'cat /proc/self/gid_map',
+	'cat /sys/fs/cgroup/memory.max',
+	'cat /app/data/recovery-probe.txt'
+];
+
+function completeCommandInput(input: string, cursor: number, cwd: string): CompletionResult {
+	const before = input.slice(0, cursor);
+	const tokenMatch = /(^|\s)(\S*)$/.exec(before);
+	const token = tokenMatch?.[2] ?? '';
+	const tokenStart = cursor - token.length;
+	const firstToken = input.slice(0, tokenStart).trim() === '';
+	const commandName = input.trimStart().split(/\s+/, 1)[0] || '';
+
+	if (firstToken && !token.includes('/')) {
+		return completeFromOptions(input, cursor, tokenStart, token, commandSuggestions);
+	}
+
+	const dirsOnly = commandName === 'cd';
+	return completePathToken(input, cursor, tokenStart, token, cwd, dirsOnly);
+}
+
+function completeFromOptions(input: string, cursor: number, tokenStart: number, token: string, options: string[]): CompletionResult {
+	const matches = options.filter((option) => option.startsWith(token));
+	return completionResult(input, cursor, tokenStart, token, matches);
+}
+
+function completePathToken(input: string, cursor: number, tokenStart: number, token: string, cwd: string, dirsOnly: boolean): CompletionResult {
+	const slashIndex = token.lastIndexOf('/');
+	const baseToken = slashIndex >= 0 ? token.slice(0, slashIndex + 1) : '';
+	const partial = slashIndex >= 0 ? token.slice(slashIndex + 1) : token;
+	const basePath = resolvePath(cwd, baseToken || '.');
+
+	try {
+		const matches = readdirSync(basePath, { withFileTypes: true })
+			.filter((entry) => (partial.startsWith('.') || !entry.name.startsWith('.')) && entry.name.startsWith(partial))
+			.filter((entry) => !dirsOnly || entry.isDirectory())
+			.map((entry) => `${baseToken}${entry.name}${entry.isDirectory() ? '/' : ''}`)
+			.sort((a, b) => a.localeCompare(b));
+
+		return completionResult(input, cursor, tokenStart, token, matches);
+	} catch {
+		return { options: [] };
+	}
+}
+
+function completionResult(input: string, cursor: number, tokenStart: number, token: string, matches: string[]): CompletionResult {
+	if (matches.length === 0) return { options: [] };
+
+	const prefix = matches.length === 1 ? matches[0] : commonPrefix(matches);
+	const replacementToken = prefix.length > token.length ? prefix : matches.length === 1 ? matches[0] : token;
+	const replacement = replacementToken !== token
+		? `${input.slice(0, tokenStart)}${replacementToken}${input.slice(cursor)}`
+		: undefined;
+
+	return { replacement, options: matches.slice(0, 40) };
+}
+
+function commonPrefix(values: string[]): string {
+	if (values.length === 0) return '';
+	let prefix = values[0];
+	for (const value of values.slice(1)) {
+		while (prefix && !value.startsWith(prefix)) prefix = prefix.slice(0, -1);
+	}
+	return prefix;
+}
+
+function resolvePath(cwd: string, value: string): string {
+	if (value === '~') return process.env.HOME || cwd;
+	if (value.startsWith('~/')) return resolve(process.env.HOME || cwd, value.slice(2));
+	return value.startsWith('/') ? resolve(value) : resolve(cwd, value);
+}
+
+function shellQuote(value: string): string {
+	return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
