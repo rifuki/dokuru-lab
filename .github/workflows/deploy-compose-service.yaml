@@ -100,6 +100,6 @@ jobs:
 
           docker compose -f "${DOKURU_LAB_COMPOSE_FILE}" config --quiet
           docker compose -f "${DOKURU_LAB_COMPOSE_FILE}" pull
-          docker compose -f "${DOKURU_LAB_COMPOSE_FILE}" up -d --no-build
+          docker compose -f "${DOKURU_LAB_COMPOSE_FILE}" up -d --no-build --remove-orphans
           docker compose -f "${DOKURU_LAB_COMPOSE_FILE}" ps
           REMOTE
