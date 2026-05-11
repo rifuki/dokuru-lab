@@ -3,10 +3,9 @@
 	import ControlDeck from '$lib/components/organisms/ControlDeck.svelte';
 	import HeroSection from '$lib/components/organisms/HeroSection.svelte';
 	import Masthead from '$lib/components/organisms/Masthead.svelte';
-	import TerminalDrawer from '$lib/components/organisms/TerminalDrawer.svelte';
+	import TerminalEventLog, { type TerminalEvent } from '$lib/components/organisms/TerminalEventLog.svelte';
 	import TerminalHandle from '$lib/components/organisms/TerminalHandle.svelte';
 	import SidebarMonitor from '$lib/components/organisms/SidebarMonitor.svelte';
-	import type { TerminalLine } from '$lib/components/organisms/TerminalPanel.svelte';
 	import { Activity, AlertOctagon, FlaskConical, Terminal as TerminalIcon } from '@lucide/svelte';
 	import type {
 		ActivePayload,
@@ -42,9 +41,13 @@
 	let evidenceData = $state<LabResponse | null>(null);
 	let lastUpdated = $state('');
 	let actionStatuses = $state<Record<string, ActionStatus>>({});
-	let terminalLines = $state<TerminalLine[]>([]);
+	let events = $state<TerminalEvent[]>([]);
 	let customerSamples = $state<CustomerSample[]>([]);
 	let activePayload = $state<ActivePayload | null>(null);
+	let activeShellEventId = $state<string | null>(null);
+	let activeActionType = $state<string | null>(null);
+	let pendingShellCommand = $state('');
+	let hostname = $state('');
 	let terminalConnected = $state(false);
 	let monitorConnected = $state(false);
 	let customerConnected = $state(false);
@@ -212,6 +215,7 @@
 
 	onMount(() => {
 		mounted = true;
+		hostname = window.location.host;
 		restoreUiTheme();
 		updateTerminalMaxWidth();
 		window.addEventListener('resize', updateTerminalMaxWidth);
@@ -347,7 +351,10 @@
 
 	function connectTerminal() {
 		terminalSocket = new WebSocket(wsUrl('/ws/terminal'));
-		terminalSocket.onopen = () => (terminalConnected = true);
+		terminalSocket.onopen = () => {
+			terminalConnected = true;
+			appendSystemEvent('connected to terminal websocket');
+		};
 		terminalSocket.onmessage = (event) => {
 			const message = parseSocketMessage(event.data);
 			if (!message) return;
@@ -358,30 +365,33 @@
 			}
 
 			if (message.type === 'terminal.line') {
-				pushTerminalLine({
-					stream: message.stream as TerminalLine['stream'],
-					text: String(message.text || ''),
-					at: timeLabel(message.at)
-				});
+				appendShellLine(message.stream as 'stdout' | 'stderr' | 'stdin' | 'system', String(message.text || ''));
 			}
 
 			if (message.type === 'terminal.start') {
 				const action = String(message.action || 'terminal');
 				running = action;
+				activeActionType = action;
+				startShellEvent(action);
 				markAction(action, 'running');
 			}
 
 			if (message.type === 'terminal.exit') {
-				const action = String(message.action || running || 'terminal');
+				const action = String(message.action || activeActionType || running || 'terminal');
 				const code = Number(message.code ?? 0);
+				finishShellEvent(Number.isFinite(code) ? code : null);
 				markAction(action, code === 0 ? 'success' : 'error');
 				running = '';
+				activeActionType = null;
 				void refreshEvidence(false);
 			}
 		};
 		terminalSocket.onclose = () => {
 			terminalConnected = false;
 			running = '';
+			activeActionType = null;
+			finishShellEvent(null);
+			appendSystemEvent('terminal websocket disconnected', 'warn');
 			if (mounted) window.setTimeout(connectTerminal, 900);
 		};
 	}
@@ -492,11 +502,7 @@
 
 	async function runHttpAction(key: string, path: string, options: RequestInit = {}) {
 		if (running || httpRunning) {
-			pushTerminalLine({
-				stream: 'stderr',
-				text: `busy running ${running || httpRunning}; wait before starting ${actionLabels[key] || key}\n`,
-				at: timeLabel()
-			});
+			appendSystemEvent(`busy running ${running || httpRunning}; wait before starting ${actionLabels[key] || key}`, 'error');
 			markAction(key, 'error', 'busy');
 			openTerminal();
 			return;
@@ -506,20 +512,34 @@
 		httpRunning = key;
 		markAction(key, 'running');
 		const method = String(options.method || 'GET').toUpperCase();
-		pushTerminalLine({ stream: 'system', text: `$ fetch ${method} ${path}\n`, at: timeLabel() });
+		const eventId = createEventId('http');
+		const startedAt = performance.now();
+		const httpEvent: TerminalEvent = {
+			id: eventId,
+			at: timeLabel(),
+			kind: 'http',
+			method,
+			path,
+			body: options.body instanceof FormData ? '[multipart/form-data]' : options.body
+		};
+		events = [...events, httpEvent].slice(-200);
 
 		try {
 			const result = await requestJson(path, options);
-			pushTerminalLine({
-				stream: result.ok ? 'stdout' : 'stderr',
-				text: `${JSON.stringify(result, null, 2).slice(0, 5000)}\n`,
-				at: timeLabel()
-			});
+			const duration = Math.round(performance.now() - startedAt);
+			events = events.map((event) =>
+				event.id === eventId && event.kind === 'http'
+					? { ...event, status: Number(result.http_status || 0) || undefined, duration, response: result }
+					: event
+			);
 			markAction(key, result.ok ? 'success' : 'error', `${result.http_status || 'n/a'}`);
 			void refreshEvidence(false);
 		} catch (error) {
+			const duration = Math.round(performance.now() - startedAt);
 			const message = error instanceof Error ? error.message : String(error);
-			pushTerminalLine({ stream: 'stderr', text: `${message}\n`, at: timeLabel() });
+			events = events.map((event) =>
+				event.id === eventId && event.kind === 'http' ? { ...event, duration, error: message } : event
+			);
 			markAction(key, 'error', message);
 		} finally {
 			httpRunning = '';
@@ -542,59 +562,102 @@
 		openTerminal();
 
 		if (!stopActions.has(action) && (running || httpRunning)) {
-			pushTerminalLine({
-				stream: 'stderr',
-				text: `terminal is busy running ${running || httpRunning}\n`,
-				at: timeLabel()
-			});
+			appendSystemEvent(`terminal is busy running ${running || httpRunning}`, 'error');
 			markAction(action, 'error', 'busy');
 			return;
 		}
 
 		if (!stopActions.has(action) && activePayload && payloadActions.has(action)) {
-			pushTerminalLine({
-				stream: 'stderr',
-				text: `${activePayload.label} is still active; stop it before starting another payload\n`,
-				at: timeLabel()
-			});
+			appendSystemEvent(`${activePayload.label} is still active; stop it before starting another payload`, 'error');
 			markAction(action, 'error', 'payload-active');
 			return;
 		}
 
 		if (!terminalSocket || terminalSocket.readyState !== WebSocket.OPEN) {
-			pushTerminalLine({
-				stream: 'stderr',
-				text: 'terminal websocket is not connected\n',
-				at: timeLabel()
-			});
+			appendSystemEvent('terminal websocket is not connected', 'error');
 			markAction(action, 'error', 'websocket-offline');
 			return;
 		}
 
 		running = action;
+		pendingShellCommand = action === 'exec' ? String(payload.command || command) : `dokuru-lab ${action}`;
 		markAction(action, 'running');
 		terminalSocket.send(JSON.stringify(payload));
 	}
 
-	function sendTerminalData(data: string) {
+	function sendShellInput(text: string) {
 		if (!terminalSocket || terminalSocket.readyState !== WebSocket.OPEN) {
-			pushTerminalLine({
-				stream: 'stderr',
-				text: 'terminal websocket is not connected\n',
-				at: timeLabel()
-			});
+			appendSystemEvent('terminal websocket is not connected', 'error');
 			return;
 		}
 
-		terminalSocket.send(JSON.stringify({ type: 'terminal.data', data }));
+		if (activeShellEventId) {
+			terminalSocket.send(JSON.stringify({ type: 'stdin', data: `${text}\n` }));
+			return;
+		}
+
+		sendTerminal({ type: 'exec', command: text });
 	}
 
-	function clearTerminal() {
-		terminalLines = [];
+	function clearEvents() {
+		events = [];
+		activeShellEventId = null;
 	}
 
-	function pushTerminalLine(line: TerminalLine) {
-		terminalLines = [...terminalLines, line].slice(-600);
+	function createEventId(prefix: string): string {
+		return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+	}
+
+	function appendSystemEvent(text: string, level: 'info' | 'warn' | 'error' = 'info') {
+		const trimmed = text.trim();
+		if (!trimmed) return;
+		const event: TerminalEvent = {
+			id: createEventId('sys'),
+			at: timeLabel(),
+			kind: 'system',
+			text: trimmed,
+			level
+		};
+		events = [...events, event].slice(-200);
+	}
+
+	function startShellEvent(action: string) {
+		const id = createEventId('sh');
+		activeShellEventId = id;
+		const event: TerminalEvent = {
+			id,
+			at: timeLabel(),
+			kind: 'shell',
+			command: pendingShellCommand || (action === 'exec' ? command : `dokuru-lab ${action}`),
+			lines: [],
+			running: true
+		};
+		events = [...events, event].slice(-200);
+	}
+
+	function appendShellLine(stream: 'stdout' | 'stderr' | 'stdin' | 'system', text: string) {
+		if (!activeShellEventId) {
+			if (stream !== 'system' && stream !== 'stderr') return;
+			appendSystemEvent(text, stream === 'stderr' ? 'error' : 'info');
+			return;
+		}
+
+		events = events.map((event) =>
+			event.id === activeShellEventId && event.kind === 'shell'
+				? { ...event, lines: [...event.lines.slice(-400), { stream, text }] }
+				: event
+		);
+	}
+
+	function finishShellEvent(exitCode: number | null) {
+		if (!activeShellEventId) return;
+		events = events.map((event) =>
+			event.id === activeShellEventId && event.kind === 'shell'
+				? { ...event, running: false, exitCode }
+				: event
+		);
+		activeShellEventId = null;
+		pendingShellCommand = '';
 	}
 
 	function markAction(key: string, state: ActionState, detail?: string) {
@@ -788,9 +851,9 @@
 				</div>
 
 				<!-- Lines count pill -->
-				{#if terminalLines.length > 0 && activePanels.includes('terminal')}
+				{#if events.length > 0 && activePanels.includes('terminal')}
 					<span class="ml-1 rounded-full bg-white/[0.06] px-1.5 py-px font-mono text-[9.5px] text-white/45 tabular-nums">
-						{terminalLines.length > 999 ? '999+' : terminalLines.length}
+						{events.length > 999 ? '999+' : events.length}
 					</span>
 				{/if}
 			</div>
@@ -815,13 +878,14 @@
 				{:else if activePanels.length === 1}
 					<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
 						{#if activePanels[0] === 'terminal'}
-							<TerminalDrawer
-								lines={terminalLines}
+							<TerminalEventLog
+								{events}
 								connected={terminalConnected}
-								onClear={clearTerminal}
+								running={terminalBusy}
+								onClear={clearEvents}
 								onClose={() => removePanel('terminal')}
-								onData={sendTerminalData}
-								hideHeader
+								onSend={sendShellInput}
+								{hostname}
 							/>
 						{:else}
 							<SidebarMonitor {runtime} connected={monitorConnected} {lastUpdated} onClose={() => removePanel('monitor')} />
@@ -841,13 +905,14 @@
 							class="group/pane relative flex min-h-0 flex-col overflow-hidden"
 						>
 							{#if activePanels[0] === 'terminal'}
-								<TerminalDrawer
-									lines={terminalLines}
+								<TerminalEventLog
+									{events}
 									connected={terminalConnected}
-									onClear={clearTerminal}
+									running={terminalBusy}
+									onClear={clearEvents}
 									onClose={() => removePanel('terminal')}
-									onData={sendTerminalData}
-									hideHeader
+									onSend={sendShellInput}
+									{hostname}
 								/>
 							{:else}
 								<SidebarMonitor {runtime} connected={monitorConnected} {lastUpdated} onClose={() => removePanel('monitor')} />
@@ -875,13 +940,14 @@
 						<!-- Second panel (bottom or right) -->
 						<div class="group/pane relative flex min-h-0 flex-1 flex-col overflow-hidden">
 							{#if activePanels[1] === 'terminal'}
-								<TerminalDrawer
-									lines={terminalLines}
+								<TerminalEventLog
+									{events}
 									connected={terminalConnected}
-									onClear={clearTerminal}
+									running={terminalBusy}
+									onClear={clearEvents}
 									onClose={() => removePanel('terminal')}
-									onData={sendTerminalData}
-									hideHeader
+									onSend={sendShellInput}
+									{hostname}
 								/>
 							{:else}
 								<SidebarMonitor {runtime} connected={monitorConnected} {lastUpdated} onClose={() => removePanel('monitor')} />
@@ -925,7 +991,7 @@
 	maxWidth={terminalMaxWidth}
 	connected={terminalConnected}
 	busy={terminalBusy}
-	lineCount={terminalLines.length}
+	lineCount={events.length}
 	onToggle={toggleTerminal}
 	onResize={handleTerminalResize}
 	onResizeEnd={handleTerminalResizeEnd}
@@ -941,12 +1007,14 @@
 			onclick={closeTerminal}
 		></button>
 		<div class="relative ml-auto flex h-screen w-full max-w-md flex-col bg-black text-white shadow-[-12px_0_30px_rgba(0,0,0,0.45)]">
-			<TerminalDrawer
-				lines={terminalLines}
+			<TerminalEventLog
+				{events}
 				connected={terminalConnected}
-				onClear={clearTerminal}
+				running={terminalBusy}
+				onClear={clearEvents}
 				onClose={closeTerminal}
-				onData={sendTerminalData}
+				onSend={sendShellInput}
+				{hostname}
 			/>
 		</div>
 	</div>
@@ -962,8 +1030,8 @@
 	>
 		<span class={`inline-block h-2 w-2 rounded-full shadow-[0_0_8px_currentColor] ${terminalConnected ? (terminalBusy ? 'bg-playstation-cyan animate-pulse' : 'bg-emerald-400') : 'bg-commerce'}`} aria-hidden="true"></span>
 		<span class="tracking-wide">Terminal</span>
-		{#if terminalLines.length > 0}
-			<span class="ml-1 rounded-full bg-white/20 px-2 py-0.5 font-mono text-[11px] text-white">{terminalLines.length > 99 ? '99+' : terminalLines.length}</span>
+		{#if events.length > 0}
+			<span class="ml-1 rounded-full bg-white/20 px-2 py-0.5 font-mono text-[11px] text-white">{events.length > 99 ? '99+' : events.length}</span>
 		{/if}
 	</button>
 {/if}
