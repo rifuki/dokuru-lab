@@ -33,8 +33,17 @@ export function createCustomerRuntime(options: CustomerRuntimeOptions): Customer
 
 	async function customerProbe(): Promise<CustomerSample> {
 		const trafficSample = checkoutMonitorSample(options);
-		if (trafficSample) return trafficSample;
-		return directCustomerProbe(options.checkoutApiUrl);
+		if (trafficSample && trafficSample.status !== 'STALE') return trafficSample;
+
+		const directSample = await directCustomerProbe(options.checkoutApiUrl);
+		if (!trafficSample) return directSample;
+
+		return {
+			...directSample,
+			source: 'direct-probe',
+			observed_at: trafficSample.observed_at,
+			error: directSample.error ?? trafficSample.error
+		};
 	}
 
 	function attach(server: WebSocketServer): void {
@@ -71,6 +80,7 @@ async function directCustomerProbe(checkoutApiUrl: string): Promise<CustomerSamp
 			status: response.status,
 			latency_ms: Date.now() - started,
 			url: checkoutApiUrl,
+			source: 'direct-probe',
 			body
 		};
 	} catch (error) {
@@ -79,6 +89,7 @@ async function directCustomerProbe(checkoutApiUrl: string): Promise<CustomerSamp
 			status: 'ERR',
 			latency_ms: Date.now() - started,
 			url: checkoutApiUrl,
+			source: 'direct-probe',
 			error: error instanceof Error ? error.message : String(error)
 		};
 	} finally {
