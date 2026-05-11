@@ -97,12 +97,7 @@ jobs:
           test -f "${DOKURU_LAB_COMPOSE_FILE}"
 
           mkdir -p data uploads logs config
-          chmod 0777 data uploads logs
-          if [ -e data/checkout-monitor.log ] && [ ! -w data/checkout-monitor.log ]; then
-            mv data/checkout-monitor.log "data/checkout-monitor.log.readonly-$(date -u +%Y%m%dT%H%M%SZ)"
-          fi
-          touch data/checkout-monitor.log
-          chmod 0666 data/checkout-monitor.log
+          chmod 1777 data uploads logs
 
           export VERSION="${DOKURU_LAB_VERSION}"
 

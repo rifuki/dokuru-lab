@@ -51,7 +51,7 @@ The baseline lab adds neighbor services in the same Compose stack so the demo ca
 
 - `checkout-api`: healthy customer-facing API used by Customer Live View.
 - `customer-db`: PostgreSQL neighbor with demo customer records for post-compromise host-side proof.
-- `checkout-monitor`: background curl loop that writes real checkout latency to `./data/checkout-monitor.log` for the UI.
+- `checkout-monitor`: sidecar probe that exposes real checkout latency over the internal Compose network for the UI.
 
 Point DNS for `lab.dokuru.rifuki.dev` to the VPS, then deploy:
 
@@ -69,6 +69,7 @@ PORT=8080
 LAB_DATA_DIR=/app/data
 LAB_UPLOAD_DIR=/app/uploads
 LAB_LOG_DIR=/app/logs
+CHECKOUT_MONITOR_URL=http://checkout-monitor:3001/sample
 ```
 
 Deploy:

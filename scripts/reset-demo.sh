@@ -23,12 +23,7 @@ cp "$BASELINE_FILE" docker-compose.yaml
 
 printf 'Preparing writable lab bind mounts...\n'
 mkdir -p data uploads logs config
-chmod 0777 data uploads logs
-if [ -e data/checkout-monitor.log ] && [ ! -w data/checkout-monitor.log ]; then
-	mv data/checkout-monitor.log "data/checkout-monitor.log.readonly-$(date -u +%Y%m%dT%H%M%SZ)"
-fi
-touch data/checkout-monitor.log
-chmod 0666 data/checkout-monitor.log
+chmod 1777 data uploads logs
 
 printf 'Recreating lab stack...\n'
 docker compose up -d --remove-orphans >/dev/null

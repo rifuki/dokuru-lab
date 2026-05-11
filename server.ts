@@ -21,8 +21,8 @@ const monitorServer = new WebSocketServer({ noServer: true });
 const customerServer = new WebSocketServer({ noServer: true });
 
 const customerRuntime = createCustomerRuntime({
-	dataDir: config.dataDir,
 	checkoutApiUrl: config.checkoutApiUrl,
+	checkoutMonitorUrl: config.checkoutMonitorUrl,
 	probeIntervalMs: config.customerProbeIntervalMs
 });
 

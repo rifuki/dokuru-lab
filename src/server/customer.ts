@@ -1,12 +1,10 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import type { WebSocket, WebSocketServer } from 'ws';
 import type { CustomerSample } from '../lib/types/lab';
 import { send } from './socket';
 
 export type CustomerRuntimeOptions = {
-	dataDir: string;
 	checkoutApiUrl: string;
+	checkoutMonitorUrl: string;
 	probeIntervalMs: number;
 };
 
@@ -32,24 +30,13 @@ export function createCustomerRuntime(options: CustomerRuntimeOptions): Customer
 	}
 
 	async function customerProbe(): Promise<CustomerSample> {
-		const trafficSample = checkoutMonitorSample(options);
-		if (trafficSample && trafficSample.status !== 'STALE') return trafficSample;
-
-		const directSample = await directCustomerProbe(options.checkoutApiUrl);
-		if (!trafficSample) return directSample;
-
-		return {
-			...directSample,
-			source: 'direct-probe',
-			observed_at: trafficSample.observed_at,
-			error: directSample.error ?? trafficSample.error
-		};
+		return (await checkoutMonitorProbe(options.checkoutMonitorUrl, options.checkoutApiUrl)) ?? directCustomerProbe(options.checkoutApiUrl);
 	}
 
 	function attach(server: WebSocketServer): void {
 		server.on('connection', (socket) => {
 			customerSockets.add(socket);
-			send(socket, 'customer.config', { url: options.checkoutApiUrl });
+			send(socket, 'customer.config', { url: options.checkoutApiUrl, monitorUrl: options.checkoutMonitorUrl });
 			void sendCustomerSample(socket);
 			socket.on('close', () => {
 				customerSockets.delete(socket);
@@ -65,6 +52,40 @@ export function createCustomerRuntime(options: CustomerRuntimeOptions): Customer
 		attach,
 		directCustomerProbe: () => directCustomerProbe(options.checkoutApiUrl)
 	};
+}
+
+async function checkoutMonitorProbe(checkoutMonitorUrl: string, checkoutApiUrl: string): Promise<CustomerSample | null> {
+	if (!checkoutMonitorUrl) return null;
+
+	const started = Date.now();
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), 900);
+
+	try {
+		const response = await fetch(checkoutMonitorUrl, { signal: controller.signal });
+		if (!response.ok) return null;
+
+		const sample = (await response.json()) as Partial<CustomerSample>;
+		const observedAt = typeof sample.observed_at === 'string' ? sample.observed_at : new Date().toISOString();
+		const observedAtMs = Date.parse(observedAt);
+		const ageMs = Number.isFinite(observedAtMs) ? Date.now() - observedAtMs : 0;
+		if (ageMs > 5000) return null;
+
+		return {
+			ok: Boolean(sample.ok),
+			status: coerceStatus(sample.status),
+			latency_ms: coerceLatency(sample.latency_ms, Date.now() - started),
+			url: typeof sample.url === 'string' ? sample.url : checkoutApiUrl,
+			source: 'checkout-monitor',
+			observed_at: observedAt,
+			body: typeof sample.body === 'string' ? sample.body : undefined,
+			error: typeof sample.error === 'string' ? sample.error : undefined
+		};
+	} catch {
+		return null;
+	} finally {
+		clearTimeout(timeout);
+	}
 }
 
 async function directCustomerProbe(checkoutApiUrl: string): Promise<CustomerSample> {
@@ -97,49 +118,10 @@ async function directCustomerProbe(checkoutApiUrl: string): Promise<CustomerSamp
 	}
 }
 
-function checkoutMonitorSample(options: CustomerRuntimeOptions): CustomerSample | null {
-	const path = join(options.dataDir, 'checkout-monitor.log');
+function coerceStatus(value: unknown): number | string {
+	return typeof value === 'number' || typeof value === 'string' ? value : 'ERR';
+}
 
-	try {
-		const lines = readFileSync(path, 'utf8')
-			.trim()
-			.split('\n')
-			.filter(Boolean);
-		const latest = lines[lines.length - 1];
-		if (!latest) return null;
-
-		const match = /^(\S+)\s+status=([^\s]+)\s+latency_s=([0-9.]+)(?:\s+error=(.*))?$/.exec(latest);
-		if (!match) return null;
-
-		const observedAt = match[1];
-		const statusText = match[2];
-		const latencyMs = Math.round(Number(match[3]) * 1000);
-		const status = /^\d+$/.test(statusText) ? Number(statusText) : statusText;
-		const timestamp = Date.parse(observedAt);
-		const ageMs = Number.isFinite(timestamp) ? Date.now() - timestamp : 0;
-
-		if (ageMs > 5000) {
-			return {
-				ok: false,
-				status: 'STALE',
-				latency_ms: ageMs,
-				url: options.checkoutApiUrl,
-				source: 'checkout-monitor',
-				observed_at: observedAt,
-				error: `checkout-monitor sample is stale (${ageMs}ms old)`
-			};
-		}
-
-		return {
-			ok: typeof status === 'number' && status >= 200 && status < 400,
-			status,
-			latency_ms: Number.isFinite(latencyMs) ? latencyMs : 0,
-			url: options.checkoutApiUrl,
-			source: 'checkout-monitor',
-			observed_at: observedAt,
-			error: match[4]
-		};
-	} catch {
-		return null;
-	}
+function coerceLatency(value: unknown, fallback: number): number {
+	return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.round(value)) : fallback;
 }

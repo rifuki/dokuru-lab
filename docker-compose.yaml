@@ -27,6 +27,7 @@ services:
       PORT: ${PORT:-8080}
       LAB_DATA_DIR: ${LAB_DATA_DIR:-/app/data}
       CHECKOUT_API_URL: ${CHECKOUT_API_URL:-http://checkout-api:3000/checkout}
+      CHECKOUT_MONITOR_URL: ${CHECKOUT_MONITOR_URL:-http://checkout-monitor:3001/sample}
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads
@@ -102,21 +103,103 @@ services:
       - dokuru-lab
 
   checkout-monitor:
-    image: alpine/curl:latest
+    image: node:20-alpine
     container_name: dokuru-lab-checkout-monitor
     restart: unless-stopped
+    environment:
+      CHECKOUT_API_URL: http://checkout-api:3000/checkout
+      PORT: 3001
     entrypoint: ["sh", "-c"]
     command:
       - |
-        while true; do
-          { date -u +%Y-%m-%dT%H:%M:%SZ | tr '\n' ' '; curl -sS -m 2 -o /dev/null -w 'status=%{http_code} latency_s=%{time_total}\n' http://checkout-api:3000/checkout 2>/dev/null || true; } | tee -a /data/checkout-monitor.log
-          sleep 0.5
-        done
+        cat > /tmp/checkout-monitor.js <<'EOF'
+        const http = require('node:http');
+
+        const checkoutUrl = process.env.CHECKOUT_API_URL || 'http://checkout-api:3000/checkout';
+        const port = Number(process.env.PORT || 3001);
+        const intervalMs = Number(process.env.SAMPLE_INTERVAL_MS || 500);
+        let latest = {
+          ok: false,
+          status: 'BOOT',
+          latency_ms: 0,
+          url: checkoutUrl,
+          source: 'checkout-monitor',
+          observed_at: new Date().toISOString(),
+          error: 'waiting for first checkout sample'
+        };
+
+        function publish(sample) {
+          latest = sample;
+          const latencySeconds = (sample.latency_ms / 1000).toFixed(6);
+          const errorText = sample.error ? ' error=' + sample.error.replace(/\s+/g, '_').slice(0, 120) : '';
+          console.log(sample.observed_at + ' status=' + sample.status + ' latency_s=' + latencySeconds + errorText);
+        }
+
+        async function probeCheckout() {
+          const started = Date.now();
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 1800);
+
+          try {
+            const response = await fetch(checkoutUrl, { signal: controller.signal });
+            await response.arrayBuffer();
+            publish({
+              ok: response.ok,
+              status: response.status,
+              latency_ms: Date.now() - started,
+              url: checkoutUrl,
+              source: 'checkout-monitor',
+              observed_at: new Date().toISOString()
+            });
+          } catch (error) {
+            publish({
+              ok: false,
+              status: 'ERR',
+              latency_ms: Date.now() - started,
+              url: checkoutUrl,
+              source: 'checkout-monitor',
+              observed_at: new Date().toISOString(),
+              error: error instanceof Error ? error.message : String(error)
+            });
+          } finally {
+            clearTimeout(timeout);
+          }
+        }
+
+        setInterval(() => {
+          void probeCheckout();
+        }, intervalMs);
+        void probeCheckout();
+
+        http.createServer((request, response) => {
+          const observedAtMs = Date.parse(latest.observed_at);
+          const ageMs = Number.isFinite(observedAtMs) ? Date.now() - observedAtMs : 0;
+          const payload = JSON.stringify({ ...latest, age_ms: ageMs });
+          const isHealthy = ageMs < 5000;
+
+          response.setHeader('content-type', 'application/json');
+          if (request.url === '/health') {
+            response.writeHead(isHealthy ? 200 : 503);
+            response.end(JSON.stringify({ ok: isHealthy, age_ms: ageMs }));
+            return;
+          }
+
+          response.writeHead(200);
+          response.end(payload);
+        }).listen(port, '0.0.0.0', () => console.log('checkout-monitor serving samples on :' + port));
+        EOF
+        node /tmp/checkout-monitor.js
+    expose:
+      - "3001"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3001/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       checkout-api:
         condition: service_healthy
-    volumes:
-      - ./data:/data
     networks:
       - dokuru-lab
 
