@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { Cpu, Hash, MemoryStick, ShieldAlert, ShieldCheck } from '@lucide/svelte';
-	import type { RuntimeEvidence } from '$lib/types/lab';
+	import type { HostResourceInfo, RuntimeEvidence } from '$lib/types/lab';
 
 	type Props = {
 		runtime?: RuntimeEvidence;
@@ -11,16 +11,7 @@
 	};
 
 	let { runtime, connected, lastUpdated, onClose }: Props = $props();
-	type HostInfo = {
-		cpu_cores: number;
-		cpu_usage_percent: number;
-		memory_total_gb: number;
-		memory_available_gb: number;
-		memory_total_mib?: number;
-		memory_available_mib?: number;
-	};
-
-	let hostInfo = $state<HostInfo>({ cpu_cores: 0, cpu_usage_percent: 0, memory_total_gb: 0, memory_available_gb: 0 });
+	let hostInfo = $state<HostResourceInfo>({ cpu_cores: 0, cpu_usage_percent: 0, memory_total_gb: 0, memory_available_gb: 0 });
 
 	onMount(() => {
 		void fetchHostInfo();
@@ -70,9 +61,15 @@
 
 	function hostMemoryUsedPercent(): number {
 		const total = hostInfo.memory_total_mib || hostInfo.memory_total_gb * 1024;
-		const available = hostInfo.memory_available_mib || hostInfo.memory_available_gb * 1024;
+		const used = hostInfo.memory_used_mib ?? Math.max(0, total - (hostInfo.memory_available_mib || hostInfo.memory_available_gb * 1024));
 		if (!total) return 0;
-		return Math.min(100, Math.round(((total - available) / total) * 100));
+		return Math.min(100, Math.round((used / total) * 100));
+	}
+
+	function hostMemoryUsedMib(): number {
+		const total = hostInfo.memory_total_mib || hostInfo.memory_total_gb * 1024;
+		if (hostInfo.memory_used_mib !== undefined) return hostInfo.memory_used_mib;
+		return Math.max(0, total - (hostInfo.memory_available_mib || hostInfo.memory_available_gb * 1024));
 	}
 
 	function formatHostMemory(mib?: number, gb?: number): string {
@@ -203,7 +200,7 @@
 				<span class="font-mono text-[10px] text-white/25">5.11</span>
 			</div>
 			<span class="font-mono text-[11.5px] font-medium text-white tabular-nums">
-				{hostInfo.memory_total_gb ? `${hostMemPct}% kernel` : '—'}
+				{hostInfo.memory_total_gb ? `${hostMemPct}% host used` : '—'}
 			</span>
 		</div>
 		<div class="h-1 overflow-hidden rounded-full bg-white/10">
@@ -211,8 +208,12 @@
 		</div>
 		<div class="mt-2 grid gap-1.5">
 			<div class="flex justify-between gap-2">
-				<span class="font-mono text-[10px] text-white/35">kernel avail / total</span>
-				<span class="font-mono text-[10px] text-white/70 tabular-nums">{formatHostMemory(hostInfo.memory_available_mib, hostInfo.memory_available_gb)} / {formatHostMemory(hostInfo.memory_total_mib, hostInfo.memory_total_gb)}</span>
+				<span class="font-mono text-[10px] text-white/35">host used / total</span>
+				<span class="font-mono text-[10px] text-white/70 tabular-nums">{formatHostMemory(hostMemoryUsedMib())} / {formatHostMemory(hostInfo.memory_total_mib, hostInfo.memory_total_gb)}</span>
+			</div>
+			<div class="flex justify-between gap-2">
+				<span class="font-mono text-[10px] text-white/35">host available</span>
+				<span class="font-mono text-[10px] text-white/70 tabular-nums">{formatHostMemory(hostInfo.memory_available_mib, hostInfo.memory_available_gb)}</span>
 			</div>
 			<div class="flex justify-between gap-2">
 				<span class="font-mono text-[10px] text-white/35">dokuru-lab used</span>
@@ -221,6 +222,10 @@
 			<div class="flex justify-between gap-2">
 				<span class="font-mono text-[10px] text-white/35">dokuru-lab limit</span>
 				<span class="font-mono text-[10px] text-white/70 tabular-nums">{formatBytes(runtime?.cgroup.memory_max)}</span>
+			</div>
+			<div class="flex justify-between gap-2">
+				<span class="font-mono text-[10px] text-white/35">host source</span>
+				<span class="max-w-[62%] truncate font-mono text-[10px] text-white/45 text-right" title={hostInfo.memory_source || 'free -m'}>{hostInfo.memory_source || 'free -m'}</span>
 			</div>
 		</div>
 	</div>

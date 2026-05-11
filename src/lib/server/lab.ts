@@ -72,13 +72,15 @@ export function getHostResourceInfo() {
 	let memoryAvailableGb = 0;
 	let memoryTotalMib = 0;
 	let memoryAvailableMib = 0;
+	let memoryUsedMib = 0;
 	try {
-		const memOutput = execFileSync('sh', ['-c', "free -m | awk '/^Mem:/ {print $2,$7}'"], { timeout: 2000 })
+		const memOutput = execFileSync('sh', ['-c', "free -m | awk '/^Mem:/ {print $2,$3,$7}'"], { timeout: 2000 })
 			.toString()
 			.trim()
 			.split(' ');
 		memoryTotalMib = parseInt(memOutput[0]) || 0;
-		memoryAvailableMib = parseInt(memOutput[1]) || 0;
+		memoryUsedMib = parseInt(memOutput[1]) || 0;
+		memoryAvailableMib = parseInt(memOutput[2]) || 0;
 		memoryTotalGb = Math.round((memoryTotalMib / 1024) * 10) / 10;
 		memoryAvailableGb = Math.round((memoryAvailableMib / 1024) * 10) / 10;
 	} catch {
@@ -86,6 +88,7 @@ export function getHostResourceInfo() {
 		memoryAvailableGb = 0;
 		memoryTotalMib = 0;
 		memoryAvailableMib = 0;
+		memoryUsedMib = 0;
 	}
 	
 	return {
@@ -94,7 +97,9 @@ export function getHostResourceInfo() {
 		memory_total_gb: memoryTotalGb,
 		memory_available_gb: memoryAvailableGb,
 		memory_total_mib: memoryTotalMib,
-		memory_available_mib: memoryAvailableMib
+		memory_available_mib: memoryAvailableMib,
+		memory_used_mib: memoryUsedMib,
+		memory_source: 'free -m from inside dokuru-lab; host kernel view, not cgroup usage'
 	};
 }
 

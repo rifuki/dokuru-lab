@@ -28,6 +28,17 @@ export type RuntimeEvidence = {
 	processes: ProcessEvidence;
 };
 
+export type HostResourceInfo = {
+	cpu_cores: number;
+	cpu_usage_percent: number;
+	memory_total_gb: number;
+	memory_available_gb: number;
+	memory_total_mib?: number;
+	memory_available_mib?: number;
+	memory_used_mib?: number;
+	memory_source?: string;
+};
+
 export type LabResponse = {
 	ok: boolean;
 	error?: string;
