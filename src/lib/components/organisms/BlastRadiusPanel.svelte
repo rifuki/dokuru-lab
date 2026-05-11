@@ -442,7 +442,7 @@
 				Baseline probe
 			</p>
 			<p class="m-0 mt-0.5 text-[12.5px] leading-snug text-body-gray">
-				Direct probe to the Protected Checkout API (<code>victim-checkout</code>) confirms the neighbor service is healthy before
+				Direct probe to the Protected Checkout API (<code>checkout-api</code>) confirms the neighbor service is healthy before
 				pressure payloads.
 			</p>
 		</div>

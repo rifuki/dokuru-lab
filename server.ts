@@ -22,13 +22,13 @@ const customerServer = new WebSocketServer({ noServer: true });
 
 const customerRuntime = createCustomerRuntime({
 	dataDir: config.dataDir,
-	victimCheckoutUrl: config.victimCheckoutUrl,
+	checkoutApiUrl: config.checkoutApiUrl,
 	probeIntervalMs: config.customerProbeIntervalMs
 });
 
 new TerminalController(terminalServer, {
 	dataDir: config.dataDir,
-	victimCheckoutUrl: config.victimCheckoutUrl,
+	checkoutApiUrl: config.checkoutApiUrl,
 	directCustomerProbe: customerRuntime.directCustomerProbe
 }).attach();
 attachMonitorSocketServer(monitorServer);

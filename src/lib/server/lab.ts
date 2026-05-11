@@ -21,10 +21,10 @@ const dataDir = process.env.LAB_DATA_DIR || '/app/data';
 const uploadDir = process.env.LAB_UPLOAD_DIR || '/app/uploads';
 const logDir = process.env.LAB_LOG_DIR || '/app/logs';
 const ransomwareKeyPath = process.env.LAB_RANSOMWARE_KEY_PATH || '/tmp/dokuru-lab-ransomware-key.txt';
-const postgresHost = process.env.VICTIM_POSTGRES_HOST || 'victim-secrets';
-const postgresUser = process.env.VICTIM_POSTGRES_USER || 'prod_user';
-const postgresPassword = process.env.VICTIM_POSTGRES_PASSWORD || 'SuperSecretP@ssw0rd123';
-const postgresDb = process.env.VICTIM_POSTGRES_DB || 'customer_data';
+const postgresHost = process.env.CUSTOMER_DB_HOST || 'customer-db';
+const postgresUser = process.env.CUSTOMER_DB_USER || 'prod_user';
+const postgresPassword = process.env.CUSTOMER_DB_PASSWORD || 'SuperSecretP@ssw0rd123';
+const postgresDb = process.env.CUSTOMER_DB_NAME || 'customer_data';
 const customerCount = clamp(Number(process.env.LAB_CUSTOMER_COUNT || 1_200_000), 1, 2_000_000);
 let memoryHold: Buffer[] = [];
 

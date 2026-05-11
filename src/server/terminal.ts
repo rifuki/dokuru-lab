@@ -21,7 +21,7 @@ type TerminalPayload = {
 
 type TerminalControllerOptions = {
 	dataDir: string;
-	victimCheckoutUrl: string;
+	checkoutApiUrl: string;
 	directCustomerProbe: () => Promise<CustomerSample>;
 };
 
@@ -446,7 +446,7 @@ allocateBatch();
 	}
 
 	private async runCustomerProbe(socket: WebSocket): Promise<void> {
-		line(socket, 'system', `$ curl -sS -m 2 ${this.options.victimCheckoutUrl}\n`);
+		line(socket, 'system', `$ curl -sS -m 2 ${this.options.checkoutApiUrl}\n`);
 		const sample = await this.options.directCustomerProbe();
 		if (sample.ok) {
 			line(socket, 'stdout', `customer OK status=${sample.status} latency=${sample.latency_ms}ms body=${sample.body}\n`);

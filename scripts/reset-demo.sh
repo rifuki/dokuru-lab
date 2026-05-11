@@ -22,7 +22,7 @@ printf 'Restoring compose baseline from %s\n' "$BASELINE_FILE"
 cp "$BASELINE_FILE" docker-compose.yaml
 
 printf 'Recreating lab stack...\n'
-docker compose up -d victim-checkout victim-secrets customer-traffic dokuru-lab caddy >/dev/null
+docker compose up -d checkout-api customer-db latency-probe dokuru-lab caddy >/dev/null
 
 printf 'Waiting for dokuru-lab health...\n'
 for _ in $(seq 1 30); do

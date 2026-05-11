@@ -46,7 +46,7 @@
 		{
 			no: '02',
 			role: 'Protected Checkout API',
-			id: 'victim-checkout container',
+			id: 'checkout-api container',
 			body: 'A neighboring customer API that should stay responsive while the lab app consumes CPU, memory, and process slots.',
 			Icon: ShoppingCart,
 			tint: 'blue'
@@ -54,7 +54,7 @@
 		{
 			no: '03',
 			role: 'Latency Probe',
-			id: 'customer-traffic sidecar',
+			id: 'latency-probe sidecar',
 			body: 'A separate probe hits checkout on a loop. Its latency feed makes cgroup blast radius visible without trusting the attacker app.',
 			Icon: Radio,
 			tint: 'cyan'

@@ -26,7 +26,7 @@ services:
       HOST: ${HOST:-0.0.0.0}
       PORT: ${PORT:-8080}
       LAB_DATA_DIR: ${LAB_DATA_DIR:-/app/data}
-      VICTIM_CHECKOUT_URL: ${VICTIM_CHECKOUT_URL:-http://victim-checkout:3000/checkout}
+      CHECKOUT_API_URL: ${CHECKOUT_API_URL:-http://checkout-api:3000/checkout}
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads
@@ -35,9 +35,9 @@ services:
     expose:
       - "8080"
     depends_on:
-      victim-checkout:
+      checkout-api:
         condition: service_healthy
-      victim-secrets:
+      customer-db:
         condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:$${PORT:-8080}/api/health >/dev/null"]
@@ -48,15 +48,15 @@ services:
     networks:
       - dokuru-lab
 
-  victim-checkout:
+  checkout-api:
     image: node:20-alpine
-    container_name: dokuru-lab-victim-checkout
+    container_name: dokuru-lab-checkout-api
     restart: unless-stopped
     command:
       - sh
       - -c
       - |
-        cat > /tmp/victim-checkout.js <<'EOF'
+        cat > /tmp/checkout-api.js <<'EOF'
         const http = require('node:http');
 
         function checkoutWork() {
@@ -69,18 +69,18 @@ services:
           const started = Date.now();
           if (request.url === '/health') {
             response.writeHead(200, { 'content-type': 'application/json' });
-            response.end(JSON.stringify({ ok: true, service: 'victim-checkout' }));
+            response.end(JSON.stringify({ ok: true, service: 'checkout-api' }));
             return;
           }
 
           const checksum = checkoutWork();
           response.writeHead(200, { 'content-type': 'application/json' });
-          response.end(JSON.stringify({ ok: true, service: 'victim-checkout', checksum, latency_ms: Date.now() - started }));
+          response.end(JSON.stringify({ ok: true, service: 'checkout-api', checksum, latency_ms: Date.now() - started }));
         });
 
-        server.listen(3000, '0.0.0.0', () => console.log('victim-checkout listening on :3000'));
+        server.listen(3000, '0.0.0.0', () => console.log('checkout-api listening on :3000'));
         EOF
-        node /tmp/victim-checkout.js
+        node /tmp/checkout-api.js
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
       interval: 10s
@@ -90,9 +90,9 @@ services:
     networks:
       - dokuru-lab
 
-  victim-secrets:
+  customer-db:
     image: postgres:16-alpine
-    container_name: dokuru-lab-victim-secrets
+    container_name: dokuru-lab-customer-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: prod_user
@@ -101,19 +101,19 @@ services:
     networks:
       - dokuru-lab
 
-  customer-traffic:
+  latency-probe:
     image: alpine/curl:latest
-    container_name: dokuru-lab-customer-traffic
+    container_name: dokuru-lab-latency-probe
     restart: unless-stopped
     entrypoint: ["sh", "-c"]
     command:
       - |
         while true; do
-          { date -u +%Y-%m-%dT%H:%M:%SZ | tr '\n' ' '; curl -sS -m 2 -o /dev/null -w 'status=%{http_code} latency_s=%{time_total}\n' http://victim-checkout:3000/checkout 2>/dev/null || true; } | tee -a /data/customer-traffic.log
+          { date -u +%Y-%m-%dT%H:%M:%SZ | tr '\n' ' '; curl -sS -m 2 -o /dev/null -w 'status=%{http_code} latency_s=%{time_total}\n' http://checkout-api:3000/checkout 2>/dev/null || true; } | tee -a /data/latency-probe.log
           sleep 0.5
         done
     depends_on:
-      victim-checkout:
+      checkout-api:
         condition: service_healthy
     volumes:
       - ./data:/data

@@ -6,7 +6,7 @@ import { send } from './socket';
 
 export type CustomerRuntimeOptions = {
 	dataDir: string;
-	victimCheckoutUrl: string;
+	checkoutApiUrl: string;
 	probeIntervalMs: number;
 };
 
@@ -34,13 +34,13 @@ export function createCustomerRuntime(options: CustomerRuntimeOptions): Customer
 	async function customerProbe(): Promise<CustomerSample> {
 		const trafficSample = customerTrafficSample(options);
 		if (trafficSample) return trafficSample;
-		return directCustomerProbe(options.victimCheckoutUrl);
+		return directCustomerProbe(options.checkoutApiUrl);
 	}
 
 	function attach(server: WebSocketServer): void {
 		server.on('connection', (socket) => {
 			customerSockets.add(socket);
-			send(socket, 'customer.config', { url: options.victimCheckoutUrl });
+			send(socket, 'customer.config', { url: options.checkoutApiUrl });
 			void sendCustomerSample(socket);
 			socket.on('close', () => {
 				customerSockets.delete(socket);
@@ -54,23 +54,23 @@ export function createCustomerRuntime(options: CustomerRuntimeOptions): Customer
 
 	return {
 		attach,
-		directCustomerProbe: () => directCustomerProbe(options.victimCheckoutUrl)
+		directCustomerProbe: () => directCustomerProbe(options.checkoutApiUrl)
 	};
 }
 
-async function directCustomerProbe(victimCheckoutUrl: string): Promise<CustomerSample> {
+async function directCustomerProbe(checkoutApiUrl: string): Promise<CustomerSample> {
 	const started = Date.now();
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), 1800);
 
 	try {
-		const response = await fetch(victimCheckoutUrl, { signal: controller.signal });
+		const response = await fetch(checkoutApiUrl, { signal: controller.signal });
 		const body = (await response.text()).trim().slice(0, 240);
 		return {
 			ok: response.ok,
 			status: response.status,
 			latency_ms: Date.now() - started,
-			url: victimCheckoutUrl,
+			url: checkoutApiUrl,
 			body
 		};
 	} catch (error) {
@@ -78,7 +78,7 @@ async function directCustomerProbe(victimCheckoutUrl: string): Promise<CustomerS
 			ok: false,
 			status: 'ERR',
 			latency_ms: Date.now() - started,
-			url: victimCheckoutUrl,
+			url: checkoutApiUrl,
 			error: error instanceof Error ? error.message : String(error)
 		};
 	} finally {
@@ -87,7 +87,7 @@ async function directCustomerProbe(victimCheckoutUrl: string): Promise<CustomerS
 }
 
 function customerTrafficSample(options: CustomerRuntimeOptions): CustomerSample | null {
-	const path = join(options.dataDir, 'customer-traffic.log');
+	const path = join(options.dataDir, 'latency-probe.log');
 
 	try {
 		const lines = readFileSync(path, 'utf8')
@@ -112,10 +112,10 @@ function customerTrafficSample(options: CustomerRuntimeOptions): CustomerSample 
 				ok: false,
 				status: 'STALE',
 				latency_ms: ageMs,
-				url: options.victimCheckoutUrl,
-				source: 'customer-traffic',
+				url: options.checkoutApiUrl,
+				source: 'latency-probe',
 				observed_at: observedAt,
-				error: `customer-traffic sample is stale (${ageMs}ms old)`
+				error: `latency-probe sample is stale (${ageMs}ms old)`
 			};
 		}
 
@@ -123,8 +123,8 @@ function customerTrafficSample(options: CustomerRuntimeOptions): CustomerSample 
 			ok: typeof status === 'number' && status >= 200 && status < 400,
 			status,
 			latency_ms: Number.isFinite(latencyMs) ? latencyMs : 0,
-			url: options.victimCheckoutUrl,
-			source: 'customer-traffic',
+			url: options.checkoutApiUrl,
+			source: 'latency-probe',
 			observed_at: observedAt,
 			error: match[4]
 		};

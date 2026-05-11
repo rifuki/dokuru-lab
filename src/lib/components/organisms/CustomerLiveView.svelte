@@ -130,6 +130,6 @@
 	</div>
 
 	<p class="m-0 mt-3 text-sm leading-relaxed text-body-gray">
-		Latency is sampled by the <code>customer-traffic</code> sidecar hitting the Protected Checkout API (<code>victim-checkout</code>). Even when the attacker lab steals CPU or memory, this signal originates from a separate container so blast radius is observable end-to-end.
+		Latency is sampled by the <code>latency-probe</code> sidecar hitting the Protected Checkout API (<code>checkout-api</code>). Even when the attacker lab steals CPU or memory, this signal originates from a separate container so blast radius is observable end-to-end.
 	</p>
 </Panel>

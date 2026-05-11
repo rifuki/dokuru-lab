@@ -45,13 +45,13 @@ The app intentionally uses Docker's default isolation posture:
 - no memory, CPU, or PIDs limits on the vulnerable app
 - bind mounts for `./uploads`, `./logs`, and read-only `./config`
 
-This setup demonstrates two default Docker gaps: container root writes bind-mounted files as host root when user namespace remap is disabled, and an unconstrained container can still consume host resources without cgroup limits. Caddy and victim services keep normal resource limits so the audit noise stays focused on `dokuru-lab`.
+This setup demonstrates two default Docker gaps: container root writes bind-mounted files as host root when user namespace remap is disabled, and an unconstrained container can still consume host resources without cgroup limits. Caddy and neighbor services keep normal resource limits so the audit noise stays focused on `dokuru-lab`.
 
-The baseline lab adds victim services in the same Compose stack so the demo can show cross-container blast radius, not only introspection:
+The baseline lab adds neighbor services in the same Compose stack so the demo can show cross-container blast radius, not only introspection:
 
-- `victim-checkout`: healthy customer-facing API used by Customer Live View.
-- `victim-secrets`: PostgreSQL neighbor with demo customer records for post-compromise host-side proof.
-- `customer-traffic`: background curl loop that writes real customer latency to `./data/customer-traffic.log` for the UI.
+- `checkout-api`: healthy customer-facing API used by Customer Live View.
+- `customer-db`: PostgreSQL neighbor with demo customer records for post-compromise host-side proof.
+- `latency-probe`: background curl loop that writes real customer latency to `./data/latency-probe.log` for the UI.
 
 Point DNS for `lab.dokuru.rifuki.dev` to the VPS, then deploy:
 
@@ -89,7 +89,7 @@ The browser lab uses:
 
 - `wss://lab.dokuru.rifuki.dev/ws/monitor` for live namespace and cgroup metrics.
 - `wss://lab.dokuru.rifuki.dev/ws/terminal` for real stdout/stderr from commands and pressure tests. The terminal also forwards stdin to the active interactive `exec` command, so a browser operator can answer prompts without leaving the lab page.
-- `wss://lab.dokuru.rifuki.dev/ws/customer` for real checkout latency samples against `victim-checkout`.
+- `wss://lab.dokuru.rifuki.dev/ws/customer` for real checkout latency samples against `checkout-api`.
 
 Set these repository variables for automatic deployment from `main`:
 

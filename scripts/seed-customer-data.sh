@@ -4,7 +4,7 @@ set -eu
 UPLOAD_DIR="${LAB_UPLOAD_DIR:-./uploads}"
 DATA_DIR="${UPLOAD_DIR}/customer-data"
 INVOICE_DIR="${UPLOAD_DIR}/invoices"
-POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-dokuru-lab-victim-secrets}"
+POSTGRES_CONTAINER="${POSTGRES_CONTAINER:-dokuru-lab-customer-db}"
 POSTGRES_USER="${POSTGRES_USER:-prod_user}"
 POSTGRES_DB="${POSTGRES_DB:-customer_data}"
 CUSTOMER_COUNT="${CUSTOMER_COUNT:-1200000}"
