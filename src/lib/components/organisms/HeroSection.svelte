@@ -37,25 +37,25 @@
 	const setup = [
 		{
 			no: '01',
-			role: 'Attacker',
-			id: 'dokuru-lab',
-			body: 'A vulnerable default-root web app with bind mounts. Upload and command-injection bugs become host-root evidence when userns-remap is off.',
+			role: 'Vulnerable lab',
+			id: 'dokuru-lab container',
+			body: 'A default-root web app with bind mounts. Upload and command-injection bugs create host-root-owned files when userns-remap is off.',
 			Icon: Bomb,
 			tint: 'commerce'
 		},
 		{
 			no: '02',
-			role: 'Neighbor',
-			id: 'victim-checkout',
-			body: 'A customer-facing API that should stay responsive while the baseline app tries to consume unconstrained CPU, memory, and PIDs.',
+			role: 'Protected Checkout API',
+			id: 'victim-checkout container',
+			body: 'A neighboring customer API that should stay responsive while the lab app consumes CPU, memory, and process slots.',
 			Icon: ShoppingCart,
 			tint: 'blue'
 		},
 		{
 			no: '03',
-			role: 'Signal',
-			id: 'customer-traffic',
-			body: 'An out-of-band probe that hits checkout on a loop. Its latency feed is the visible blast-radius signal for the cgroup demo.',
+			role: 'Latency Probe',
+			id: 'customer-traffic sidecar',
+			body: 'A separate probe hits checkout on a loop. Its latency feed makes cgroup blast radius visible without trusting the attacker app.',
 			Icon: Radio,
 			tint: 'cyan'
 		}
@@ -106,7 +106,7 @@
 			<span class={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 ${dark ? 'border-white/8 bg-white/[0.03]' : 'border-black/8 bg-black/[0.025]'}`}>
 				<Radio size={11} strokeWidth={2.2} class={dark ? 'text-white/45' : 'text-black/35'} />
 				<span class={`inline-block h-1.5 w-1.5 rounded-full ${dot(customerConnected)}`} aria-hidden="true"></span>
-				<span>/ws/customer</span>
+				<span>latency probe</span>
 			</span>
 		</div>
 
@@ -116,7 +116,7 @@
 				Default Docker, <span class={dark ? 'text-white/55' : 'text-black/42'}>root-owned artifacts on the host.</span>
 			</h1>
 			<p class={`mb-5 max-w-2xl text-[15px] leading-relaxed ${dark ? 'text-[#dcdcdc]' : 'text-black/62'}`}>
-				Trigger payloads from <code class={`font-mono text-[14px] ${dark ? 'text-white' : 'text-black'}`}>dokuru-lab</code>, then watch the neighbor service and container evidence update live.
+				Trigger payloads from <code class={`font-mono text-[14px] ${dark ? 'text-white' : 'text-black'}`}>dokuru-lab</code>, then watch the protected API and container evidence update live.
 			</p>
 			<div class="flex flex-wrap items-center gap-4">
 				<Button onclick={onProbe} disabled={Boolean(running)}>
@@ -145,7 +145,7 @@
 					</h2>
 				</div>
 				<span class={`hidden font-mono text-[10.5px] tracking-[0.06em] sm:inline ${dark ? 'text-white/35' : 'text-black/35'}`}>
-					attacker → neighbor → signal
+					lab → protected API → latency probe
 				</span>
 			</div>
 

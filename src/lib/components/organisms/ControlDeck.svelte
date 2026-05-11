@@ -135,15 +135,16 @@
 	const pidPct = $derived(percent(runtime?.cgroup.pids_current, runtime?.cgroup.pids_max));
 	const memPct = $derived(percent(runtime?.cgroup.memory_current, runtime?.cgroup.memory_max));
 	const activeBurners = $derived(runtime?.processes.cpu_burners || String(runtime?.cgroup.active_cpu_burners ?? 0));
+	const rootMap = $derived(rootMapState());
 
 	$effect(() => {
 		signalView = routeToSignal(page);
 	});
 
 	const signalTabs: { id: SignalView; label: string; Icon: typeof Activity }[] = [
-		{ id: 'traffic', label: 'Traffic', Icon: Radio },
+		{ id: 'traffic', label: 'Latency', Icon: Radio },
 		{ id: 'resources', label: 'Resource', Icon: Gauge },
-		{ id: 'namespace', label: 'Namespace', Icon: Layers },
+		{ id: 'namespace', label: 'Root Map', Icon: Layers },
 		{ id: 'evidence', label: 'Evidence', Icon: FileSearch }
 	];
 
@@ -202,6 +203,38 @@
 
 	function firstLine(value?: string): string {
 		return value?.split('\n')[0]?.trim() || 'loading';
+	}
+
+	function rootMapState(): { label: string; title: string; detail: string; proof: string; tone: string; safe: boolean } {
+		const uid = firstLine(runtime?.uid_map);
+		if (/^0\s+0\s+/.test(uid)) {
+			return {
+				label: 'danger',
+				title: 'Container root is host root',
+				detail: 'UID 0 in dokuru-lab maps to UID 0 on the host. This is why bind-mount/SUID artifacts are dangerous before the fix.',
+				proof: 'Raw UID map starts with 0 0, so root inside the lab is also host root.',
+				tone: 'border-commerce/35 bg-commerce/[0.08] text-commerce',
+				safe: false
+			};
+		}
+		if (/^0\s+(?!0\b)\d{4,}/.test(uid)) {
+			return {
+				label: 'isolated',
+				title: 'Container root is remapped',
+				detail: 'UID 0 in dokuru-lab maps to an unprivileged host UID, so root-owned files inside the container are not host-root files.',
+				proof: 'Raw UID map starts with 0 and a non-zero host UID, so root inside the lab is remapped.',
+				tone: 'border-emerald-400/35 bg-emerald-400/[0.08] text-emerald-400',
+				safe: true
+			};
+		}
+		return {
+			label: 'waiting',
+			title: 'Waiting for root map',
+			detail: 'The monitor has not received the root mapping proof yet.',
+			proof: 'Waiting for /proc/self/uid_map from the lab container.',
+			tone: dark ? 'border-white/10 bg-white/[0.04] text-white/55' : 'border-black/10 bg-black/[0.03] text-black/55',
+			safe: false
+		};
 	}
 
 	function averageLatency(values: CustomerSample[]): string {
@@ -350,7 +383,7 @@
 					<div id="cgroup" class={`rounded-2xl border p-4 ${cardClass()}`}>
 						<div class="mb-3 flex flex-wrap items-center justify-between gap-3">
 							<div>
-								<p class={`m-0 mb-1 font-mono text-[10.5px] tracking-[0.14em] uppercase ${muted()}`}>Cgroup pressure</p>
+								<p class={`m-0 mb-1 font-mono text-[10.5px] tracking-[0.14em] uppercase ${muted()}`}>Resource pressure</p>
 								<h4 class="m-0 text-[16px] font-semibold tracking-tight">Trigger resource pressure and watch Resource/Traffic</h4>
 							</div>
 							<Button size="sm" variant="commerce" onclick={onStopPayloads} disabled={running === 'stop-payloads'}>Stop payload</Button>
@@ -371,7 +404,7 @@
 										<Layers size={17} strokeWidth={1.7} />
 									</span>
 									<div>
-										<h4 class="m-0 text-[15px] font-semibold">Namespace proof</h4>
+										<h4 class="m-0 text-[15px] font-semibold">Root mapping proof</h4>
 										<p class={`m-0 mt-0.5 text-[12.5px] ${muted()}`}>Run exact command, read output in terminal.</p>
 									</div>
 								</div>
@@ -396,7 +429,7 @@
 								value={command}
 								oninput={(event) => onCommandChange(event.currentTarget.value)}
 								class={`mb-2.5 min-h-20 w-full resize-y rounded-xl border px-3 py-2 font-mono text-[12px] transition focus:ring-2 focus:outline-none ${inputClass()}`}
-								aria-label="Namespace command"
+								aria-label="Root-map command"
 							></textarea>
 							<Button size="sm" onclick={onRunCommand} disabled={busy}>Run command</Button>
 						</article>
@@ -423,7 +456,7 @@
 
 					<div class="flex flex-wrap items-center justify-between gap-3">
 						<Button size="sm" onclick={onCleanupTraps} disabled={busy}>Cleanup SUID/setcap</Button>
-						<Button size="sm" onclick={onCustomerProbe} disabled={busy}>Probe checkout</Button>
+						<Button size="sm" onclick={onCustomerProbe} disabled={busy}>Probe protected API</Button>
 					</div>
 				</div>
 			</section>
@@ -533,7 +566,7 @@
 	{/if}
 {/snippet}
 
-{#snippet metricRow(label: string, value: string, pct = 0, tone = 'bg-playstation-blue')}
+{#snippet metricRow(label: string, value: string, pct = 0, tone = 'bg-playstation-blue', detail = '')}
 	<div class={`rounded-2xl border p-4 ${dark ? 'border-white/8 bg-white/[0.025]' : 'border-black/6 bg-white'}`}>
 		<div class="mb-3 flex items-center justify-between gap-3">
 			<span class={`font-mono text-[10.5px] tracking-[0.12em] uppercase ${muted()}`}>{label}</span>
@@ -542,6 +575,9 @@
 		<div class={`h-2 overflow-hidden rounded-full ${dark ? 'bg-white/10' : 'bg-black/8'}`}>
 			<div class={`h-full rounded-full transition-all duration-500 ${tone}`} style={`width: ${pct}%`}></div>
 		</div>
+		{#if detail}
+			<p class={`m-0 mt-2 text-[11.5px] leading-snug ${muted()}`}>{detail}</p>
+		{/if}
 	</div>
 {/snippet}
 
@@ -552,7 +588,7 @@
 				<div>
 					<p class={`m-0 mb-1 inline-flex items-center gap-2 text-[12px] ${dark ? 'text-white/55' : 'text-black/55'}`}>
 						<span class={`h-1.5 w-1.5 rounded-full ${customerConnected ? 'bg-emerald-400' : 'bg-commerce'}`} aria-hidden="true"></span>
-						victim-checkout
+						Protected Checkout API
 					</p>
 					<strong class={`block text-[48px] leading-none font-light tracking-[-0.04em] tabular-nums ${latencyTone(latestSample)}`}>{latencyLabel(latestSample)}</strong>
 				</div>
@@ -562,7 +598,7 @@
 			</div>
 			<div class={`flex h-32 items-end gap-1 rounded-2xl p-2 ${dark ? 'bg-black/35' : 'bg-white/70'}`} aria-label="Customer latency bars">
 				{#if recentSamples.length === 0}
-					<div class={`grid h-full w-full place-items-center text-[13px] ${muted()}`}>waiting for /ws/customer</div>
+					<div class={`grid h-full w-full place-items-center text-[13px] ${muted()}`}>waiting for latency probe</div>
 				{/if}
 				{#each recentSamples as sample}
 					<div class={`min-w-1 flex-1 rounded-t ${barTone(sample)}`} style={`height: ${barHeight(sample)}%`} title={sample.ok ? `${sample.latency_ms}ms` : sample.error || 'failed'}></div>
@@ -579,14 +615,15 @@
 
 {#snippet resourceSignal()}
 	<div class="grid gap-3">
-		{@render metricRow('dokuru-lab PIDs', `${runtime?.cgroup.pids_current || '—'} / ${runtime?.cgroup.pids_max || '—'}`, pidPct, 'bg-playstation-blue')}
-		{@render metricRow('dokuru-lab memory', `${formatBytes(runtime?.cgroup.memory_current)} / ${formatBytes(runtime?.cgroup.memory_max)}`, memPct, 'bg-playstation-cyan')}
-		{@render metricRow('CPU burners', activeBurners, Number(activeBurners) > 0 ? 100 : 0, 'bg-commerce')}
+		{@render metricRow('Processes in lab', `${runtime?.cgroup.pids_current || '—'} / ${runtime?.cgroup.pids_max || '—'}`, pidPct, 'bg-playstation-blue', 'Current process count versus the PID limit for dokuru-lab only.')}
+		{@render metricRow('Memory in lab', `${formatBytes(runtime?.cgroup.memory_current)} / ${formatBytes(runtime?.cgroup.memory_max)}`, memPct, 'bg-playstation-cyan', 'cgroup memory.current versus memory.max for dokuru-lab.')}
+		{@render metricRow('CPU stress workers', activeBurners, Number(activeBurners) > 0 ? 100 : 0, 'bg-commerce', 'Active CPU burner processes started by this demo.')}
 		<div class={`rounded-2xl border p-4 ${dark ? 'border-white/8 bg-white/[0.025]' : 'border-black/6 bg-white'}`}>
+			<p class={`m-0 mb-3 font-mono text-[10.5px] tracking-[0.12em] uppercase ${muted()}`}>Raw cgroup proof</p>
 			<dl class="grid gap-2 font-mono text-[11px]">
-				<div class="flex justify-between gap-3"><dt class={muted()}>cpu.max</dt><dd class="m-0 text-right">{runtime?.cgroup.cpu_max || 'loading'}</dd></div>
-				<div class="flex justify-between gap-3"><dt class={muted()}>cpu.weight</dt><dd class="m-0 text-right">{runtime?.cgroup.cpu_weight || 'loading'}</dd></div>
-				<div class="flex justify-between gap-3"><dt class={muted()}>sleepers</dt><dd class="m-0 text-right">{runtime?.processes.pid_bomb_sleepers || '0'}</dd></div>
+				<div class="flex justify-between gap-3"><dt class={muted()}>CPU quota file</dt><dd class="m-0 text-right">{runtime?.cgroup.cpu_max || 'loading'}</dd></div>
+				<div class="flex justify-between gap-3"><dt class={muted()}>CPU weight file</dt><dd class="m-0 text-right">{runtime?.cgroup.cpu_weight || 'loading'}</dd></div>
+				<div class="flex justify-between gap-3"><dt class={muted()}>PID sleepers</dt><dd class="m-0 text-right">{runtime?.processes.pid_bomb_sleepers || '0'}</dd></div>
 			</dl>
 		</div>
 	</div>
@@ -594,21 +631,29 @@
 
 {#snippet namespaceSignal()}
 	<div class={`rounded-[24px] border p-5 ${dark ? 'border-white/8 bg-white/[0.025]' : 'border-black/6 bg-white'}`}>
-		<div class="mb-4 flex items-center gap-3">
-			<span class="grid h-10 w-10 place-items-center rounded-xl bg-playstation-blue/12 text-playstation-blue" aria-hidden="true">
-				<Boxes size={18} strokeWidth={1.7} />
-			</span>
-			<div>
-				<h4 class="m-0 text-[15px] font-semibold">Container reality</h4>
-				<p class={`m-0 mt-0.5 text-[12.5px] ${muted()}`}>Live from /proc and cgroup files.</p>
+		<div class="mb-4 flex items-start justify-between gap-3">
+			<div class="flex items-center gap-3">
+				<span class="grid h-10 w-10 place-items-center rounded-xl bg-playstation-blue/12 text-playstation-blue" aria-hidden="true">
+					<Boxes size={18} strokeWidth={1.7} />
+				</span>
+				<div>
+					<h4 class="m-0 text-[15px] font-semibold">{rootMap.title}</h4>
+					<p class={`m-0 mt-0.5 max-w-[30rem] text-[12.5px] leading-relaxed ${muted()}`}>{rootMap.detail}</p>
+				</div>
 			</div>
+			<span class={`shrink-0 rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] ${rootMap.tone}`}>{rootMap.label}</span>
+		</div>
+		<div class={`mb-4 rounded-2xl border p-3 ${rootMap.tone}`}>
+			<p class="m-0 font-mono text-[11px] leading-relaxed">
+				{rootMap.proof}
+			</p>
 		</div>
 		<dl class="grid gap-3">
-			{@render proofLine('uid_map', firstLine(runtime?.uid_map))}
-			{@render proofLine('gid_map', firstLine(runtime?.gid_map))}
-			{@render proofLine('user ns', runtime?.user_namespace || 'loading')}
-			{@render proofLine('pid ns', runtime?.pid_namespace || 'loading')}
-			{@render proofLine('visible procs', runtime?.processes.process_count || 'loading')}
+			{@render proofLine('raw UID map', firstLine(runtime?.uid_map))}
+			{@render proofLine('raw GID map', firstLine(runtime?.gid_map))}
+			{@render proofLine('user namespace ID', runtime?.user_namespace || 'loading')}
+			{@render proofLine('PID namespace ID', runtime?.pid_namespace || 'loading')}
+			{@render proofLine('processes visible here', `${runtime?.processes.process_count || 'loading'} inside dokuru-lab`)}
 		</dl>
 	</div>
 {/snippet}

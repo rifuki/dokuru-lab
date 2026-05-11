@@ -81,25 +81,36 @@
 		return '—';
 	}
 
-	function usernsState(): { label: string; detail: string; tone: string; safe: boolean } {
+	function usernsState(): { label: string; headline: string; detail: string; tone: string; headlineTone: string; safe: boolean } {
 		const uid = firstLine(runtime?.uid_map);
-		if (uid.startsWith('0 0 ')) {
+		if (/^0\s+0\s+/.test(uid)) {
 			return {
-				label: 'userns off',
-				detail: 'container root maps to host root',
+				label: 'danger',
+				headline: 'root = host root',
+				detail: 'UID 0 inside dokuru-lab is UID 0 on the host',
 				tone: 'bg-commerce/15 text-commerce',
+				headlineTone: 'text-commerce',
 				safe: false
 			};
 		}
-		if (/^0\s+\d{4,}/.test(uid)) {
+		if (/^0\s+(?!0\b)\d{4,}/.test(uid)) {
 			return {
-				label: 'userns on',
-				detail: 'root is remapped on host',
+				label: 'isolated',
+				headline: 'root is remapped',
+				detail: 'UID 0 inside dokuru-lab becomes an unprivileged host UID',
 				tone: 'bg-emerald-400/15 text-emerald-400',
+				headlineTone: 'text-emerald-400',
 				safe: true
 			};
 		}
-		return { label: 'checking', detail: 'waiting for uid_map', tone: 'bg-white/10 text-white/45', safe: false };
+		return {
+			label: 'waiting',
+			headline: 'waiting for proof',
+			detail: 'root mapping has not arrived yet',
+			tone: 'bg-white/10 text-white/45',
+			headlineTone: 'text-white/55',
+			safe: false
+		};
 	}
 
 	const pidPct = $derived(percent(runtime?.cgroup.pids_current, runtime?.cgroup.pids_max));
@@ -214,34 +225,35 @@
 		</div>
 	</div>
 
-	<!-- Isolation evidence row -->
+	<!-- Root mapping evidence row -->
 	<div class="rounded-xl bg-white/[0.04] px-4 py-3">
 		<div class="mb-3 flex items-center justify-between gap-2">
 			<div class="flex items-center gap-2">
-			<span class="grid h-6 w-6 place-items-center rounded-md bg-[#9ad7ff]/15 text-[#9ad7ff]" aria-hidden="true">
-				{#if userns.safe}
-					<ShieldCheck size={12} strokeWidth={1.5} />
-				{:else}
-					<ShieldAlert size={12} strokeWidth={1.5} />
-				{/if}
-			</span>
-				<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">Isolation</span>
+				<span class="grid h-6 w-6 place-items-center rounded-md bg-[#9ad7ff]/15 text-[#9ad7ff]" aria-hidden="true">
+					{#if userns.safe}
+						<ShieldCheck size={12} strokeWidth={1.5} />
+					{:else}
+						<ShieldAlert size={12} strokeWidth={1.5} />
+					{/if}
+				</span>
+				<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-white/50">Host-root risk</span>
 			</div>
 			<span class={`rounded-full px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] ${userns.tone}`}>{userns.label}</span>
 		</div>
-		<p class="m-0 mb-2 truncate font-mono text-[9.5px] text-white/32">{userns.detail}</p>
+		<p class={`m-0 mb-1 text-[13px] font-semibold ${userns.headlineTone}`}>{userns.headline}</p>
+		<p class="m-0 mb-3 text-[11px] leading-snug text-white/42">{userns.detail}</p>
 		<dl class="grid gap-1.5">
 			<div class="flex justify-between gap-2">
-				<dt class="font-mono text-[10px] text-white/35">root map</dt>
+				<dt class="font-mono text-[10px] text-white/35">UID 0 map</dt>
 				<dd class="m-0 max-w-[55%] truncate font-mono text-[10px] text-white/70 tabular-nums text-right">{firstLine(runtime?.uid_map)}</dd>
 			</div>
 			<div class="flex justify-between gap-2">
-				<dt class="font-mono text-[10px] text-white/35">PID boundary</dt>
+				<dt class="font-mono text-[10px] text-white/35">PID namespace</dt>
 				<dd class="m-0 max-w-[55%] truncate font-mono text-[10px] text-white/70 tabular-nums text-right">{runtime?.pid_namespace || '—'}</dd>
 			</div>
 			<div class="flex justify-between gap-2">
-				<dt class="font-mono text-[10px] text-white/35">proc visibility</dt>
-				<dd class="m-0 font-mono text-[10px] text-white/70 tabular-nums">{runtime?.processes.process_count || '—'}</dd>
+				<dt class="font-mono text-[10px] text-white/35">processes visible</dt>
+				<dd class="m-0 font-mono text-[10px] text-white/70 tabular-nums">{runtime?.processes.process_count || '—'} in lab</dd>
 			</div>
 		</dl>
 	</div>

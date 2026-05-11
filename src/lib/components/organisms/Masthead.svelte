@@ -33,9 +33,9 @@
 		<div class="flex items-center gap-5 text-[13px] font-medium">
 			<div class="hidden items-center gap-5 @4xl/page:flex">
 				<a class={`${dark ? 'text-white/85' : 'text-black/70'} no-underline transition hover:text-[#1883fd]`} href="/monitor">Monitor</a>
-				<a class={`${dark ? 'text-white/85' : 'text-black/70'} no-underline transition hover:text-[#1883fd]`} href="/namespace">Namespace</a>
+				<a class={`${dark ? 'text-white/85' : 'text-black/70'} no-underline transition hover:text-[#1883fd]`} href="/namespace">Root Map</a>
 				<a class={`${dark ? 'text-white/85' : 'text-black/70'} no-underline transition hover:text-[#1883fd]`} href="/exploit">Exploit</a>
-				<a class={`${dark ? 'text-white/85' : 'text-black/70'} no-underline transition hover:text-[#1883fd]`} href="/cgroup">Cgroup</a>
+				<a class={`${dark ? 'text-white/85' : 'text-black/70'} no-underline transition hover:text-[#1883fd]`} href="/cgroup">Resources</a>
 				<a class={`${dark ? 'text-white/85' : 'text-black/70'} no-underline transition hover:text-[#1883fd]`} href="/evidence">Evidence</a>
 			</div>
 			<span class={`hidden items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[10px] @2xl/page:inline-flex ${monitorConnected ? 'text-emerald-500' : 'text-commerce'}`}>

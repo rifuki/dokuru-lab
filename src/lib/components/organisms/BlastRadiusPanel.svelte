@@ -442,13 +442,13 @@
 				Baseline probe
 			</p>
 			<p class="m-0 mt-0.5 text-[12.5px] leading-snug text-body-gray">
-				Direct probe to <code>victim-checkout</code> confirms neighbor service is healthy before
+				Direct probe to the Protected Checkout API (<code>victim-checkout</code>) confirms the neighbor service is healthy before
 				pressure payloads.
 			</p>
 		</div>
 		<Button size="sm" variant="ghost" onclick={onCustomerProbe} disabled={busy}>
 			<span class="inline-flex items-center gap-1.5"
-				><Activity size={13} strokeWidth={2} /> Probe checkout</span
+				><Activity size={13} strokeWidth={2} /> Probe protected API</span
 			>
 		</Button>
 	</div>

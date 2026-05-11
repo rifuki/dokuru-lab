@@ -178,10 +178,10 @@
 	const TERMINAL_OPEN_KEY = 'dokuru-lab.terminal.open';
 
 	const presets: CommandPreset[] = [
-		{ label: 'UID map', command: 'id; cat /proc/self/uid_map; cat /proc/self/gid_map' },
+		{ label: 'Root map', command: 'id; cat /proc/self/uid_map; cat /proc/self/gid_map' },
 		{ label: 'PID view', command: 'ps -eo pid,ppid,user,comm | head -40' },
 		{
-			label: 'Namespace links',
+			label: 'Root/PID IDs',
 			command: 'readlink /proc/self/ns/user; readlink /proc/self/ns/pid; readlink /proc/1/ns/pid'
 		}
 	];
@@ -194,7 +194,7 @@
 	const actionLabels: Record<string, string> = {
 		health: 'Container health',
 		probe: 'Probe write',
-		exec: 'Namespace command',
+		exec: 'Root-map command',
 		ping: 'Command injection',
 		upload: 'Bind marker',
 		'suid-trap': 'SUID trap',
@@ -674,9 +674,9 @@
 
 	function runtimeStateLabel(uidMap?: string): string {
 		const first = uidMap?.split('\n')[0]?.trim();
-		if (!first) return 'runtime · loading';
-		if (first.startsWith('0 0 ')) return 'userns off · live';
-		if (first.startsWith('0 100000 ') || first.includes(' 100000 ')) return 'userns on · live';
+		if (!first) return 'root map loading';
+		if (first.startsWith('0 0 ')) return 'root = host root';
+		if (first.startsWith('0 100000 ') || first.includes(' 100000 ')) return 'root remapped';
 		return 'runtime · live';
 	}
 
@@ -792,7 +792,7 @@
 					<span class="grid h-8 w-8 place-items-center rounded-full bg-white text-playstation-blue" aria-hidden="true">
 						<FlaskConical size={18} strokeWidth={1.5} />
 					</span>
-					<strong class="text-[15px] font-semibold">Dokuru Namespace &amp; Cgroup Lab</strong>
+					<strong class="text-[15px] font-semibold">Dokuru Root Map &amp; Resource Lab</strong>
 				</div>
 				<span class="flex max-w-3xl items-start gap-2 text-[13px] text-white/85">
 					<AlertOctagon size={18} strokeWidth={1.5} class="mt-0.5 shrink-0" />
