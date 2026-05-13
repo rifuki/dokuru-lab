@@ -1,527 +1,111 @@
-# Hardening Results - Before vs After Dokuru
+# Hardening Results — Dokuru Lab
 
-**Target:** `lab.dokuru.rifuki.dev` (dokuru-lab)
-**Hardening Date:** 2026-05-08  
-**Audit File:** `dokuru-audit-dokuru-lab-2026-05-08.json`
+**Target:** `lab1.dokuru.static.ninja` (dokuru-lab)
+**Scope:** Only the scenarios exposed by the lab's control deck — A0 command injection, B1 bind marker, B2 SUID trap, B3 setcap trap, PIDs / Memory / CPU pressure, root mapping proof, and the Dump / Encrypt / Restore app-data buttons.
+**Last live check:** 2026-05-14 (T4 fully hardened state)
 
----
-
-## Executive Summary
-
-**Exploits Re-Tested:** 8  
-**Blocked/Mitigated:** 6/8 (75%)  
-**Blast Radius Reduction:** ~85%  
-**Time to Full Compromise:** ∞ (critical paths blocked)
+> **Update 2026-05-14 (T4 final):** lab `lab1` sekarang **fully hardened** dengan skor audit Dokuru **100 / 100** (39/39 PASS). Kelima aturan *scope* penelitian (2.10, 4.1, 5.11, 5.12, 5.29) seluruhnya **PASS**. *Before-state* yang disajikan di dokumen ini bersifat historis (T0, 2026-05-11). *After-state* aktual didokumentasikan di `../skripsi/progress-log.md` "Update 2026-05-14 (T4)" dan `../skripsi/bab4-draft.md` §4.6d. Detail *journey* T0 → T4 ada di `../skripsi/bab4-draft.md` §4.6 sampai §4.8.
 
 ---
 
-## Configuration Changes
+## Where This Document Starts and Stops
 
-### **BEFORE Hardening:**
+This file records the **before / after** shape of the container for the scenarios the lab actually exposes. Anything that is not wired into `ControlDeck.svelte` (SSH key plant, `/etc/shadow` exfiltration, neighbor-Postgres credential theft, cross-container ransomware chain, "infrastructure compromise in 90 seconds") is **not claimed here** and should not be claimed in the defense. The blast radius this lab is designed to demonstrate is the **container-root → host-root file ownership gap** plus **cgroup absence**, not full host takeover.
+
+## Current State on `lab1.dokuru.static.ninja` (2026-05-11)
+
+Live from `POST /api/upload` and `GET /api/ping?host=127.0.0.1;id;cat /proc/self/uid_map`:
+
 ```json
 {
-  "user": "root (UID 0)",
-  "uid_map": "0 0 4294967295",
-  "pids_max": "4606 (host limit)",
-  "memory_max": "max (unlimited)",
-  "cpu_weight": "100 (default)",
-  "capabilities": "ALL"
-}
-```
-
-### **AFTER Hardening:**
-```json
-{
-  "user": "1001 (non-root)",
-  "uid_map": "0 100000 65536",
-  "pids_max": "100",
-  "memory_max": "268435456 (256MB)",
-  "cpu_weight": "59",
-  "capabilities": "RESTRICTED"
-}
-```
-
----
-
-## Exploit Re-Test Results
-
-| # | Exploit | Before | After | Status | Impact Reduction |
-|---|---|---|---|---|---|
-| 1 | **Command Injection** | ✅ UID 0 | ✅ UID 1001 | ⚠️ **MITIGATED** | 80% |
-| 2 | **File Upload + Userns Gap** | ✅ root:root | ❌ 100000:100000 | ✅ **BLOCKED** | 100% |
-| 3 | **SSH Backdoor** | ✅ Planted | ❌ Permission denied | ✅ **BLOCKED** | 100% |
-| 4 | **/etc/shadow Exfil** | ✅ Readable | ❌ Permission denied | ✅ **BLOCKED** | 100% |
-| 5 | **Database Dump** | ✅ Full access | ⚠️ App data only | ⚠️ **PARTIAL** | 50% |
-| 6 | **Fork Bomb** | ✅ Unlimited | ❌ Capped at 100 | ✅ **LIMITED** | 95% |
-| 7 | **Memory Bomb** | ✅ Unlimited | ❌ Capped at 256MB | ✅ **LIMITED** | 90% |
-| 8 | **CPU Burn** | ✅ Unlimited | ⚠️ Throttled | ✅ **LIMITED** | 60% |
-
-**Legend:**
-- ✅ **BLOCKED** = Exploit completely prevented
-- ✅ **LIMITED** = Exploit constrained by cgroup limits
-- ⚠️ **MITIGATED** = Blast radius significantly reduced
-- ⚠️ **PARTIAL** = Some impact remains (app-level)
-
----
-
-## Detailed Comparison
-
-### 1️⃣ Command Injection
-
-#### **BEFORE:**
-```bash
-curl "https://lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;id"
-# Output: uid=0(root) gid=0(root) groups=0(root)
-```
-
-**Impact:** Full root access to container
-
-#### **AFTER:**
-```bash
-curl "https://lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;id"
-# Output: uid=1001 gid=1004 groups=1004
-```
-
-**Impact:** Limited user access, no system file access
-
-**Blast Radius Reduction:** 80%
-- ❌ Can't read /etc/shadow
-- ❌ Can't write /root/.ssh/
-- ❌ Can't modify system files
-- ✅ Can still access app data (expected)
-
----
-
-### 2️⃣ File Upload + Userns Gap
-
-#### **BEFORE:**
-```bash
-# Upload file from container (UID 0)
-ls -la ~/apps/dokuru-lab/uploads/
-# -rwxr-xr-x 1 root root innocent.jpg.sh
-```
-
-**Impact:** Container root = Host root ownership
-
-#### **AFTER:**
-```bash
-# Upload file from container (UID 1001)
-ls -la ~/apps/dokuru-lab/uploads/
-# -rwxrwxr-x+ 1 100000 100000 innocent.jpg.sh
-```
-
-**Impact:** Container UID 1001 → Host UID 101001 (remapped)
-
-**Blast Radius Reduction:** 100%
-- ✅ No host root file ownership
-- ✅ Cron trigger attack blocked
-- ✅ Privilege escalation path closed
-
-**CIS Rule Fixed:** 2.10 (User namespace remapping)
-
----
-
-### 3️⃣ SSH Backdoor Persistence
-
-#### **BEFORE:**
-```bash
-curl "https://lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;echo%20KEY%20%3E%20/root/.ssh/authorized_keys"
-# Success: SSH key planted
-```
-
-**Impact:** Permanent root access to container
-
-#### **AFTER:**
-```bash
-curl "https://lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;echo%20KEY%20%3E%20/root/.ssh/authorized_keys"
-# Error: Permission denied
-```
-
-**Impact:** Cannot write to /root/ as non-root user
-
-**Blast Radius Reduction:** 100%
-- ✅ Persistence attack blocked
-- ✅ No long-term access
-
-**CIS Rule Fixed:** 4.1 (Non-root user)
-
----
-
-### 4️⃣ System File Exfiltration
-
-#### **BEFORE:**
-```bash
-curl "https://lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;cat%20/etc/shadow"
-# root:*:20486:0:99999:7:::
-# daemon:*:20486:0:99999:7:::
-```
-
-**Impact:** Full read access to system files
-
-#### **AFTER:**
-```bash
-curl "https://lab.dokuru.rifuki.dev/api/ping?host=127.0.0.1;cat%20/etc/shadow"
-# Error: Permission denied
-```
-
-**Impact:** No system file access
-
-**Blast Radius Reduction:** 100%
-- ✅ /etc/shadow protected
-- ✅ /etc/passwd protected
-- ✅ System configs protected
-
-**CIS Rule Fixed:** 4.1 (Non-root user)
-
----
-
-### 5️⃣ Database Dump
-
-#### **BEFORE:**
-```json
-{
-  "ok": true,
-  "postgres": {
-    "customer_count": 1200000
-  },
-  "customer_files": [...],
-  "invoice_files": [...]
-}
-```
-
-**Impact:** Full database + file exfiltration
-
-#### **AFTER:**
-```json
-{
-  "message": "Internal Error"
-}
-```
-
-**Impact:** Endpoint has errors, but app-owned data still accessible
-
-**Blast Radius Reduction:** 50%
-- ⚠️ App credentials still work (expected)
-- ⚠️ App-owned files still readable
-- ✅ System-level access blocked
-
-**Note:** This is **app-level vulnerability**, not Docker config issue. Hardening reduces blast radius but doesn't fix app bugs.
-
----
-
-### 6️⃣ Fork Bomb (PIDs Cgroup)
-
-#### **BEFORE:**
-```json
-{
-  "requested": 150,
-  "spawned": 150,
+  "id": "uid=0(root) gid=0(root) groups=0(root)",
+  "uid_map": "0          0 4294967295",
+  "gid_map": "0          0 4294967295",
+  "user_namespace": "user:[4026531837]",
   "cgroup": {
-    "pids_current": "228",
-    "pids_max": "4606"
-  }
-}
-```
-
-**Impact:** Can spawn unlimited processes until host exhaustion
-
-#### **AFTER:**
-```json
-{
-  "requested": 150,
-  "spawned": 150,
-  "cgroup": {
-    "pids_current": "100",
-    "pids_max": "100"
-  }
-}
-```
-
-**Impact:** Capped at 100 PIDs, cannot exhaust host
-
-**Blast Radius Reduction:** 95%
-- ✅ Host protected from PID exhaustion
-- ✅ Neighbor containers unaffected
-- ⚠️ Container can still hit its own limit
-
-**CIS Rule Fixed:** 5.29 (PIDs limit)
-
----
-
-### 7️⃣ Memory Bomb (Memory Cgroup)
-
-#### **BEFORE:**
-```json
-{
-  "allocated_mb": 256,
-  "cgroup": {
-    "memory_current": "386023424",
-    "memory_max": "max"
-  }
-}
-```
-
-**Impact:** Can allocate unlimited memory, OOM host
-
-#### **AFTER:**
-```json
-{
-  "allocated_mb": 128,
-  "cgroup": {
-    "memory_current": "165986304",
-    "memory_max": "268435456"
-  }
-}
-```
-
-**Impact:** Capped at 256MB, OOM kills container before host
-
-**Blast Radius Reduction:** 90%
-- ✅ Host protected from OOM
-- ✅ Neighbor containers unaffected
-- ⚠️ Container can still OOM itself
-
-**CIS Rule Fixed:** 5.11 (Memory limit)
-
-**Test Evidence:**
-- Request 512MB → **KILLED** (OOM)
-- Request 128MB → **SUCCESS** (within limit)
-
----
-
-### 8️⃣ CPU Burn (CPU Cgroup)
-
-#### **BEFORE:**
-```json
-{
-  "worker_count": 4,
-  "cgroup": {
+    "pids_max": "2268",
+    "memory_max": "max",
     "cpu_weight": "100",
     "cpu_max": "max 100000"
   }
 }
 ```
 
-**Impact:** Can saturate all host CPUs
+All five CIS rules in scope are currently **FAIL**. Dokuru hardening has not been applied to this deployment at the time of writing. The numbers below therefore describe what changes when hardening is applied to a container of this shape, based on the rules in the audit registry and the direct observations we have from the `dokuru-lab-baseline` trial run on a separate VPS.
 
-#### **AFTER:**
-```json
-{
-  "worker_count": 4,
-  "cgroup": {
-    "cpu_weight": "59",
-    "cpu_max": "max 100000"
-  }
-}
-```
-
-**Impact:** CPU usage throttled by scheduler
-
-**Blast Radius Reduction:** 60%
-- ✅ Host CPU protected (fair share scheduling)
-- ✅ Neighbor containers get CPU time
-- ⚠️ Container can still use allocated share
-
-**CIS Rule Fixed:** 5.12 (CPU shares)
-
----
-
-## CIS Compliance Summary
-
-### **BEFORE Hardening:**
-| Rule | Status | Description |
+| CIS Rule | Before (lab1 now) | After hardening target |
 |---|---|---|
-| 2.10 | ❌ **FAIL** | User namespace remapping disabled |
-| 4.1 | ❌ **FAIL** | Container runs as root |
-| 5.11 | ❌ **FAIL** | No memory limit |
-| 5.12 | ❌ **FAIL** | No CPU shares |
-| 5.29 | ❌ **FAIL** | No PIDs limit |
+| 2.10 — Userns remap | `uid_map: 0 0 4294967295` (identity) | `uid_map: 0 100000 65536` (remapped) |
+| 4.1 — Non-root user | UID 0 | Declared `USER` in image, typically UID 1001 |
+| 5.11 — Memory limit | `memory_max: max` | `memory_max: 268435456` (256 MiB example) |
+| 5.12 — CPU weight | `cpu_weight: 100`, `cpu_max: max 100000` | `cpu_weight: 59`, `cpu_max` set when a quota is desired |
+| 5.29 — PIDs limit | `pids_max: 2268` (host default) | `pids_max: 100` |
 
-**Compliance Score:** 0/5 (0%)
+## Per-Scenario Expectation (hardening on vs off)
 
-### **AFTER Hardening:**
-| Rule | Status | Description |
-|---|---|---|
-| 2.10 | ✅ **PASS** | User namespace remapping enabled |
-| 4.1 | ✅ **PASS** | Container runs as UID 1001 |
-| 5.11 | ✅ **PASS** | Memory limit: 256MB |
-| 5.12 | ✅ **PASS** | CPU weight: 59 |
-| 5.29 | ✅ **PASS** | PIDs limit: 100 |
+Each row describes the same endpoint called in both states.
 
-**Compliance Score:** 5/5 (100%)
+### A0 — Command Injection
 
----
+- **Before:** Output contains `uid=0(root)`. Container is in the init user namespace.
+- **After (rule 4.1):** Output contains the non-root UID configured on the image (e.g. `uid=1001`). The app bug is **not fixed** — command injection is still a real RCE, it just runs as an unprivileged user.
 
-## Attack Chain Analysis
+### B1 — Bind marker (upload)
 
-### **BEFORE: Total Compromise in 90 Seconds**
+- **Before:** `owner: "0:0 -rwxr-xr-x"` on the host. Host root owns the file.
+- **After (rule 2.10):** `owner` shows the remapped host UID (e.g. `100000 100000` when `/etc/subuid` maps from 100000). File is unprivileged on the host.
 
-```
-0:00   Command injection → root shell
-0:10   File upload → host root ownership
-0:20   SSH backdoor → persistence
-0:30   /etc/shadow → system credentials
-0:40   Database dump → 1.2M records
-0:50   Ransomware → 200 files encrypted
-1:00   Fork bomb → host instability
-1:10   Memory bomb → host OOM risk
-1:20   CPU burn → host saturation
-```
+### B2 — SUID trap
 
-**Result:** 🔴 **TOTAL INFRASTRUCTURE COMPROMISE**
+- **Before:** `stat: -rwsr-xr-x 4755 0:0 root:root`, `userns_remap_active: false`, `expected_impact: DANGEROUS`. A host-local unprivileged user running the planted binary would gain EUID 0.
+- **After (rule 2.10 + 4.1):** `stat` shows the remapped UID owner. `userns_remap_active: true`. The SUID bit on a file owned by an unprivileged remapped UID does not confer host root, so the planted binary is inert from a host-shell escalation perspective.
 
----
+### B3 — Setcap trap
 
-### **AFTER: Limited App-Level Compromise**
+- **Before:** `setcap_error: null`, capabilities applied (`cap_net_admin,cap_net_raw,cap_net_bind_service=ep`). The container is in `init_user_ns` and has CAP_SETFCAP in that namespace.
+- **After (rule 2.10):** `setcap_error` is a non-null kernel error such as `Operation not permitted`. The container's user namespace no longer carries CAP_SETFCAP in `init_user_ns`, so the attribute write is rejected.
 
-```
-0:00   Command injection → UID 1001 shell
-0:10   Try /etc/shadow → ❌ Permission denied
-0:20   Try SSH backdoor → ❌ Permission denied
-0:30   Try fork bomb → ❌ Capped at 100 PIDs
-0:40   Try memory bomb → ❌ OOM killed at 256MB
-0:50   Try CPU burn → ⚠️ Throttled by cgroup
-1:00   Access app data → ⚠️ Still accessible (expected)
-```
+### Resource pressure — PIDs / Memory / CPU
 
-**Result:** 🟡 **APP DATA COMPROMISE ONLY**
+- **Before:** `pids_max: 2268`, `memory_max: max`, `cpu_weight: 100`. All three pressure endpoints can consume host-scoped resources until host limits kick in.
+- **After (rules 5.11 / 5.12 / 5.29):**
+  - `POST /api/pid-bomb` with `count=150` is bounded by `pids_max: 100` (request count can be sent, but the cgroup refuses to create new tasks past the cap).
+  - `POST /api/memory-bomb` with `mb=512` is OOM-killed by the cgroup once it crosses the container memory limit. `mb=128` fits.
+  - `POST /api/cpu-burn` still spawns miners, but scheduler weight 59 yields CPU time to neighbors instead of monopolising cores.
 
-**Critical Paths Blocked:**
-- ❌ System file access
-- ❌ Persistence mechanisms
-- ❌ Host resource exhaustion
-- ❌ Cross-container attacks
-- ❌ Privilege escalation
+### Root mapping proof
 
-**Remaining Risk:**
-- ⚠️ App-level data exfiltration (requires fixing app code)
+- **Before:** `cat /proc/self/uid_map` returns `0          0 4294967295`.
+- **After (rule 2.10):** `cat /proc/self/uid_map` returns `0     100000      65536`. This is the single most direct piece of evidence that hardening landed.
 
----
+### App data scope — Dump / Encrypt / Restore
 
-## Blast Radius Comparison
+- **Before:** App data (customer JSON, invoices) is readable and writable by the container's root. Encrypt / Restore round-trip works.
+- **After:** App data is **still readable and writable by the application user**. Hardening does not fix application-level authorization. This is the "honest boundary" the UI already labels: app-layer impact remains.
 
-### **BEFORE:**
-```
-┌─────────────────────────────────────┐
-│         COMPROMISED ASSETS          │
-├─────────────────────────────────────┤
-│ ✅ Application container (root)     │
-│ ✅ Host filesystem (bind mounts)    │
-│ ✅ System files (/etc/shadow)       │
-│ ✅ Neighbor containers (inspect)    │
-│ ✅ Host resources (CPU/mem/PIDs)    │
-│ ✅ Persistence (SSH backdoor)       │
-│ ✅ Customer database (1.2M records) │
-│ ✅ 200+ encrypted files             │
-└─────────────────────────────────────┘
-```
+## What Hardening Changes vs What It Does Not
 
-**Blast Radius:** 🔴 **100% (Total Infrastructure)**
+Hardening at the Docker layer changes:
 
----
+- Container filesystem ownership on bind mounts (rule 2.10).
+- Privilege the container process carries after an in-container RCE (rule 4.1).
+- Whether planted SUID and file-capability primitives survive on the host in a usable form (rules 2.10 + 4.1 combined).
+- Whether the container can starve the host for CPU, memory, or PIDs (rules 5.11, 5.12, 5.29).
 
-### **AFTER:**
-```
-┌─────────────────────────────────────┐
-│         COMPROMISED ASSETS          │
-├─────────────────────────────────────┤
-│ ⚠️ Application container (UID 1001) │
-│ ⚠️ App-owned data files             │
-│ ❌ Host filesystem (remapped UID)   │
-│ ❌ System files (permission denied) │
-│ ❌ Neighbor containers (isolated)   │
-│ ❌ Host resources (cgroup limited)  │
-│ ❌ Persistence (blocked)            │
-│ ⚠️ Customer database (app creds)    │
-│ ❌ Ransomware (limited scope)       │
-└─────────────────────────────────────┘
-```
+Hardening at the Docker layer does not change:
 
-**Blast Radius:** 🟡 **15% (App Data Only)**
+- That command injection still exists in the application.
+- That a successful RCE can still read and tamper with data the application user owns.
+- That `customer-db` is still reachable on the Docker network.
 
-**Reduction:** **85%** ✅
+## Current Gap on lab1
 
----
+At the time of this document, the `lab1.dokuru.static.ninja` deployment has **no hardening applied**. All five rules above are FAIL. If the intent is to demonstrate a before/after on this exact domain, Dokuru still needs to apply:
 
-## Key Takeaways
+- `userns-remap=default` in the daemon (rule 2.10) and restart.
+- A non-root `USER` in the image or a `user:` entry in Compose (rule 4.1).
+- `mem_limit` (rule 5.11).
+- `cpu_shares` or a Compose-level CPU shares value (rule 5.12).
+- `pids_limit` (rule 5.29).
 
-### **What Hardening Fixed:**
-
-1. ✅ **User Namespace Remapping (Rule 2.10)**
-   - Container UID 0 → Host UID 100000+
-   - Eliminates host root file ownership
-   - Blocks privilege escalation via bind mounts
-
-2. ✅ **Non-Root User (Rule 4.1)**
-   - Container runs as UID 1001
-   - No system file access
-   - No persistence mechanisms
-
-3. ✅ **Cgroup Limits (Rules 5.11, 5.12, 5.29)**
-   - Memory: 256MB cap
-   - CPU: Fair share scheduling
-   - PIDs: 100 process limit
-   - Prevents host resource exhaustion
-
-### **What Hardening Didn't Fix:**
-
-1. ⚠️ **Application Vulnerabilities**
-   - Command injection still works
-   - App credentials still valid
-   - App-owned data still accessible
-
-2. ⚠️ **Network-Level Attacks**
-   - Database still reachable
-   - API endpoints still exposed
-
-### **The Message:**
-
-> **"Docker hardening is not a silver bullet, but it's a critical safety net."**
->
-> Command injection is an **app bug** that developers must fix. But with default Docker config, that single bug becomes **total infrastructure compromise**. With Dokuru hardening, the same bug is contained to **app data only** — an 85% blast radius reduction.
->
-> **Security is layers.** Fix the app, harden the container, isolate the network, monitor the logs. Dokuru handles the container layer automatically.
-
----
-
-## Recommendations
-
-### **Immediate (Done):**
-- ✅ Enable userns-remap (Rule 2.10)
-- ✅ Enforce non-root user (Rule 4.1)
-- ✅ Set memory limit (Rule 5.11)
-- ✅ Set CPU shares (Rule 5.12)
-- ✅ Set PIDs limit (Rule 5.29)
-
-### **Short-Term (App-Level):**
-- ⚠️ Fix command injection in `/api/ping`
-- ⚠️ Implement input validation
-- ⚠️ Use parameterized commands
-- ⚠️ Add rate limiting
-- ⚠️ Implement secrets management
-
-### **Medium-Term (Defense in Depth):**
-- ⚠️ Add network policies
-- ⚠️ Implement WAF rules
-- ⚠️ Enable audit logging
-- ⚠️ Add intrusion detection
-- ⚠️ Implement backup/recovery
-
----
-
-## Conclusion
-
-**Dokuru hardening successfully reduced blast radius by 85%.**
-
-The same vulnerable application, the same command injection bug, but with Docker hardening:
-- ❌ No system file access
-- ❌ No persistence
-- ❌ No host resource exhaustion
-- ❌ No cross-container attacks
-- ⚠️ Only app data compromise (expected)
-
-**This is the difference between "app compromised" and "infrastructure compromised".**
-
----
-
-**Next Steps:** Fix application vulnerabilities (command injection, input validation) to achieve 100% protection.
+Once applied, the sections above describe what each scenario's response should look like, and the same endpoints can be re-run against the hardened container to collect after-state evidence without changing the scope of the demo.
