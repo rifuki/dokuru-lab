@@ -72,11 +72,58 @@ LAB_LOG_DIR=/app/logs
 CHECKOUT_MONITOR_URL=http://checkout-monitor:3001/sample
 ```
 
-Deploy:
+Deploy with Caddy as the HTTPS ingress:
 
 ```bash
-docker compose up --build -d
+docker compose --profile caddy up --build -d
 ```
+
+The ingress services are profile-gated, so choose exactly one public path:
+
+| Path | Command |
+|---|---|
+| Caddy + Let's Encrypt | `docker compose --profile caddy up --build -d` |
+| Cloudflare Tunnel | `docker compose --profile cloudflare up --build -d` |
+| App internals only, no public ingress | `docker compose up --build -d` |
+
+## Cloudflare Tunnel Deployment (No Caddy / No Let's Encrypt)
+
+Use this path when Caddy/Let's Encrypt is blocked by domain or certificate rate limits. The main `docker-compose.yaml` includes an optional `cloudflared` service behind the `cloudflare` profile. The tunnel exposes `dokuru-lab:8080` through an outbound Cloudflare connector, so the VPS does not need inbound ports `80` or `443`.
+
+1. In Cloudflare Zero Trust, create a **Tunnel** and choose the Docker connector.
+2. Copy the generated tunnel token into `.env`:
+
+```env
+CLOUDFLARED_TUNNEL_TOKEN=<cloudflare tunnel token>
+```
+
+3. Add a Public Hostname for the tunnel, for example `lab.example.com`, and set the service URL to:
+
+```text
+http://dokuru-lab:8080
+```
+
+4. Start only the Cloudflare ingress path. Because `caddy` and `cloudflared` are on separate Compose profiles, enabling the `cloudflare` profile does not start `caddy`:
+
+```bash
+docker compose --profile cloudflare up --build -d
+```
+
+If Caddy is already running from a previous deployment, remove it first:
+
+```bash
+docker compose stop caddy
+# optional cleanup if you want it gone from `docker ps -a`
+docker compose rm -f caddy
+```
+
+5. Check the connector logs:
+
+```bash
+docker compose logs -f cloudflared
+```
+
+WebSocket endpoints (`/ws/monitor`, `/ws/terminal`, and `/ws/customer`) work through Cloudflare Tunnel without extra Caddy configuration.
 
 ## CI/CD
 

@@ -2,6 +2,7 @@ services:
   caddy:
     image: caddy:2-alpine
     container_name: dokuru-lab-caddy
+    profiles: ["caddy"]
     restart: unless-stopped
     ports:
       - "80:80"
@@ -12,6 +13,20 @@ services:
       - caddy-config:/config
     depends_on:
       dokuru-lab:
+        condition: service_healthy
+    networks:
+      - dokuru-lab
+
+  cloudflared:
+    image: cloudflare/cloudflared:${CLOUDFLARED_VERSION:-latest}
+    container_name: dokuru-lab-cloudflared
+    profiles: ["cloudflare"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TUNNEL_TOKEN:-}
+    depends_on:
+      dokuru-lab:
+        condition: service_healthy
+      checkout-monitor:
         condition: service_healthy
     networks:
       - dokuru-lab
